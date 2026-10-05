@@ -128,9 +128,4 @@ function majTuiles(){
       if(!voulues.has(cle)){ retirerCarreau(t); TUILES.map.delete(cle); }
     }
   }
-  let prets = 0; for(const t of TUILES.map.values()) if(t.mesh) prets++;
-  const m = Math.round(degPx*111320);                                     // mètres par pixel d'écran
-  H.tuiles.textContent = zg < GIBS.zMin ? 'Détail : trop loin'
-    : 'Détail : ' + (TUILES.ze ? 'Sentinel-2 niv. ' + TUILES.ze : 'GIBS niv. ' + zg) + ' · ' + prets + ' tuiles · '
-      + (m >= 1000 ? (m/1000).toFixed(1) + ' km' : m + ' m') + '/px' + (TUILES.erreurs ? ' · ' + TUILES.erreurs + ' erreurs' : '');
 }

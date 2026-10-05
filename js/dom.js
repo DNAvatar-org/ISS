@@ -12,7 +12,4 @@ const erreurEl = $('erreur');
 const galerieEl = $('galerie');
 const photoVue = $('photoVue');
 const bPose = $('bPose');
-const H = {
-  temps:$('hTemps'), beta:$('hBeta'), lune:$('hLune'), ecl:$('hEcl'), eclLigne:$('hEclLigne'), orbite:$('hOrbite'), etat:$('hEtat'), chrono:$('hChrono'),
-  sous:$('hSous'), barre:$('hBarre'), angles:$('hAngles'), pose:$('hPose'), tuiles:$('hTuiles')
-};
+const H = {lune:$('hLune')};

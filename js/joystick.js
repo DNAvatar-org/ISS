@@ -1,5 +1,5 @@
 // File: js/joystick.js
-// Desc: Joystick de visée : un point sur un disque (cap/site), visées prédéfinies illustrées, molette = focale.
+// Desc: Joystick de visée : une cible sur un disque (cap/site), cône vu de dessus, visées prédéfinies illustrées, molette = focale.
 // Version 1.0.0
 // Date: [October 05, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
@@ -69,11 +69,16 @@ function dessinerJoystick(ms){
   c.fillStyle = 'rgba(255,255,255,.5)'; c.font = '9px sans-serif'; c.textAlign = 'center';
   c.fillText('horizon', R, R + R/2 + 11); c.fillText('zénith ▸ bord', R, 2*R - 5); c.fillText('vol ▲', R, 11);
 
-  // empreinte du cône (champ de la caméra)
-  const e = empreinte();
+  // cône de la caméra vu de dessus : l'ISS au centre (au-dessus du nadir), arêtes vers les coins du champ carré
+  const e = empreinte(), n = e.length/4;
+  c.lineWidth = 1; c.strokeStyle = 'rgba(255,170,60,.85)';
+  for(let k=0;k<4;k++){ const [x, y] = e[k*n]; c.beginPath(); c.moveTo(R, R); c.lineTo(x, y); c.stroke(); }
   c.beginPath(); e.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath();
-  c.fillStyle = 'rgba(255,210,74,.16)'; c.fill();
-  c.lineWidth = 1.5; c.strokeStyle = '#ffd24a'; c.stroke();
+  c.fillStyle = 'rgba(255,170,60,.16)'; c.fill();
+  c.lineWidth = 1.5; c.strokeStyle = '#ffaa3c'; c.stroke();
+  // l'ISS, minuscule : poutre + panneaux
+  c.fillStyle = '#e8ecf2'; c.fillRect(R - 6, R - 1, 12, 2);
+  c.fillStyle = '#5b8cff'; c.fillRect(R - 7, R - 4, 3, 8); c.fillRect(R + 4, R - 4, 3, 8);
 
   // repères (anciens boutons)
   for(const rp of JOY_REPERES){
@@ -88,12 +93,16 @@ function dessinerJoystick(ms){
     }
   }
 
-  // la pastille rouge : la visée courante
+  // la cible rouge : la visée courante (cercle + réticule ouvert au centre)
   const [vx, vy] = joyDeCapSite(VUE_ISS.cap, VUE_ISS.site);
-  const g = c.createRadialGradient(vx - 2, vy - 2, 1, vx, vy, 8);
-  g.addColorStop(0, '#ff6666'); g.addColorStop(1, '#cc0000');
-  c.beginPath(); c.arc(vx, vy, 7, 0, 2*Math.PI); c.fillStyle = g; c.fill();
-  c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,.55)'; c.stroke();
+  c.strokeStyle = 'rgba(0,0,0,.55)'; c.lineWidth = 4;
+  c.beginPath(); c.arc(vx, vy, 7, 0, 2*Math.PI); c.stroke();
+  c.strokeStyle = '#ff3030'; c.lineWidth = 2;
+  c.beginPath(); c.arc(vx, vy, 7, 0, 2*Math.PI); c.stroke();
+  c.beginPath();
+  for(const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ c.moveTo(vx + dx*3, vy + dy*3); c.lineTo(vx + dx*11, vy + dy*11); }
+  c.stroke();
+  c.fillStyle = '#ff3030'; c.beginPath(); c.arc(vx, vy, 1.3, 0, 2*Math.PI); c.fill();
   c.restore();
 }
 
@@ -113,7 +122,7 @@ function joyViser(x, y){
 
 function creerJoystick(){
   JOY.cv.addEventListener('pointerdown', ev => {
-    if(POSE.visible && !POSE.actif) poseEffacer();      // on revient à la vue normale
+    poseInterrompre();                                   // viser = nouvelle vue : l'empilement s'efface (SAVE avant)
     const [x, y] = joyPointeur(ev), rp = joyRepereSous(x, y);
     if(rp){ choisirPreset(rp.nom); return; }
     JOY.drag = true; JOY.cv.setPointerCapture(ev.pointerId); joyViser(x, y);
@@ -128,7 +137,7 @@ function creerJoystick(){
   JOY.cv.addEventListener('pointerup', () => { JOY.drag = false; });
   // survol + molette = focale : on zoome sans quitter le joystick
   JOY.cv.addEventListener('wheel', ev => {
-    ev.preventDefault();
+    ev.preventDefault(); poseInterrompre();
     VUE_ISS.fov = Math.max(0.5, Math.min(110, VUE_ISS.fov*(1 + Math.sign(ev.deltaY)*0.1)));
   }, {passive:false});
 }

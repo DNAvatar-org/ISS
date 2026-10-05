@@ -14,10 +14,19 @@ const POSE = {
 };
 POSE.photoCx = POSE.photoCv.getContext('2d');
 
+// Redimensionner la fenêtre ne doit pas effacer l'empilement : on le recopie, mis à l'échelle.
 function poseDimensionner(){
-  poseCv.width = POSE.photoCv.width = renderer.domElement.width;
-  poseCv.height = POSE.photoCv.height = renderer.domElement.height;
-  if(POSE.visible) poseVider();
+  const w = renderer.domElement.width, h = renderer.domElement.height;
+  for(const cv of [poseCv, POSE.photoCv]){
+    if(cv.width === w && cv.height === h) continue;
+    const garde = POSE.visible && cv.width > 0 && cv.height > 0;
+    let copie = null;
+    if(garde){ copie = document.createElement('canvas'); copie.width = cv.width; copie.height = cv.height; copie.getContext('2d').drawImage(cv, 0, 0); }
+    cv.width = w; cv.height = h;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
+    if(copie) cx.drawImage(copie, 0, 0, w, h);
+  }
 }
 function noir(cx, cv){
   cx.globalCompositeOperation = 'source-over';
@@ -62,7 +71,7 @@ function poseFinirPhoto(){
   im.src = url; im.title = 'Photo ' + (POSE.urls.length) + ' · ' + CFG.POSE_S + ' s';
   im.onclick = () => { photoVue.src = url; photoVue.hidden = false; marquerVignette(im); };
   galerieEl.appendChild(im);
-  galerieEl.scrollLeft = galerieEl.scrollWidth;
+  galerieEl.scrollTop = galerieEl.scrollHeight;
   POSE.finies++;
   noir(POSE.photoCx, POSE.photoCv);
 }
@@ -91,4 +100,16 @@ function poseEnregistrerPNG(){
     a.href = URL.createObjectURL(b); a.download = 'iss-empilement-nuit.png'; a.click();
     URL.revokeObjectURL(a.href);
   });
+}
+
+// Bouton REC : vert pendant la prise, avec le nombre de photos de 30 s terminées.
+function majBoutonRec(){
+  bPose.classList.toggle('rec', POSE.actif);
+  const t = POSE.actif ? '⏺️ ' + POSE.finies : '⏺️';
+  if(bPose.textContent !== t) bPose.textContent = t;
+}
+
+// Tout zoom ou clic dans la vue efface l'empilement (et arrête une prise) : SAVE avant pour le garder.
+function poseInterrompre(){
+  if(POSE.visible || POSE.actif) poseEffacer();
 }

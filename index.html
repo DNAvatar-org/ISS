@@ -12,9 +12,9 @@
 <canvas id="gl"></canvas>
 <canvas id="pose"></canvas>
 <img id="photoVue" alt="Photo de 30 s" hidden>
-<div id="galerie" hidden></div>
 
 <div id="erreur" hidden></div>
+<button id="bZen" title="Plein écran sans fenêtres (Échap ou re-clic pour revenir)">⛶</button>
 
 <aside id="hud">
   <section id="temps">
@@ -27,10 +27,13 @@
       <option value="12"></option><option value="13"></option>
     </datalist>
     <div class="row"><label for="sDate" title="La date règle la position du Soleil ET l'orientation du plan de l'orbite : β en découle.">Date</label><output id="oDate"></output><output id="oTheta" title="Position de l'ISS sur son orbite"></output></div>
-    <input type="range" id="sDate" min="0" max="365" step="0.05">
-    <input type="range" id="sTheta" min="0" max="360" step="0.5" value="0" title="Position de l'ISS sur son orbite">
+    <div class="double-jauge">
+      <input type="range" id="sDate" min="0" max="365" step="0.05" title="Date (jour de l'année)">
+      <input type="range" id="sTheta" min="0" max="360" step="0.5" value="0" title="Position de l'ISS sur son orbite">
+    </div>
     <div class="btns">
-      <button id="bDebutNuit">⇥ Début de la nuit</button>
+      <button id="bDebutNuit" class="b-ico" title="Coucher de Soleil : aller à l'entrée dans l'ombre (début de la nuit)"><svg class="ico" viewBox="0 0 24 18" aria-hidden="true"><circle cx="12" cy="11.5" r="4.4" fill="#ff4a2a"/><path d="M0 12.5 Q12 9 24 12.5 L24 18 L0 18 Z" fill="#2f6bff"/><path d="M12 0.6 V5.4 M9.6 3.2 L12 5.6 L14.4 3.2" stroke="#ffd24a" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button id="bLever" class="b-ico" title="Lever de Soleil : vue ISS braquée sur le Soleil, 45 s avant la sortie de l'ombre, au ralenti"><svg class="ico" viewBox="0 0 24 18" aria-hidden="true"><circle cx="12" cy="11.5" r="4.4" fill="#ff4a2a"/><path d="M0 12.5 Q12 9 24 12.5 L24 18 L0 18 Z" fill="#2f6bff"/><path d="M12 5.6 V0.8 M9.6 3.0 L12 0.6 L14.4 3.0" stroke="#ffd24a" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <select id="sEcl" title="Aller au maximum d'une éclipse de 2021">
         <option value="">Éclipses 2021…</option>
         <option value="145.4713|lune">26 mai — Lune, totale</option>
@@ -38,21 +41,10 @@
         <option value="322.3770|lune">19 nov. — Lune, partielle 97 %</option>
         <option value="337.3149|soleil">4 déc. — Soleil, totale</option>
       </select>
-      <button id="bLever" title="Vue ISS braquée sur le Soleil, 45 s avant la sortie de l'ombre, au ralenti">☀ Lever de Soleil</button>
     </div>
   </section>
-  <div class="ligne"><span>Temps simulé</span><b id="hTemps">T+00:00:00</b></div>
-  <div class="ligne"><span>Orbite n°</span><b id="hOrbite">1</b></div>
-  <div class="ligne"><span title="Angle Soleil / plan orbital">β</span><b id="hBeta"></b></div>
-  <div class="ligne" id="hEclLigne" hidden><span>Éclipse</span><b id="hEcl"></b></div>
   <div class="ligne"><span>Lune</span><b><span id="hLune"></span> <canvas id="hLuneIco" width="36" height="36" title="Phase"></canvas></b></div>
-  <div id="hEtat" class="jour">JOUR</div>
-  <div id="hChrono">--:--</div>
-  <div id="hSous"></div>
-  <div class="barre"><i id="hBarre"></i></div>
-  <div id="hAngles"></div>
-  <div id="hPose" hidden></div>
-  <div id="hTuiles"></div>
+  <div id="galerie" hidden></div>
 </aside>
 
 <aside id="panel">
@@ -80,13 +72,11 @@
   </section>
 
   <section class="grp">
-    <h2>Pose longue (empilement de photos)</h2>
+    <h2>Pose 30 s</h2>
     <div class="btns">
-      <button id="bPose" title="REC obturateur ouvert : une image de 30 s par tranche de 30 s, empilées (pixel le plus clair). En pause rien ne s'accumule. Arrêt au 2e clic ou à la sortie de l'ombre.">▶ Enregistrer la nuit</button>
-    </div>
-    <div class="btns">
-      <button id="bPoseSave">Enregistrer l'empilement (PNG)</button>
-      <button id="bPoseOff">Effacer</button>
+      <button id="bPose" title="REC obturateur ouvert : une image de 30 s par tranche de 30 s, empilées (pixel le plus clair). En pause rien ne s'accumule. Arrêt au 2e clic ou à la sortie de l'ombre.">⏺️</button>
+      <button id="bPoseSave" title="Enregistrer l'empilement (PNG)">💾</button>
+      <button id="bPoseOff" title="Effacer l'empilement et les photos">🗑️</button>
     </div>
   </section>
 
@@ -94,15 +84,17 @@
     <a href="https://s2maps.eu" target="_blank" rel="noopener">Sentinel-2 cloudless – https://s2maps.eu</a> by EOX IT Services GmbH
     (Contains modified Copernicus Sentinel data 2024), <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> ·
     Lune : NASA (via three.js) · Code © 2026 DNAvatar.org, <a href="LICENSE" target="_blank">Apache 2.0 + Commons Clause</a></p>
-
-  <details class="grp">
-    <summary>Ce qu'il faut voir</summary>
-    <p><b>Une seule rotation :</b> celle de l'ISS. Elle garde le ventre vers la Terre (synchrone, comme la Lune), donc elle tourne une fois par orbite (92,7 min, 3,9°/min) autour de la <b>normale orbitale</b>. Pour la caméra, tout l'extérieur tourne en bloc autour de cet axe.</p>
-    <p><b style="color:var(--c1)">Étoiles</b> : à l'infini, elles décrivent des cercles centrés sur le <b>pôle orbital</b> (la direction de l'axe), pas sur le pôle de la Terre.</p>
-    <p><b style="color:var(--c2)">Terre</b> : même rotation, mais son centre est à 90° de l'axe de visée, juste sous l'ISS. Ses points décrivent des cercles autour de l'axe vus presque de profil : un défilement parallèle à l'horizon, à la même vitesse angulaire que les étoiles.</p>
-    <p>La rotation propre de la Terre (0,25°/min, 7,5° en 30 min) ne fait que décaler un peu la trace au sol d'une orbite à l'autre.</p>
-  </details>
 </aside>
+
+<footer id="pied">
+  <div class="signature" data-tipeee-footer-inject data-signature-compact-below="440">
+    <script src="https://dnavatar.org/pages/logo-nonA/DNAvatar_signature.js"></script>
+  </div>
+  <a class="git" href="https://github.com/DNAvatar-org/ISS" target="_blank" rel="noopener noreferrer" title="Code source sur GitHub">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    DNAvatar-org/ISS
+  </a>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="js/config.js"></script>
@@ -123,7 +115,6 @@
 <script src="js/joystick-fond.js"></script>
 <script src="js/joystick.js"></script>
 <script src="js/pose.js"></script>
-<script src="js/horloge.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/entrees.js"></script>
 <script src="js/main.js"></script>

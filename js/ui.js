@@ -57,7 +57,6 @@ function majDateUI(){
   $('sDate').max = (Date.UTC(an + 1, 0, 1) - Date.UTC(an, 0, 1))/86400000;
   $('sDate').value = j - debut;
   $('oDate').textContent = libelleDate(j);
-  H.beta.textContent = (ETAT.beta/DEG).toFixed(1) + '°';
   H.lune.textContent = ETAT.lune.croissante ? 'croissante' : 'décroissante';
   dessinerPhase($('hLuneIco'), ETAT.lune.illum, ETAT.lune.croissante);
 }
@@ -85,11 +84,12 @@ function creerUI(){
     majJaugeVitesse();
   };
 
-  $('sTheta').oninput = e => { ETAT.t = themeToT(+e.target.value); };
-  $('bDebutNuit').onclick = () => { const k = cycleNuit(ETAT.t).k; ETAT.t = tEntree(k + (cycleNuit(ETAT.t).nuit ? 0 : 1)); };
+  $('sTheta').oninput = e => { poseInterrompre(); ETAT.t = themeToT(+e.target.value); };
+  $('bDebutNuit').onclick = () => { poseInterrompre(); const k = cycleNuit(ETAT.t).k; ETAT.t = tEntree(k + (cycleNuit(ETAT.t).nuit ? 0 : 1)); };
 
   // lever de Soleil : vue ISS braquée sur le Soleil juste avant la sortie de l'ombre, au ralenti
   $('bLever').onclick = () => {
+    poseInterrompre();
     const c = cycleNuit(ETAT.t), k = c.nuit ? c.k : c.k + 1;
     ETAT.t = tEntree(k) + dureeNuit() - 45;
     ETAT.vue = 'iss'; choisirPreset('soleil');
@@ -101,7 +101,7 @@ function creerUI(){
   $('sEcl').onchange = e => {
     if(!e.target.value) return;
     const [j, type] = e.target.value.split('|');
-    poseEffacer();
+    poseInterrompre();
     ETAT.date0 = +j - ETAT.t/86400; majSoleilDate();
     if(type === 'soleil'){
       ETAT.vue = 'ext'; VUE_EXT.mode = 'terre'; VUE_EXT.r = 230;
@@ -112,13 +112,14 @@ function creerUI(){
     e.target.value = ''; majBoutons();
   };
   // glisser la date : on ne touche pas à t (la phase sur l'orbite reste) ; β en découle
-  $('sDate').oninput = e => { ETAT.date0 = ETAT.debutAnnee + +e.target.value - ETAT.t/86400; };
+  $('sDate').oninput = e => { poseInterrompre(); ETAT.date0 = ETAT.debutAnnee + +e.target.value - ETAT.t/86400; };
 
-  $('cOrbite').onchange  = e => ETAT.montrer.orbite = e.target.checked;
-  $('cReperes').onchange = e => ETAT.montrer.reperes = e.target.checked;
-  $('cTrace').onchange   = e => ETAT.montrer.trace = e.target.checked;
-  $('cCone').onchange    = e => ETAT.montrer.cone = e.target.checked;
+  $('cOrbite').onchange = e => { poseInterrompre(); ETAT.montrer.orbite = e.target.checked; };
+  $('cReperes').onchange = e => { poseInterrompre(); ETAT.montrer.reperes = e.target.checked; };
+  $('cTrace').onchange = e => { poseInterrompre(); ETAT.montrer.trace = e.target.checked; };
+  $('cCone').onchange = e => { poseInterrompre(); ETAT.montrer.cone = e.target.checked; };
 
+  $('bZen').onclick = basculerZen;
   bPose.onclick = () => { poseLancer(); majBoutons(); };
   $('bPoseSave').onclick = poseEnregistrerPNG;
   $('bPoseOff').onclick = poseEffacer;
@@ -154,3 +155,15 @@ function dessinerPhase(cv, illum, croissante){
   c.fill();
   c.strokeStyle = 'rgba(255,255,255,.25)'; c.lineWidth = 1; c.beginPath(); c.arc(x0, y0, r, 0, 2*Math.PI); c.stroke();
 }
+
+/* Un seul bouton : masque les fenêtres ET passe en plein écran (F11), ou revient. Échap (sortie du plein écran par le
+   navigateur) rétablit aussi les fenêtres. Sans API plein écran (iframe…), il masque seulement les fenêtres. */
+function basculerZen(){
+  const zen = !document.body.classList.contains('zen');
+  document.body.classList.toggle('zen', zen);
+  if(zen && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+  if(!zen && document.fullscreenElement) document.exitFullscreen();
+}
+document.addEventListener('fullscreenchange', () => {
+  if(!document.fullscreenElement) document.body.classList.remove('zen');
+});

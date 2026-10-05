@@ -6,9 +6,9 @@
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
 let drag = null;
-const surUI = e => e.target.closest('#panel, #hud');
+const surUI = e => e.target.closest('#panel, #hud, #bZen');
 
-addEventListener('pointerdown', e => { if(surUI(e)) return; drag = {x:e.clientX, y:e.clientY}; });
+addEventListener('pointerdown', e => { if(surUI(e)) return; poseInterrompre(); drag = {x:e.clientX, y:e.clientY}; });
 addEventListener('pointerup', () => { drag = null; });
 addEventListener('pointermove', e => {
   if(!drag) return;
@@ -23,6 +23,7 @@ addEventListener('pointermove', e => {
 });
 addEventListener('wheel', e => {
   if(surUI(e)) return;
+  poseInterrompre();
   const f = 1 + Math.sign(e.deltaY)*0.1;
   if(ETAT.vue === 'ext'){
     const lune = VUE_EXT.mode === 'lune';       // en vue Terre–Lune on reste dans la voûte (rayon 9 000)

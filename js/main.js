@@ -75,7 +75,7 @@ function boucle(ms){
     ETAT.t += dtSim; majScene(); dessiner();
   }
   if(ms - TUILES.derniere > GIBS.periode){ TUILES.derniere = ms; majTuiles(); }
-  majHorloge(); majVisee(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms);
+  majBoutonRec(); majVisee(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms);
 }
 
 function demarrer(){

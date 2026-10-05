@@ -44,10 +44,6 @@
       "dest": "pages/ISS/js/entrees.js"
     },
     {
-      "src": "js/horloge.js",
-      "dest": "pages/ISS/js/horloge.js"
-    },
-    {
       "src": "js/iss.js",
       "dest": "pages/ISS/js/iss.js"
     },

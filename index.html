@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<!-- Copyright 2026 DNAvatar.org - Arnaud Maignan · Licensed under Apache License 2.0 with Commons Clause. See LICENSE. -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ISS — cercles d'étoiles et traînées de Terre</title>
+<meta name="description" content="Simulation 3D (Three.js) d'un passage de nuit de l'ISS : pourquoi les étoiles dessinent des cercles centrés sur le pôle orbital, et la Terre des traînées parallèles à l'horizon.">
+<link rel="stylesheet" href="css/pesquet.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="pose"></canvas>
+<img id="photoVue" alt="Photo de 30 s" hidden>
+<div id="galerie" hidden></div>
+
+<div id="erreur" hidden></div>
+
+<aside id="hud">
+  <section id="temps">
+    <h2>Temps</h2>
+    <div class="row ligne-jauge"><label for="sVit" title="Vitesse de défilement. 0 = pause. Crans logarithmiques.">Vit.</label><input type="range" id="sVit" min="0" max="13" step="1" value="6" list="crans"><output id="oVit"></output></div>
+    <datalist id="crans">
+      <option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option>
+      <option value="4"></option><option value="5"></option><option value="6"></option><option value="7"></option>
+      <option value="8"></option><option value="9"></option><option value="10"></option><option value="11"></option>
+      <option value="12"></option><option value="13"></option>
+    </datalist>
+    <div class="row"><label for="sDate" title="La date règle la position du Soleil ET l'orientation du plan de l'orbite : β en découle.">Date</label><output id="oDate"></output><output id="oTheta" title="Position de l'ISS sur son orbite"></output></div>
+    <input type="range" id="sDate" min="0" max="365" step="0.05">
+    <input type="range" id="sTheta" min="0" max="360" step="0.5" value="0" title="Position de l'ISS sur son orbite">
+    <div class="btns">
+      <button id="bDebutNuit">⇥ Début de la nuit</button>
+      <select id="sEcl" title="Aller au maximum d'une éclipse de 2021">
+        <option value="">Éclipses 2021…</option>
+        <option value="145.4713|lune">26 mai — Lune, totale</option>
+        <option value="160.4458|soleil">10 juin — Soleil, annulaire</option>
+        <option value="322.3770|lune">19 nov. — Lune, partielle 97 %</option>
+        <option value="337.3149|soleil">4 déc. — Soleil, totale</option>
+      </select>
+      <button id="bLever" title="Vue ISS braquée sur le Soleil, 45 s avant la sortie de l'ombre, au ralenti">☀ Lever de Soleil</button>
+    </div>
+  </section>
+  <div class="ligne"><span>Temps simulé</span><b id="hTemps">T+00:00:00</b></div>
+  <div class="ligne"><span>Orbite n°</span><b id="hOrbite">1</b></div>
+  <div class="ligne"><span title="Angle Soleil / plan orbital">β</span><b id="hBeta"></b></div>
+  <div class="ligne" id="hEclLigne" hidden><span>Éclipse</span><b id="hEcl"></b></div>
+  <div class="ligne"><span>Lune</span><b><span id="hLune"></span> <canvas id="hLuneIco" width="36" height="36" title="Phase"></canvas></b></div>
+  <div id="hEtat" class="jour">JOUR</div>
+  <div id="hChrono">--:--</div>
+  <div id="hSous"></div>
+  <div class="barre"><i id="hBarre"></i></div>
+  <div id="hAngles"></div>
+  <div id="hPose" hidden></div>
+  <div id="hTuiles"></div>
+</aside>
+
+<aside id="panel">
+  <section class="grp">
+    <h2>Point de vue</h2>
+    <div class="btns">
+      <button data-vue="iss" id="bVueIss" class="on" title="Caméra embarquée ; la flèche indique la visée choisie">ISS → Pôle</button>
+      <button data-vue="ext" title="Vue éloignée, centrée sur la Terre">Terre</button>
+      <button data-vue="lune" title="Terre et Lune de profil, à l'échelle, avec l'orbite de la Lune">☾ Terre–Lune</button>
+    </div>
+    <div id="viseeIss">
+      <div id="joyWrap">
+        <canvas id="joy" title="Centre = Terre (nadir), bord = zénith. Glisser : viser. Clic sur un repère. Molette : zoom."></canvas>
+      </div>
+      <div class="row"><label>Focale</label><output id="oFoc"></output></div>
+    </div>
+  </section>
+
+  <section class="grp">
+    <h2>Affichage</h2>
+    <label class="sw"><input type="checkbox" id="cOrbite"><span>Orbite</span> <span class="t-nuit">nuit</span> <span class="t-jour">jour</span></label>
+    <label class="sw"><input type="checkbox" id="cReperes"><span>Axes et pôles (orbite / Terre)</span></label>
+    <label class="sw"><input type="checkbox" id="cTrace"><span class="t-marron">Trace au sol</span></label>
+    <label class="sw"><input type="checkbox" id="cCone"><span class="t-cone">Cône d'ouverture de la caméra</span></label>
+  </section>
+
+  <section class="grp">
+    <h2>Pose longue (empilement de photos)</h2>
+    <div class="btns">
+      <button id="bPose" title="REC obturateur ouvert : une image de 30 s par tranche de 30 s, empilées (pixel le plus clair). En pause rien ne s'accumule. Arrêt au 2e clic ou à la sortie de l'ombre.">▶ Enregistrer la nuit</button>
+    </div>
+    <div class="btns">
+      <button id="bPoseSave">Enregistrer l'empilement (PNG)</button>
+      <button id="bPoseOff">Effacer</button>
+    </div>
+  </section>
+
+  <p class="aide credit">Imagerie : NASA GIBS (Blue Marble Next Generation, VIIRS City Lights 2012) ·
+    <a href="https://s2maps.eu" target="_blank" rel="noopener">Sentinel-2 cloudless – https://s2maps.eu</a> by EOX IT Services GmbH
+    (Contains modified Copernicus Sentinel data 2024), <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> ·
+    Lune : NASA (via three.js) · Code © 2026 DNAvatar.org, <a href="LICENSE" target="_blank">Apache 2.0 + Commons Clause</a></p>
+
+  <details class="grp">
+    <summary>Ce qu'il faut voir</summary>
+    <p><b>Une seule rotation :</b> celle de l'ISS. Elle garde le ventre vers la Terre (synchrone, comme la Lune), donc elle tourne une fois par orbite (92,7 min, 3,9°/min) autour de la <b>normale orbitale</b>. Pour la caméra, tout l'extérieur tourne en bloc autour de cet axe.</p>
+    <p><b style="color:var(--c1)">Étoiles</b> : à l'infini, elles décrivent des cercles centrés sur le <b>pôle orbital</b> (la direction de l'axe), pas sur le pôle de la Terre.</p>
+    <p><b style="color:var(--c2)">Terre</b> : même rotation, mais son centre est à 90° de l'axe de visée, juste sous l'ISS. Ses points décrivent des cercles autour de l'axe vus presque de profil : un défilement parallèle à l'horizon, à la même vitesse angulaire que les étoiles.</p>
+    <p>La rotation propre de la Terre (0,25°/min, 7,5° en 30 min) ne fait que décaler un peu la trace au sol d'une orbite à l'autre.</p>
+  </details>
+</aside>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/cartes-data.js"></script>
+<script src="js/dom.js"></script>
+<script src="js/orbite.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/ciel.js"></script>
+<script src="js/soleil.js"></script>
+<script src="js/lune.js"></script>
+<script src="js/terre.js"></script>
+<script src="js/tuiles-rendu.js"></script>
+<script src="js/tuiles.js"></script>
+<script src="js/iss.js"></script>
+<script src="js/reperes.js"></script>
+<script src="js/cameras.js"></script>
+<script src="js/cone.js"></script>
+<script src="js/joystick-fond.js"></script>
+<script src="js/joystick.js"></script>
+<script src="js/pose.js"></script>
+<script src="js/horloge.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/entrees.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+{
+  "_layout": "Publication par l'utilisateur seul : depuis site/Pesquet, `publish --full` (1re fois) puis `publish`. Endpoint et jeton hors dépôt (~/.dnavatar/). Les cartes JPG ne sont pas publiées : elles sont embarquées dans js/cartes-data.js.",
+  "git_root": ".",
+  "files_root": ".",
+  "files": [
+    {
+      "src": "index.html",
+      "dest": "pages/ISS/index.html"
+    },
+    {
+      "src": "css/pesquet.css",
+      "dest": "pages/ISS/css/pesquet.css"
+    },
+    {
+      "src": "LICENSE",
+      "dest": "pages/ISS/LICENSE"
+    },
+    {
+      "src": "js/cameras.js",
+      "dest": "pages/ISS/js/cameras.js"
+    },
+    {
+      "src": "js/cartes-data.js",
+      "dest": "pages/ISS/js/cartes-data.js"
+    },
+    {
+      "src": "js/ciel.js",
+      "dest": "pages/ISS/js/ciel.js"
+    },
+    {
+      "src": "js/cone.js",
+      "dest": "pages/ISS/js/cone.js"
+    },
+    {
+      "src": "js/config.js",
+      "dest": "pages/ISS/js/config.js"
+    },
+    {
+      "src": "js/dom.js",
+      "dest": "pages/ISS/js/dom.js"
+    },
+    {
+      "src": "js/entrees.js",
+      "dest": "pages/ISS/js/entrees.js"
+    },
+    {
+      "src": "js/horloge.js",
+      "dest": "pages/ISS/js/horloge.js"
+    },
+    {
+      "src": "js/iss.js",
+      "dest": "pages/ISS/js/iss.js"
+    },
+    {
+      "src": "js/joystick-fond.js",
+      "dest": "pages/ISS/js/joystick-fond.js"
+    },
+    {
+      "src": "js/joystick.js",
+      "dest": "pages/ISS/js/joystick.js"
+    },
+    {
+      "src": "js/lune.js",
+      "dest": "pages/ISS/js/lune.js"
+    },
+    {
+      "src": "js/main.js",
+      "dest": "pages/ISS/js/main.js"
+    },
+    {
+      "src": "js/orbite.js",
+      "dest": "pages/ISS/js/orbite.js"
+    },
+    {
+      "src": "js/pose.js",
+      "dest": "pages/ISS/js/pose.js"
+    },
+    {
+      "src": "js/reperes.js",
+      "dest": "pages/ISS/js/reperes.js"
+    },
+    {
+      "src": "js/scene.js",
+      "dest": "pages/ISS/js/scene.js"
+    },
+    {
+      "src": "js/soleil.js",
+      "dest": "pages/ISS/js/soleil.js"
+    },
+    {
+      "src": "js/terre.js",
+      "dest": "pages/ISS/js/terre.js"
+    },
+    {
+      "src": "js/tuiles-rendu.js",
+      "dest": "pages/ISS/js/tuiles-rendu.js"
+    },
+    {
+      "src": "js/tuiles.js",
+      "dest": "pages/ISS/js/tuiles.js"
+    },
+    {
+      "src": "js/ui.js",
+      "dest": "pages/ISS/js/ui.js"
+    }
+  ]
+}

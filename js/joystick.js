@@ -14,14 +14,15 @@ JOY.cv.width = JOY.cv.height = 2*JOY.R;
 
 const JOY_REPERES = [
   {nom:'pole',    court:'Pôle',   titre:'Pôle (photo) : pôle orbital côté nuit, la Terre en bas'},
-  {nom:'poleSol', court:'Pôle ☀', titre:'Pôle orbital côté Soleil'},
+  {nom:'poleSol', court:'',       titre:'Pôle orbital côté Soleil'},
   {nom:'nadir',   court:'',       titre:'Terre (nadir) : droit vers le bas, puis zoomer pour le détail'},
   {nom:'oblique', court:'Obl.',   titre:'Terre oblique : vers l\'avant et le bas, que de la Terre'},
   {nom:'avant',   court:'Avant',  titre:'Avant : vers l\'horizon, dans le sens du vol'},
-  {nom:'soleil',  court:'☀',      titre:'Soleil : la visée le suit'},
-  {nom:'lune',    court:'☾',      titre:'Lune : la visée la suit'}
+  {nom:'soleil',  court:'',       titre:'Soleil : la visée le suit'},
+  {nom:'lune',    court:'',       titre:'Lune : la visée la suit'}
 ];
 
+const REP_PHASE = {}; JOY_REPERES.forEach((rp, i) => REP_PHASE[rp.nom] = i*0.37);
 const _jd = new THREE.Vector3(), _jf = new THREE.Vector3(), _ju = new THREE.Vector3(), _jr = new THREE.Vector3(), _jp = new THREE.Vector3();
 
 // (ρ = angle depuis le nadir, ψ = cap) → pixel du disque ; centre = nadir, haut = sens du vol, gauche = +Y.
@@ -83,7 +84,17 @@ function dessinerJoystick(ms){
   // repères (anciens boutons)
   for(const rp of JOY_REPERES){
     const [x, y] = reperePos(rp.nom), actif = ETAT.preset === rp.nom;
-    c.beginPath(); c.arc(x, y, actif ? 5 : 3.5, 0, 2*Math.PI);
+    // invitation au clic : onde qui se propage depuis chaque point non choisi ; au survol, anneau net et point agrandi
+    const surv = JOY.survol === rp.nom;
+    if(!actif){
+      const ph = ((ms/1400) + REP_PHASE[rp.nom]) % 1;
+      c.beginPath(); c.arc(x, y, 4 + ph*8, 0, 2*Math.PI);
+      c.lineWidth = 1.5; c.strokeStyle = 'rgba(255,255,255,' + (0.7*(1 - ph)).toFixed(3) + ')'; c.stroke();
+    }
+    if(surv){
+      c.beginPath(); c.arc(x, y, 8, 0, 2*Math.PI); c.lineWidth = 2; c.strokeStyle = '#ffd24a'; c.stroke();
+    }
+    c.beginPath(); c.arc(x, y, actif ? 5 : surv ? 5.5 : 3.5, 0, 2*Math.PI);
     c.fillStyle = rp.nom === 'soleil' ? '#ffd24a' : rp.nom === 'lune' ? '#d8dde6' : (actif ? '#ffffff' : 'rgba(255,255,255,.75)'); c.fill();
     c.lineWidth = 1; c.strokeStyle = 'rgba(0,0,0,.7)'; c.stroke();
     if(rp.court){
@@ -131,13 +142,15 @@ function creerJoystick(){
     const [x, y] = joyPointeur(ev);
     if(JOY.drag){ joyViser(x, y); return; }
     const rp = joyRepereSous(x, y);
+    JOY.survol = rp ? rp.nom : null;
     JOY.cv.style.cursor = rp ? 'pointer' : 'crosshair';
     JOY.cv.title = rp ? rp.titre : 'Glisser : viser. Molette : focale (zoom).';
   });
+  JOY.cv.addEventListener('pointerleave', () => { JOY.survol = null; });
   JOY.cv.addEventListener('pointerup', () => { JOY.drag = false; });
   // survol + molette = focale : on zoome sans quitter le joystick
   JOY.cv.addEventListener('wheel', ev => {
     ev.preventDefault(); poseInterrompre();
-    VUE_ISS.fov = Math.max(0.5, Math.min(110, VUE_ISS.fov*(1 + Math.sign(ev.deltaY)*0.1)));
+    VUE_ISS.fov = Math.max(0.5, Math.min(FOV_MAX, VUE_ISS.fov*(1 + Math.sign(ev.deltaY)*0.1)));
   }, {passive:false});
 }

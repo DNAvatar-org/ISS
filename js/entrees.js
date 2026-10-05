@@ -29,7 +29,7 @@ addEventListener('wheel', e => {
     const lune = VUE_EXT.mode === 'lune';       // en vue Terre–Lune on reste dans la voûte (rayon 9 000)
     VUE_EXT.r = Math.max(lune ? 1500 : CFG.R*1.2, Math.min(lune ? 6000 : 3000, VUE_EXT.r*f));
   }
-  else VUE_ISS.fov = Math.max(0.5, Math.min(110, VUE_ISS.fov*f));
+  else VUE_ISS.fov = Math.max(0.5, Math.min(FOV_MAX, VUE_ISS.fov*f));
 }, {passive:true});
 // Espace : pause / reprise
 addEventListener('keydown', e => {

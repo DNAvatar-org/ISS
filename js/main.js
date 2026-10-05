@@ -43,6 +43,10 @@ function majScene(){
   TERRE.trace.visible = m.trace;
   REP.lignes.forEach(l => l.visible = m.reperes && !iss);
   REP.pastilles.forEach(p => p.visible = m.reperes && iss);
+  // taille apparente constante quel que soit le zoom (sinon, à 2° de champ, la pastille déborde de l'écran)
+  const kz = Math.tan(VUE_ISS.fov*DEG/2)/Math.tan(30*DEG);
+  REP.pastilles.forEach(p => p.scale.set(1400*kz, 350*kz, 1));
+  REP.lune.scale.set(1400*kz, 350*kz, 1);
   REP.lune.visible = m.reperes && iss;
   SOL.groupe.visible = true;
 
@@ -73,6 +77,11 @@ function boucle(ms){
     }
   }else{
     ETAT.t += dtSim; majScene(); dessiner();
+  }
+  // drapeau « +1 an seulement » : la date ne dépasse pas la fin de l'année suivant 2021 (le temps s'arrête au 31 déc. 2022)
+  if(CFG.PLUS_1_AN_SEUL && jourDate() >= CFG.JOUR_MAX){
+    ETAT.t -= (jourDate() - CFG.JOUR_MAX + 1/86400)*86400;   
+    ETAT.pause = true;                                       // arrêt à 23:59:59 le 31 déc.
   }
   if(ms - TUILES.derniere > GIBS.periode){ TUILES.derniere = ms; majTuiles(); }
   majBoutonRec(); majVisee(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms);

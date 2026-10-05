@@ -21,6 +21,8 @@ const CFG = {
   LUNE_D: 3844,             // distance moyenne de la Lune (384 400 km) : cadrage Terre–Lune, cercle d'orbite
   R_LUNE: 17.374,           // rayon de la Lune (1 737 km) = 0,27 rayon terrestre
   JOUR_REF: 169,            // 19 juin 2021 (jours depuis le 1er janv. 2021) : date du tweet, β calé à 49°
+  PLUS_1_AN_SEUL: true,     // drapeau : la date ne dépasse pas la fin de 2022 (2021 + 1 an) ; false = années illimitées
+  JOUR_MAX: 730,            // 1er janv. 2023 (jours depuis le 1er janv. 2021) : borne du drapeau ci-dessus
   DEPHASAGE_REF: 135*DEG,   // Ω − α à la date de référence (l'une des deux solutions donnant β = 49°)
   DERIVE_NOEUD: -5.0*DEG    // régression du nœud de l'ISS (rad/jour)
 };

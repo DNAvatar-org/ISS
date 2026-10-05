@@ -33,10 +33,23 @@ function majVisee(){
   $('viseeIss').hidden = ETAT.vue !== 'iss';
 }
 
+// Cases « Affichage » : vue Terre seulement, toutes cochées ; ISS et Terre–Lune : toutes décochées et masquées.
+let vuePrec = null;
+function majAffichage(v){
+  $('affichageTerre').hidden = v !== 'ext';
+  if(v === vuePrec) return;
+  vuePrec = v;
+  const on = v === 'ext';
+  for(const [id, k] of [['cOrbite','orbite'], ['cReperes','reperes'], ['cTrace','trace'], ['cCone','cone']]){
+    $(id).checked = on; ETAT.montrer[k] = on;
+  }
+}
+
 function majBoutons(){
   majVisee();
   const v = ETAT.vue === 'iss' ? 'iss' : (VUE_EXT.mode === 'lune' ? 'lune' : 'ext');
   marquer('[data-vue]', b => b.dataset.vue === v);
+  majAffichage(v);
   majJaugeVitesse();
 }
 
@@ -54,7 +67,7 @@ function majDateUI(){
   const an = new Date(Date.UTC(2021, 0, 1) + j*86400000).getUTCFullYear();
   const debut = (Date.UTC(an, 0, 1) - Date.UTC(2021, 0, 1))/86400000;
   ETAT.debutAnnee = debut;
-  $('sDate').max = (Date.UTC(an + 1, 0, 1) - Date.UTC(an, 0, 1))/86400000;
+  $('sDate').max = (Date.UTC(an + 1, 0, 1) - Date.UTC(an, 0, 1))/86400000 - 1/1440;   // droite toute = 31 déc. 23:59 : on y reste
   $('sDate').value = j - debut;
   $('oDate').textContent = libelleDate(j);
   H.lune.textContent = ETAT.lune.croissante ? 'croissante' : 'décroissante';
@@ -85,7 +98,14 @@ function creerUI(){
   };
 
   $('sTheta').oninput = e => { poseInterrompre(); ETAT.t = themeToT(+e.target.value); };
-  $('bDebutNuit').onclick = () => { poseInterrompre(); const k = cycleNuit(ETAT.t).k; ETAT.t = tEntree(k + (cycleNuit(ETAT.t).nuit ? 0 : 1)); };
+  // coucher de Soleil : vue ISS braquée sur le Soleil encore visible, 45 s avant l'entrée dans l'ombre, au ralenti
+  $('bDebutNuit').onclick = () => {
+    poseInterrompre();
+    ETAT.t = tEntree(cycleNuit(ETAT.t).k + 1) - 45;
+    ETAT.vue = 'iss'; choisirPreset('soleil');
+    VUE_ISS.decal = -10*DEG; VUE_ISS.fov = 45;           // le Soleil un peu au-dessus du centre, l'horizon dessous
+    ETAT.vitesse = 10; ETAT.pause = false; majBoutons();
+  };
 
   // lever de Soleil : vue ISS braquée sur le Soleil juste avant la sortie de l'ombre, au ralenti
   $('bLever').onclick = () => {
@@ -96,23 +116,36 @@ function creerUI(){
     VUE_ISS.decal = -10*DEG; VUE_ISS.fov = 45;           // le Soleil un peu au-dessus du centre, l'horizon dessous
     ETAT.vitesse = 10; ETAT.pause = false; majBoutons();
   };
-  // éclipses 2021 (instants du maximum, UT) : Soleil → vue éloignée côté Soleil, on voit l'ombre de la Lune sur la Terre ;
-  // Lune → vue ISS au téléobjectif sur la Lune
+  // éclipses 2021 (instants du maximum, UT) : toujours la vue ISS au téléobjectif, braquée sur la Lune
   $('sEcl').onchange = e => {
     if(!e.target.value) return;
-    const [j, type] = e.target.value.split('|');
+    const j = e.target.value.split('|')[0];
     poseInterrompre();
     ETAT.date0 = +j - ETAT.t/86400; majSoleilDate();
-    if(type === 'soleil'){
-      ETAT.vue = 'ext'; VUE_EXT.mode = 'terre'; VUE_EXT.r = 230;
-      VUE_EXT.th = Math.atan2(ETAT.S.x, ETAT.S.z); VUE_EXT.ph = Math.asin(ETAT.S.y);
-    }else{
-      ETAT.vue = 'iss'; choisirPreset('lune'); VUE_ISS.fov = 2;
-    }
+    ETAT.vue = 'iss'; choisirPreset('lune'); VUE_ISS.fov = 2;     // toute éclipse : vue ISS braquée sur la Lune
     e.target.value = ''; majBoutons();
   };
   // glisser la date : on ne touche pas à t (la phase sur l'orbite reste) ; β en découle
-  $('sDate').oninput = e => { poseInterrompre(); ETAT.date0 = ETAT.debutAnnee + +e.target.value - ETAT.t/86400; };
+  /* Jauge « compteur » : pousser au-delà du bord droit → 1er janv. de l'année suivante (jauge à gauche toute) ;
+     pousser au-delà du bord gauche → 31 déc. de l'année précédente (jauge à droite toute). Un seul pas par poussée :
+     tant que le pointeur reste dehors, la jauge ne lit plus la souris ; elle se réarme quand il revient dessus. */
+  const JD = {glisse:false, dehors:false};
+  $('sDate').addEventListener('pointerdown', () => { JD.glisse = true; JD.dehors = false; });
+  addEventListener('pointerup', () => { JD.glisse = false; JD.dehors = false; });
+  addEventListener('pointermove', e => {
+    if(!JD.glisse) return;
+    const b = $('sDate').getBoundingClientRect(), marge = 6;
+    const sens = e.clientX > b.right + marge ? 1 : e.clientX < b.left - marge ? -1 : 0;
+    if(sens === 0){ JD.dehors = false; return; }
+    if(JD.dehors) return;
+    const j = jourDate(), an = new Date(Date.UTC(2021, 0, 1) + j*86400000).getUTCFullYear();
+    const cible = sens > 0 ? (Date.UTC(an + 1, 0, 1) - Date.UTC(2021, 0, 1))/86400000
+                           : (Date.UTC(an, 0, 1) - Date.UTC(2021, 0, 1))/86400000 - 1/1440;
+    if(CFG.PLUS_1_AN_SEUL && (cible < 0 || cible >= CFG.JOUR_MAX)) return;     // bornes du drapeau : 2021 et 2022
+    JD.dehors = true; poseInterrompre();
+    ETAT.date0 = cible - ETAT.t/86400; majSoleilDate(); majDateUI();
+  });
+  $('sDate').oninput = e => { if(JD.dehors) return; poseInterrompre(); ETAT.date0 = ETAT.debutAnnee + +e.target.value - ETAT.t/86400; };
 
   $('cOrbite').onchange = e => { poseInterrompre(); ETAT.montrer.orbite = e.target.checked; };
   $('cReperes').onchange = e => { poseInterrompre(); ETAT.montrer.reperes = e.target.checked; };
@@ -136,7 +169,8 @@ function majCurseurFocale(){
 function majCurseurTheta(){
   const th = ((thetaISS(ETAT.t)/DEG) % 360 + 360) % 360;
   $('sTheta').value = th;
-  $('oTheta').textContent = th.toFixed(0) + '°';
+  const sec = Math.floor(((jourDate() % 1) + 1) % 1 * 86400), p2 = n => String(n).padStart(2, '0');   // heure de Greenwich (UT)
+  $('oTheta').textContent = p2(Math.floor(sec/3600)) + ':' + p2(Math.floor(sec/60) % 60) + ':' + p2(sec % 60);
 }
 
 /* Icône de phase, comme sur les calendriers (hémisphère nord) : la Lune croissante est éclairée à droite.

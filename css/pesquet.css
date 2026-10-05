@@ -125,7 +125,7 @@ button.rec{background:#2fb457;border-color:#2fb457;color:#06210f;font-weight:700
 .ligne-jauge label{flex:0 0 auto !important}
 .ligne-jauge input[type=range]{flex:1 1 auto;margin:0}
 .ligne-jauge output{width:62px !important}
-#oTheta{width:42px !important;margin-left:6px;color:var(--dim) !important}
+#oTheta{width:64px !important;font-variant-numeric:tabular-nums;margin-left:6px;color:var(--dim) !important}
 #hLuneIco{width:18px;height:18px;vertical-align:-4px}
 #hud .ligne b{display:inline-flex;align-items:center;gap:6px}
 select{font:inherit;font-size:11px;color:var(--txt);background:rgba(255,255,255,.07);border:1px solid var(--stroke);border-radius:7px;padding:4px 6px}
@@ -163,8 +163,8 @@ body.zen #panel, body.zen #hud, body.zen #galerie{display:none !important}
 .ico{width:24px;height:18px;display:block}
 #bPose,#bPoseSave,#bPoseOff{font-size:15px;padding:3px 10px}
 
-/* pied de page : signature nonoA + lien vers le dépôt git (bas gauche, le panneau s'arrête au-dessus) */
-#pied{position:fixed;left:12px;bottom:10px;z-index:2;display:flex;align-items:center;gap:12px;
+/* pied de page : signature nonoA + lien vers le dépôt git (bas, centré horizontalement) */
+#pied{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;white-space:nowrap;z-index:2;display:flex;align-items:center;gap:12px;
       padding:4px 10px;border-radius:10px;background:rgba(13,17,26,.6);border:1px solid var(--stroke)}
 #pied .git{display:inline-flex;align-items:center;gap:5px;color:var(--dim);font-size:11px;text-decoration:none}
 #pied .git:hover{color:var(--txt)}
@@ -180,3 +180,14 @@ body.zen #pied{display:none !important}
 #galerie button{font-size:11px;padding:0 6px}
 #photoVue{left:0;width:100%;height:100%;bottom:0}
 #galerie{max-height:calc(100vh - 330px);margin-top:8px;padding-top:8px;border-top:1px solid var(--stroke)}
+
+/* éclipses : le menu partage la ligne de coucher / lever de Soleil */
+#temps .btns{flex-wrap:nowrap;align-items:center}
+#temps .btns select{flex:1 1 0;min-width:0}
+
+/* imagerie et licences : encart séparé à droite, à gauche du bouton plein écran */
+#credits{position:fixed;right:12px;bottom:56px;width:300px;max-height:40%;overflow-y:auto;z-index:2;
+         padding:8px 10px;border-radius:10px;background:rgba(13,17,26,.6);border:1px solid var(--stroke)}
+#credits .credit{margin:0;font-size:10.5px!important}
+body.zen #credits{display:none !important}
+@media (max-width:760px){ #credits{display:none} }

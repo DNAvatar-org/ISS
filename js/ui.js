@@ -79,6 +79,17 @@ function jaugeCompteur(el, deborder){
   return J;
 }
 
+/* Petit écran : les crédits des cartes se posent AU-DESSUS de la signature quand l'encart Temps leur laisse la place
+   (priorité : ne rien superposer) ; sinon tout en bas, par-dessus la signature. Rappelé au redimensionnement. */
+function placerCredits(){
+  const c = $('credits');
+  c.style.bottom = '';                                             // retour à la CSS (bureau : déjà au-dessus du pied)
+  if(!matchMedia('(max-width:760px), (max-height:500px)').matches || getComputedStyle(c).display === 'none') return;   // (offsetParent vaut toujours null en position fixed)
+  const h = $('hud').getBoundingClientRect(), p = $('pied').getBoundingClientRect(), ch = c.getBoundingClientRect().height;
+  const bas = innerHeight - p.top + 4;                             // juste au-dessus de la signature
+  if(innerHeight - bas - ch >= h.bottom + 6) c.style.bottom = bas + 'px';
+}
+
 // Position θ du curseur : met à jour t en conservant le cycle courant.
 function themeToT(deg){
   const t0 = tTheta(0), base = t0 + Math.floor((ETAT.t - t0)/OBS.T)*OBS.T;     // début du cycle courant (θ = 0)
@@ -214,6 +225,9 @@ function creerUI(){
   addEventListener('pointerdown', e => { if(!e.target.closest('#lEcl, #bEcl')) ouvrirMenuEclipses(false); });
   addEventListener('keydown', e => { if(e.key === 'Escape') ouvrirMenuEclipses(false); });
   addEventListener('resize', () => ouvrirMenuEclipses(false));
+  addEventListener('resize', placerCredits);
+  new ResizeObserver(placerCredits).observe($('hud'));         // la hauteur de l'encart Temps change (galerie, vues)
+  placerCredits();
   // glisser la date : on ne touche pas à t (la phase sur l'orbite reste) ; β en découle.
   // Bord droit → 1er janv. de l'année suivante (jauge à gauche toute) ; bord gauche → 31 déc. de l'année précédente.
   const JD = jaugeCompteur($('sDate'), sens => {

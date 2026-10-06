@@ -91,6 +91,15 @@ function placerCredits(){
   document.documentElement.style.setProperty('--haut-credits', Math.round(innerHeight - c.getBoundingClientRect().top) + 'px');   // portrait : l'encart du bas s'arrête dessous
 }
 
+/* Filet de sécurité : si, sur CET appareil (polices, barre d'adresse…), l'encart de gauche déborde malgré les calculs de la CSS,
+   le joystick rétrécit de ce débordement (--joy-moins) plutôt que de faire apparaître une barre de défilement. */
+function ajusterPanneau(){
+  const p = $('panel'), r = document.documentElement.style;
+  r.setProperty('--joy-moins', '0px');
+  const trop = p.scrollHeight - p.clientHeight;
+  if(trop > 0 && $('viseeIss').offsetParent !== null) r.setProperty('--joy-moins', trop + 'px');
+}
+
 // Position θ du curseur : met à jour t en conservant le cycle courant.
 function themeToT(deg){
   const t0 = tTheta(0), base = t0 + Math.floor((ETAT.t - t0)/OBS.T)*OBS.T;     // début du cycle courant (θ = 0)
@@ -226,6 +235,9 @@ function creerUI(){
   addEventListener('keydown', e => { if(e.key === 'Escape') ouvrirMenuEclipses(false); });
   addEventListener('resize', () => ouvrirMenuEclipses(false));
   addEventListener('resize', placerCredits);
+  addEventListener('resize', ajusterPanneau);
+  new ResizeObserver(ajusterPanneau).observe($('panel'));
+  ajusterPanneau();
   new ResizeObserver(placerCredits).observe($('hud'));         // la hauteur de l'encart Temps change (galerie, vues)
   placerCredits();
   // glisser la date : on ne touche pas à t (la phase sur l'orbite reste) ; β en découle.

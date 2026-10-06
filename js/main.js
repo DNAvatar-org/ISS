@@ -1,7 +1,7 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
-// Version 1.0.0
-// Date: [October 05, 2026]
+// Version 1.0.1
+// Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -11,6 +11,7 @@ let dernier = 0;
 
 function redimensionner(){
   const w = innerWidth, h = innerHeight;
+  document.documentElement.style.setProperty('--alt', h + 'px');   // hauteur visible : 100vh dépasse l'écran sur mobile (barre d'adresse)
   renderer.setSize(w, h);
   camExt.aspect = camIss.aspect = w/h;
   camExt.updateProjectionMatrix();

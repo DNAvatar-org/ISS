@@ -112,7 +112,7 @@ button.rec{background:#2fb457;border-color:#2fb457;color:#06210f}
 
 /* joystick de visée */
 #joyWrap{display:flex;justify-content:center;margin:2px 0 6px}
-#joy{width:192px;height:192px;border-radius:50%;cursor:crosshair;user-select:none;touch-action:none;
+#joy{width:max(96px, calc(192px - var(--joy-moins, 0px)));height:max(96px, calc(192px - var(--joy-moins, 0px)));border-radius:50%;cursor:crosshair;user-select:none;touch-action:none;
      border:2px solid rgba(255,255,255,.25);box-shadow:inset 0 1px 4px rgba(0,0,0,.4)}
 @media (max-width:760px){ #hud{width:200px} }
 
@@ -194,7 +194,7 @@ body.zen #pied{display:none !important}
 #galerie img,#galerie button{height:34px;border-width:1px}
 #galerie button{font-size:11px;padding:0 6px}
 #photoVue{left:0;width:100%;height:100%;bottom:0}
-#galerie{max-height:calc(100vh - 330px);margin-top:8px;padding-top:8px;border-top:1px solid var(--stroke)}
+#galerie{max-height:calc(var(--alt, 100vh) - 330px);margin-top:8px;padding-top:8px;border-top:1px solid var(--stroke)}
 
 /* éclipses : le menu partage la ligne de coucher / lever de Soleil */
 #temps .btns{flex-wrap:nowrap;align-items:center}
@@ -245,8 +245,9 @@ body.zen #credits{display:none !important}
   #panel{top:8px;left:8px;right:auto;bottom:auto;width:min(300px, calc(50vw - 12px));max-height:calc(100% - 16px);padding:10px 12px 10px}
   /* le joystick prend TOUTE la hauteur que laisse le reste de l'encart (jusqu'en bas de l'écran, par-dessus la signature),
      borné par la largeur de l'encart ; --joy-reste = hauteur du reste de l'encart + marges (mesurée) */
+  /* --alt = hauteur VISIBLE (innerHeight, posée par main.js) : sur Android, 100vh ignore la barre d'adresse et dépasse l'écran */
   :root{--joy-max:calc(min(300px, 50vw - 12px) - 36px)}
-  #joy{width:clamp(96px, calc(100vh - var(--joy-reste)), var(--joy-max));height:clamp(96px, calc(100vh - var(--joy-reste)), var(--joy-max))}
+  #joy{width:max(96px, calc(clamp(96px, calc(var(--alt, 100vh) - var(--joy-reste)), var(--joy-max)) - var(--joy-moins, 0px)));height:max(96px, calc(clamp(96px, calc(var(--alt, 100vh) - var(--joy-reste)), var(--joy-max)) - var(--joy-moins, 0px)))}
   /* plus de titre « Point de vue » : les 3 satellites passent en colonne à droite des boutons de vue (une ligne de gagnée) */
   :root{--joy-reste:128px}             /* hauteur de tout le reste du panneau + marges (mesurée), moins le chevauchement */
   /* le joystick grossit et passe SOUS la rangée de boutons de vue (ses coins sont vides : c'est un disque) */

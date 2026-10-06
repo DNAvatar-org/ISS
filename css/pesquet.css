@@ -239,9 +239,12 @@ body.zen #credits{display:none !important}
 /* paysage bas : encarts en haut à gauche / à droite, crédits tout en bas à droite ; le pied, dessous, ne réserve rien */
 @media (max-height:500px) and (orientation:landscape){
   #panel{top:8px;left:8px;right:auto;bottom:auto;width:min(300px, calc(50vw - 12px));max-height:calc(100% - 16px);padding:10px 12px 10px}
-  #joy{width:clamp(96px, calc(100vh - var(--joy-reste)), 192px);height:clamp(96px, calc(100vh - var(--joy-reste)), 192px)}
+  /* le joystick prend TOUTE la hauteur que laisse le reste de l'encart (jusqu'en bas de l'écran, par-dessus la signature),
+     borné par la largeur de l'encart ; --joy-reste = hauteur du reste de l'encart + marges (mesurée) */
+  :root{--joy-max:calc(min(300px, 50vw - 12px) - 36px)}
+  #joy{width:clamp(96px, calc(100vh - var(--joy-reste)), var(--joy-max));height:clamp(96px, calc(100vh - var(--joy-reste)), var(--joy-max))}
   /* plus de titre « Point de vue » : les 3 satellites passent en colonne à droite des boutons de vue (une ligne de gagnée) */
-  :root{--joy-reste:136px}             /* hauteur de tout le reste du panneau + marges (mesurée), moins le chevauchement */
+  :root{--joy-reste:126px}             /* hauteur de tout le reste du panneau + marges (mesurée), moins le chevauchement */
   /* le joystick grossit et passe SOUS la rangée de boutons de vue (ses coins sont vides : c'est un disque) */
   #joyWrap{margin-top:-28px;position:relative;z-index:0}
   #panel .grp:first-child > .btns, .tete, #panel .grp + .grp{position:relative;z-index:2}

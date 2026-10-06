@@ -1,7 +1,7 @@
 // File: js/soleil.js
-// Desc: Soleil : disque, halo et lumière directionnelle (direction fixe dans le repère inertiel).
-// Version 1.0.0
-// Date: [October 05, 2026]
+// Desc: Soleil : disque et lumière directionnelle (direction fixe dans le repère inertiel).
+// Version 1.1.0
+// Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -14,17 +14,7 @@ function creerSoleil(){
     new THREE.MeshBasicMaterial({color:0xfff3c4}));
   SOL.groupe.add(SOL.disque);
 
-  // halo : dégradé radial additif
-  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
-  const cx = cv.getContext('2d');
-  const g = cx.createRadialGradient(128,128,0,128,128,128);
-  g.addColorStop(0,'rgba(255,250,230,1)'); g.addColorStop(.05,'rgba(255,240,200,.95)'); g.addColorStop(.14,'rgba(255,215,140,.45)');
-  g.addColorStop(.4,'rgba(255,170,80,.12)'); g.addColorStop(1,'rgba(255,150,50,0)');
-  cx.fillStyle = g; cx.fillRect(0,0,256,256);
-  SOL.halo = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),
-    blending:THREE.AdditiveBlending, depthWrite:false, transparent:true}));
-  SOL.halo.scale.setScalar(rayon*34);          // éblouissement : environ 9° de large
-  SOL.groupe.add(SOL.halo);
+  // le halo n'est plus un sprite autour du Soleil : voir eblouissement.js (et couronne.js pour la totalité)
   scene.add(SOL.groupe);
 
   SOL.lumiere = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -43,7 +33,8 @@ function colorerSoleil(){
     chaud = Math.max(0, Math.min(1, 1 - hauteur/6));
   }
   SOL.disque.material.color.setRGB(1, 1.0 - 0.25*chaud, 0.92 - 0.45*chaud);   // blanc-chaud, un peu rouge au ras de l'horizon
-  SOL.halo.material.color.setRGB(1, 1 - 0.45*chaud, 1 - 0.8*chaud);
+  ECL.uTeinte.value.set(1, 1 - 0.45*chaud, 1 - 0.8*chaud);
+  SOL.disque.scale.setScalar(Math.tan(ETAT.rSol)/Math.tan(CFG.SUN_ANG));   // rayon apparent du jour (0,262° à 0,271°)
 }
 
 // À rappeler quand le Soleil bouge.

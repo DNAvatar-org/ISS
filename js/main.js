@@ -54,6 +54,8 @@ function majScene(){
   // Soleil et voûte à l'infini : posés relativement à l'observateur, quelle que soit la vue (aucune parallaxe).
   // Le Soleil réel est 390 fois plus loin que la Lune ; dessiné à distance fixe du centre, il semblait sur son orbite.
   SOL.groupe.position.copy(ETAT.vue === 'iss' ? OBS.groupe.position : camExt.position).addScaledVector(ETAT.S, CFG.SUN_D);
+  const fLune = majEblouissement(ETAT.vue === 'iss' ? camIss : camExt);   // vu de la caméra qui dessine
+  majCouronne(fLune);
   majCiel();
   // pastille « Lune » : direction vue de l'observateur (la parallaxe de ~1° depuis l'ISS est réelle)
   REP.lune.position.copy(LUNE.mesh.position).sub(CIEL.groupe.position).setLength(CFG.SKY_R*0.93).add(CIEL.groupe.position);
@@ -78,13 +80,14 @@ function boucle(ms){
   }else{
     ETAT.t += dtSim; majScene(); dessiner();
   }
-  // drapeau « +1 an seulement » : la date ne dépasse pas la fin de l'année suivant 2021 (le temps s'arrête au 31 déc. 2022)
-  if(CFG.PLUS_1_AN_SEUL && jourDate() >= CFG.JOUR_MAX){
-    ETAT.t -= (jourDate() - CFG.JOUR_MAX + 1/86400)*86400;   
-    ETAT.pause = true;                                       // arrêt à 23:59:59 le 31 déc.
+  // bornes 2000 – 2035 (dates.js) : le temps s'arrête au 31 déc. 2035 à 23:59:59 ; on ne descend pas sous le 1er janv. 2000
+  if(jourDate() >= DATES.max){
+    ETAT.t -= (jourDate() - DATES.max + 1/86400)*86400; ETAT.pause = true;
+  }else if(jourDate() < DATES.min){
+    ETAT.t += (DATES.min - jourDate())*86400; ETAT.pause = true;
   }
   if(ms - TUILES.derniere > GIBS.periode){ TUILES.derniere = ms; majTuiles(); }
-  majBoutonRec(); majVisee(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms);
+  majBoutonRec(); majVisee(); majSelections(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms);
 }
 
 function demarrer(){
@@ -99,6 +102,7 @@ function demarrer(){
   creerSoleil();
   TEX.lune.anisotropy = 4;
   creerLune(TEX.lune);
+  creerEblouissement(); creerCouronne();
   creerSats();
   OBS.groupe.add(camIss);
   creerCone();

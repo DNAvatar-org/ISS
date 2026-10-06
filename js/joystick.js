@@ -144,7 +144,11 @@ function creerJoystick(){
     const rp = joyRepereSous(x, y);
     JOY.survol = rp ? rp.nom : null;
     JOY.cv.style.cursor = rp ? 'pointer' : 'crosshair';
-    JOY.cv.title = rp ? rp.titre : 'Glisser : viser. Molette : focale (zoom).';
+    const txt = rp ? rp.titre : 'Glisser : viser. Molette : focale (zoom).';
+    JOY.cv.title = txt;
+    // la bulle alt0sec est déjà affichée : on la met à jour quand on passe d'un repère à l'autre
+    const bulle = document.querySelector('.alt0sec:not(.alt2sec)');
+    if(bulle && bulle.style.visibility === 'visible') bulle.innerHTML = txt;
   });
   JOY.cv.addEventListener('pointerleave', () => { JOY.survol = null; });
   JOY.cv.addEventListener('pointerup', () => { JOY.drag = false; });

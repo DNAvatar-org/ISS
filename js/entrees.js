@@ -8,7 +8,8 @@
 let drag = null;
 const surUI = e => e.target.closest('#panel, #hud, #bZen');
 
-addEventListener('pointerdown', e => { if(surUI(e)) return; poseInterrompre(); drag = {x:e.clientX, y:e.clientY}; });
+addEventListener('pointerdown', e => { if(surUI(e)) return; poseInterrompre(); if(ETAT.vue !== 'iss') fermerPhoto();     // capture ouverte : on la referme
+  drag = {x:e.clientX, y:e.clientY}; });
 addEventListener('pointerup', () => { drag = null; });
 addEventListener('pointermove', e => {
   if(!drag) return;

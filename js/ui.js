@@ -1,7 +1,7 @@
 // File: js/ui.js
 // Desc: Commandes : vues, jauge de vitesse (crans logarithmiques), date (donc β), position sur l'orbite, affichages, pose.
-// Version 2.0.0
-// Date: [October 05, 2026]
+// Version 2.1.0
+// Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -45,13 +45,38 @@ function majAffichage(v){
   }
 }
 
+// Point de vue et satellite sélectionnés : seulement quand on regarde la vue en direct (pas une capture ou une photo).
+function majSelections(){
+  const direct = photoVue.hidden;
+  const v = ETAT.vue === 'iss' ? 'iss' : (VUE_EXT.mode === 'lune' ? 'lune' : 'ext');
+  marquer('[data-vue]', b => direct && b.dataset.vue === v);
+  marquer('[data-sat]', b => direct && b.dataset.sat === OBS.id);
+}
+
 function majBoutons(){
   majVisee();
   const v = ETAT.vue === 'iss' ? 'iss' : (VUE_EXT.mode === 'lune' ? 'lune' : 'ext');
-  marquer('[data-vue]', b => b.dataset.vue === v);
-  marquer('[data-sat]', b => b.dataset.sat === OBS.id);
+  majSelections();
   majAffichage(v);
   majJaugeVitesse();
+}
+
+/* Jauge « compteur » : pousser le pointeur au-delà d'un bord fait passer à l'unité suivante (sens = +1) ou précédente (−1),
+   via deborder(sens) qui renvoie false hors des bornes. Un seul pas par poussée : tant que le pointeur reste dehors,
+   la jauge ne lit plus la souris (dehors = true) ; elle se réarme quand il revient dessus. */
+function jaugeCompteur(el, deborder){
+  const J = {glisse:false, dehors:false};
+  el.addEventListener('pointerdown', () => { J.glisse = true; J.dehors = false; });
+  addEventListener('pointerup', () => { J.glisse = false; J.dehors = false; });
+  addEventListener('pointermove', e => {
+    if(!J.glisse) return;
+    const b = el.getBoundingClientRect(), marge = 6;
+    const sens = e.clientX > b.right + marge ? 1 : e.clientX < b.left - marge ? -1 : 0;
+    if(sens === 0){ J.dehors = false; return; }
+    if(J.dehors) return;
+    if(deborder(sens)) J.dehors = true;
+  });
+  return J;
 }
 
 // Position θ du curseur : met à jour t en conservant le cycle courant.
@@ -61,6 +86,19 @@ function themeToT(deg){
 }
 
 // Date et β : texte et curseur lisent le même état (date0 + t), toujours synchrones.
+// Menu « Éclipses » : celles de l'année affichée ; reconstruit quand la date change d'année.
+let anMenuEcl = null;
+function majMenuEclipses(an){
+  if(an === anMenuEcl) return;
+  anMenuEcl = an;
+  const sel = $('sEcl');
+  sel.textContent = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Éclipses ' + an + '…'; sel.appendChild(o0);
+  for(const e of eclipsesAnnee(an)){
+    const o = document.createElement('option'); o.value = e[0] + '|' + e[1]; o.textContent = libelleEclipse(e); sel.appendChild(o);
+  }
+}
+
 function majDateUI(){
   const j = jourDate();
   // la jauge couvre l'année civile EN COURS (365 ou 366 jours) : passé le 31 décembre, elle repart à gauche
@@ -68,6 +106,7 @@ function majDateUI(){
   const an = new Date(Date.UTC(2021, 0, 1) + j*86400000).getUTCFullYear();
   const debut = (Date.UTC(an, 0, 1) - Date.UTC(2021, 0, 1))/86400000;
   ETAT.debutAnnee = debut;
+  majMenuEclipses(an);
   $('sDate').max = (Date.UTC(an + 1, 0, 1) - Date.UTC(an, 0, 1))/86400000 - 1/1440;   // droite toute = 31 déc. 23:59 : on y reste
   $('sDate').value = j - debut;
   $('oDate').textContent = libelleDate(j);
@@ -89,16 +128,32 @@ function creerBoutonsSats(){
   for(const sat of SATS){
     const b = document.createElement('button');
     b.className = 'b-ico b-sat'; b.dataset.sat = sat.id; b.title = sat.info; b.innerHTML = sat.logo;
-    b.onclick = () => { poseEffacer(); activerSat(sat.id); ETAT.vue = 'iss'; majBoutons(); };
-    $('sats').appendChild(b);
+    // fond = les couleurs de la trajectoire, coupées en diagonale : partie au jour / partie à l'ombre
+    const rgba = (c, a) => 'rgba(' + c.map(v => Math.round(v*255)).join(',') + ',' + a + ')';
+    b.style.background = 'linear-gradient(135deg, ' + rgba(sat.jour, .6) + ' 0 50%, ' + rgba(sat.nuit, .6) + ' 50% 100%)';
+    b.onclick = () => {
+      if(ETAT.vue === 'iss' || VUE_EXT.mode === 'lune') poseEffacer();   // l'empilement appartient au satellite ; les captures de la vue Terre restent
+      activerSat(sat.id);
+      if(ETAT.vue === 'ext' && VUE_EXT.mode === 'lune') ETAT.vue = 'iss';   // Terre–Lune : on passe dans le satellite ; Terre et vue embarquée : on y reste
+      majBoutons();
+    };
+    const w = document.createElement('div'), nom = document.createElement('span');
+    w.className = 'sat'; nom.textContent = sat.nom;
+    w.append(b, nom);
+    $('sats').appendChild(w);
   }
 }
 
 function creerUI(){
   creerBoutonsSats();
+  // une image affichée (capture ou photo) : tout clic sur un bouton, une case ou un menu ramène à la vue en direct
+  document.addEventListener('click', e => {
+    if(e.target.closest('#galerie')) return;
+    if(e.target.closest('button, input, select, label')) fermerPhoto();
+  }, true);
   document.querySelectorAll('[data-vue]').forEach(b => b.onclick = () => {
     const v = b.dataset.vue;
-    poseEffacer();                                       // changer de vue : on retire l'empilement pour revoir la vue normale
+    if(ETAT.vue === 'iss' || v === 'iss') poseEffacer();   // entrer ou sortir de la vue embarquée : on retire l'empilement ; Terre ↔ Terre–Lune garde les captures
     if(v === 'lune') vueTerreLune(); else if(v === 'ext') vueTerre(); else ETAT.vue = 'iss';
     majBoutons(); });
 
@@ -109,7 +164,6 @@ function creerUI(){
     majJaugeVitesse();
   };
 
-  $('sTheta').oninput = e => { poseInterrompre(); ETAT.t = themeToT(+e.target.value); };
   // coucher de Soleil : vue ISS braquée sur le Soleil encore visible, 45 s avant l'entrée dans l'ombre, au ralenti
   $('bDebutNuit').onclick = () => {
     poseInterrompre();
@@ -137,27 +191,31 @@ function creerUI(){
     ETAT.vue = 'iss'; choisirPreset('lune'); VUE_ISS.fov = 2;     // toute éclipse : vue ISS braquée sur la Lune
     e.target.value = ''; majBoutons();
   };
-  // glisser la date : on ne touche pas à t (la phase sur l'orbite reste) ; β en découle
-  /* Jauge « compteur » : pousser au-delà du bord droit → 1er janv. de l'année suivante (jauge à gauche toute) ;
-     pousser au-delà du bord gauche → 31 déc. de l'année précédente (jauge à droite toute). Un seul pas par poussée :
-     tant que le pointeur reste dehors, la jauge ne lit plus la souris ; elle se réarme quand il revient dessus. */
-  const JD = {glisse:false, dehors:false};
-  $('sDate').addEventListener('pointerdown', () => { JD.glisse = true; JD.dehors = false; });
-  addEventListener('pointerup', () => { JD.glisse = false; JD.dehors = false; });
-  addEventListener('pointermove', e => {
-    if(!JD.glisse) return;
-    const b = $('sDate').getBoundingClientRect(), marge = 6;
-    const sens = e.clientX > b.right + marge ? 1 : e.clientX < b.left - marge ? -1 : 0;
-    if(sens === 0){ JD.dehors = false; return; }
-    if(JD.dehors) return;
+  // glisser la date : on ne touche pas à t (la phase sur l'orbite reste) ; β en découle.
+  // Bord droit → 1er janv. de l'année suivante (jauge à gauche toute) ; bord gauche → 31 déc. de l'année précédente.
+  const JD = jaugeCompteur($('sDate'), sens => {
     const j = jourDate(), an = new Date(Date.UTC(2021, 0, 1) + j*86400000).getUTCFullYear();
     const cible = sens > 0 ? (Date.UTC(an + 1, 0, 1) - Date.UTC(2021, 0, 1))/86400000
                            : (Date.UTC(an, 0, 1) - Date.UTC(2021, 0, 1))/86400000 - 1/1440;
-    if(CFG.PLUS_1_AN_SEUL && (cible < 0 || cible >= CFG.JOUR_MAX)) return;     // bornes du drapeau : 2021 et 2022
-    JD.dehors = true; poseInterrompre();
+    if(cible < DATES.min || cible >= DATES.max) return false;               // bornes 2000 – 2035 (dates.js)
+    poseInterrompre();
     ETAT.date0 = cible - ETAT.t/86400; majSoleilDate(); majDateUI();
+    return true;
   });
   $('sDate').oninput = e => { if(JD.dehors) return; poseInterrompre(); ETAT.date0 = ETAT.debutAnnee + +e.target.value - ETAT.t/86400; };
+
+  // curseur gris = position sur l'orbite courante. Bord droit → orbite suivante, θ = 0 (curseur à gauche toute) ;
+  // bord gauche → orbite précédente, θ juste sous 360° (curseur à droite toute).
+  const JT = jaugeCompteur($('sTheta'), sens => {
+    const t = sens > 0 ? themeToT(0) + OBS.T : themeToT(0) - 0.5;
+    const j = ETAT.date0 + t/86400;
+    if(j < DATES.min || j >= DATES.max) return false;
+    poseInterrompre();
+    ETAT.t = t; majSoleilDate(); majCurseurTheta();
+    return true;
+  });
+  // 359,9° au plus : à 360°, themeToT donnerait déjà θ = 0 de l'orbite suivante
+  $('sTheta').oninput = e => { if(JT.dehors) return; poseInterrompre(); ETAT.t = themeToT(Math.min(+e.target.value, 359.9)); };
 
   $('cOrbite').onchange = e => { poseInterrompre(); ETAT.montrer.orbite = e.target.checked; };
   $('cReperes').onchange = e => { poseInterrompre(); ETAT.montrer.reperes = e.target.checked; };
@@ -165,8 +223,9 @@ function creerUI(){
   $('cCone').onchange = e => { poseInterrompre(); ETAT.montrer.cone = e.target.checked; };
 
   $('bZen').onclick = basculerZen;
+  $('bCapture').onclick = capturer;
   bPose.onclick = () => { poseLancer(); majBoutons(); };
-  $('bPoseSave').onclick = poseEnregistrerPNG;
+  $('bPoseSave').onclick = enregistrerImage;
   $('bPoseOff').onclick = poseEffacer;
 
   majBoutons();

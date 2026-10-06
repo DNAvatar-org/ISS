@@ -9,7 +9,7 @@
    rendues pendant ces 30 s), puis toutes les photos sont empilées de la même façon.
    Une nuit de 29 min 56 s donne 59 photos. */
 const POSE = {
-  actif:false, visible:false, vuNuit:false, t0:0, finies:0, urls:[],
+  caps:[], capNoms:[], capSel:-1, satPose:'', actif:false, visible:false, vuNuit:false, t0:0, finies:0, urls:[],
   cx:poseCv.getContext('2d'), photoCv:document.createElement('canvas')
 };
 POSE.photoCx = POSE.photoCv.getContext('2d');
@@ -35,7 +35,7 @@ function noir(cx, cv){
 function poseVider(){ noir(POSE.cx, poseCv); noir(POSE.photoCx, POSE.photoCv); }
 
 function poseEffacer(){
-  POSE.actif = false; POSE.visible = false; POSE.finies = 0; POSE.urls = [];
+  POSE.actif = false; POSE.visible = false; POSE.finies = 0; POSE.urls = []; POSE.caps = []; POSE.capNoms = []; POSE.capSel = -1;
   poseCv.classList.remove('on'); galerieEl.hidden = true; galerieEl.textContent = '';
   photoVue.hidden = true;
 }
@@ -47,12 +47,25 @@ function poseEffacer(){
 function poseLancer(){
   if(POSE.actif){ POSE.actif = false; return; }          // 2e clic : on arrête la prise
   poseEffacer();
+  POSE.satPose = nomFichier(OBS.nom, 'empilement');         // le satellite de la prise, pas celui du moment de l'enregistrement
   POSE.t0 = ETAT.t; POSE.actif = true; POSE.visible = true; POSE.vuNuit = false;
   poseVider();
   galerieEl.hidden = false;
   const s = document.createElement('button'); s.textContent = 'Σ empilement';
   s.onclick = () => { photoVue.hidden = true; marquerVignette(s); };
   galerieEl.appendChild(s);
+}
+
+// Nom de fichier : satellite observateur AU MOMENT de la prise + date et heure UT simulées.
+function nomFichier(sat, type){
+  const d = new Date(Date.UTC(2021, 0, 1) + jourDate()*86400000).toISOString();
+  return sat + '-' + type + '-' + d.slice(0, 10) + '_' + d.slice(11, 13) + d.slice(14, 16) + 'UT.png';
+}
+
+// Retour à la vue en direct : on ferme l'image affichée et on désélectionne la vignette.
+function fermerPhoto(){
+  photoVue.hidden = true;
+  galerieEl.querySelectorAll('.sel').forEach(e => e.classList.remove('sel'));
 }
 
 function marquerVignette(el){
@@ -69,7 +82,10 @@ function poseFinirPhoto(){
   POSE.urls.push(url);
   const im = document.createElement('img');
   im.src = url; im.title = 'Photo ' + (POSE.urls.length) + ' · ' + CFG.POSE_S + ' s';
-  im.onclick = () => { photoVue.src = url; photoVue.hidden = false; marquerVignette(im); };
+  im.onclick = () => {                                   // 2e clic sur la même photo : retour à la vue
+    if(!photoVue.hidden && photoVue.src === url){ fermerPhoto(); return; }
+    photoVue.src = url; photoVue.hidden = false; marquerVignette(im);
+  };
   galerieEl.appendChild(im);
   galerieEl.scrollTop = galerieEl.scrollHeight;
   POSE.finies++;
@@ -94,19 +110,62 @@ function poseAjouter(){
   else if(POSE.vuNuit) POSE.actif = false;                 // sortie de l'ombre : fin de la nuit
 }
 
+/* CAPTURE (vues Terre et Terre–Lune) : une image instantanée de la vue, sans pose de 30 s, ajoutée à la galerie.
+   Le rendu est refait juste avant la lecture du canevas (le tampon WebGL n'est pas conservé entre deux trames). */
+function capturer(){
+  dessiner();
+  const cv = renderer.domElement, png = cv.toDataURL('image/png');
+  const w = 960, h = Math.round(w*cv.height/cv.width);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  c.getContext('2d').drawImage(cv, 0, 0, w, h);
+  const url = c.toDataURL('image/jpeg', 0.85), n = POSE.caps.push(png);
+  POSE.capNoms.push(nomFichier(OBS.nom, 'capture'));
+  galerieEl.hidden = false;
+  const im = document.createElement('img');
+  im.src = url; im.title = 'Capture ' + n;
+  im.onclick = () => {                                   // la vignette ouvre la capture en grand ; un 2e clic la referme
+    POSE.capSel = n - 1;
+    if(!photoVue.hidden && photoVue.src === png){ fermerPhoto(); return; }
+    marquerVignette(im); photoVue.src = png; photoVue.hidden = false;
+  };
+  galerieEl.appendChild(im);
+  galerieEl.scrollTop = galerieEl.scrollHeight;
+  marquerVignette(im); POSE.capSel = n - 1;
+  photoVue.src = png; photoVue.hidden = false;           // la capture sélectionnée est affichée à la place de la vue en direct
+}
+
+// 💾 : l'image affichée si c'est une capture, sinon l'empilement s'il existe, sinon la dernière capture.
+function enregistrerImage(){
+  if(!photoVue.hidden && POSE.caps.includes(photoVue.src)) capEnregistrerPNG();
+  else if(POSE.visible) poseEnregistrerPNG();
+  else capEnregistrerPNG();
+}
+
+function capEnregistrerPNG(){
+  if(!POSE.caps.length) return;
+  const a = document.createElement('a');
+  const i = POSE.capSel >= 0 ? POSE.capSel : POSE.caps.length - 1;
+  a.href = POSE.caps[i]; a.download = POSE.capNoms[i]; a.click();
+}
+
 function poseEnregistrerPNG(){
   poseCv.toBlob(b => {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(b); a.download = 'iss-empilement-nuit.png'; a.click();
+    a.href = URL.createObjectURL(b); a.download = POSE.satPose; a.click();
     URL.revokeObjectURL(a.href);
   });
 }
 
-// Bouton REC : vert pendant la prise, avec le nombre de photos de 30 s terminées.
+// Bouton REC : seulement dans la vue embarquée ; vert pendant la prise, avec le nombre de photos de 30 s terminées.
+// Le bouton 📷 (capture instantanée) est toujours là.
 function majBoutonRec(){
-  bPose.classList.toggle('rec', POSE.actif);
+  const pose = ETAT.vue === 'iss';
+  bPose.hidden = !pose;
+  bPose.classList.toggle('rec', pose && POSE.actif);
   const t = POSE.actif ? '⏺️ ' + POSE.finies : '⏺️';
   if(bPose.textContent !== t) bPose.textContent = t;
+  const titre = pose ? 'Capture · pose 30 s' : 'Capture';
+  if($('titrePose').textContent !== titre) $('titrePose').textContent = titre;
 }
 
 // Tout zoom ou clic dans la vue efface l'empilement (et arrête une prise) : SAVE avant pour le garder.

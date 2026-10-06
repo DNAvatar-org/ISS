@@ -55,11 +55,29 @@ function creerLune(texture){
   LUNE.marque.scale.setScalar(0.035); LUNE.marque.renderOrder = 10;
   scene.add(LUNE.marque);
 
-  // orbite de la Lune : cercle de rayon LUNE_D dans le plan de l'écliptique (à 5° près), visible en vue Terre–Lune
-  const pts = [];
-  for(let i=0;i<=180;i++){ const a = i/180*2*Math.PI; pts.push(new THREE.Vector3(Math.cos(a)*CFG.LUNE_D, 0, Math.sin(a)*CFG.LUNE_D)); }
-  LUNE.orbite = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({color:0x5b6a90}));
+  // orbite de la Lune : sa trajectoire réelle sur un mois sidéral autour de la date courante (distance variable 356–407 000 km,
+  // inclinaison de 5°), donc elle passe exactement par la Lune ; recalculée quand la date a bougé (voir majOrbiteLune)
+  LUNE.nOrb = 180; LUNE.jOrb = NaN;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array((LUNE.nOrb + 1)*3), 3));
+  LUNE.orbite = new THREE.Line(g, new THREE.LineBasicMaterial({color:0x5b6a90}));
+  LUNE.orbite.frustumCulled = false;
   scene.add(LUNE.orbite);
+}
+
+const MOIS_SIDERAL = 27.3217;   // jours
+const _lv = new THREE.Vector3();
+function majOrbiteLune(){
+  const j = jourDate();
+  if(Math.abs(j - LUNE.jOrb) < 0.02) return;
+  LUNE.jOrb = j;
+  const pos = LUNE.orbite.geometry.attributes.position;
+  for(let i=0;i<=LUNE.nOrb;i++){
+    const m = ephemLune(j + (i/LUNE.nOrb - 0.5)*MOIS_SIDERAL);
+    ETAT.vers(m.eq, _lv).multiplyScalar(m.dist);
+    pos.setXYZ(i, _lv.x, _lv.y, _lv.z);
+  }
+  pos.needsUpdate = true;
 }
 
 const _lx = new THREE.Vector3(), _ly = new THREE.Vector3(), _lz = new THREE.Vector3(), _lm = new THREE.Matrix4();
@@ -76,5 +94,5 @@ function majLune(){
   const iss = ETAT.vue === 'iss', lune = !iss && VUE_EXT.mode === 'lune';
   LUNE.marque.visible = !iss; LUNE.marque.position.copy(LUNE.mesh.position);
   LUNE.orbite.visible = lune;
-  LUNE.orbite.quaternion.setFromUnitVectors(_ly.set(0, 1, 0), ETAT.Mnord);
+  if(lune) majOrbiteLune();
 }

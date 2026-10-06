@@ -40,6 +40,10 @@
       "dest": "pages/ISS/js/config.js"
     },
     {
+      "src": "js/dates.js",
+      "dest": "pages/ISS/js/dates.js"
+    },
+    {
       "src": "js/dom.js",
       "dest": "pages/ISS/js/dom.js"
     },
@@ -98,6 +102,14 @@
     {
       "src": "js/soleil.js",
       "dest": "pages/ISS/js/soleil.js"
+    },
+    {
+      "src": "js/eblouissement.js",
+      "dest": "pages/ISS/js/eblouissement.js"
+    },
+    {
+      "src": "js/couronne.js",
+      "dest": "pages/ISS/js/couronne.js"
     },
     {
       "src": "js/terre.js",

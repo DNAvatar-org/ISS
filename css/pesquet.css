@@ -85,7 +85,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 .t-cone{color:#ffd24a;font-weight:600}
 
 /* enregistrement : le bouton passe au vert pendant la prise */
-button.rec{background:#2fb457;border-color:#2fb457;color:#06210f;font-weight:700}
+button.rec{background:#2fb457;border-color:#2fb457;color:#06210f}
+/* compteur de photos de 30 s : pastille dans le coin du bouton REC, qui garde ainsi la taille des autres boutons de capture */
+#bPose{position:relative}
+#bPose[data-n]:not([data-n=""])::after{content:attr(data-n);position:absolute;right:2px;bottom:0;font-size:10px;line-height:1.2;
+  font-weight:700;color:#06210f;background:rgba(255,255,255,.85);border-radius:5px;padding:0 3px}
 
 #galerie{position:fixed;left:340px;right:0;bottom:0;z-index:2;display:flex;gap:6px;align-items:center;
          padding:8px 10px;overflow-x:auto;background:rgba(3,5,10,.72);border-top:1px solid var(--stroke)}
@@ -272,25 +276,10 @@ body.zen #credits{display:none !important}
   #viseeIss .row{display:none}
   #panel .grp{border-bottom:0;padding-bottom:2px;margin-bottom:2px}
 }
-/* portrait étroit (fenêtre de bureau ; un téléphone en portrait voit l'écran « tourner ») */
+/* portrait étroit (téléphone tenu droit, ou fenêtre étroite) */
 @media (max-width:760px) and (orientation:portrait){
   #pied{transform:translateX(-50%) scale(.6)}
   #pied .git{font-size:0}                                   /* le logo GitHub seul, sans libellé */
   #credits{left:8px;right:52px;bottom:6px;width:auto}
-  #panel{bottom:56px;max-height:calc(100% - 270px)}
+  #panel{bottom:calc(var(--haut-credits, 56px) + 6px);max-height:calc(100% - 270px)}
 }
-
-/* Paysage imposé sur téléphone : aucune page ne peut tourner l'écran (sauf Android en plein écran, cf. basculerZen) ;
-   tenu en portrait, un écran couvre la simulation et demande de tourner l'appareil. */
-#tourner{display:none}
-@media (orientation:portrait) and (max-width:760px) and (pointer:coarse){
-  #tourner{display:flex;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;text-align:center;
-           background:var(--bg);color:var(--txt);padding:24px}
-  #tourner p{margin:10px 0 0;font-size:17px}
-  #tourner .aide{font-size:13px!important}
-  #tourner .tel{display:inline-block;font-size:64px;line-height:1;animation:tourner 2.4s ease-in-out infinite}
-  #bZen{display:none}
-  body.portrait-ok #tourner{display:none}
-  body.portrait-ok #bZen{display:block}
-}
-@keyframes tourner{0%,20%{transform:rotate(0)} 50%,80%{transform:rotate(-90deg)} 100%{transform:rotate(0)}}

@@ -88,6 +88,7 @@ function placerCredits(){
   const h = $('hud').getBoundingClientRect(), p = $('pied').getBoundingClientRect(), ch = c.getBoundingClientRect().height;
   const bas = innerHeight - p.top + 4;                             // juste au-dessus de la signature
   if(innerHeight - bas - ch >= h.bottom + 6) c.style.bottom = bas + 'px';
+  document.documentElement.style.setProperty('--haut-credits', Math.round(innerHeight - c.getBoundingClientRect().top) + 'px');   // portrait : l'encart du bas s'arrête dessous
 }
 
 // Position θ du curseur : met à jour t en conservant le cycle courant.
@@ -210,7 +211,6 @@ function creerUI(){
     ETAT.vitesse = 10; ETAT.pause = false; majBoutons();
   };
   // éclipses 2021 (instants du maximum, UT) : toujours la vue ISS au téléobjectif, braquée sur la Lune
-  $('tourner').onclick = () => document.body.classList.add('portrait-ok');   // l'écran « tourner » se ferme au toucher
   $('bEcl').onclick = () => ouvrirMenuEclipses($('lEcl').hidden);
   $('lEcl').onclick = e => {
     const b = e.target.closest('button');
@@ -304,9 +304,7 @@ function basculerZen(){
   const zen = !document.body.classList.contains('zen');
   document.body.classList.toggle('zen', zen);
   if(zen && document.documentElement.requestFullscreen && !document.fullscreenElement)
-    document.documentElement.requestFullscreen()
-      .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'))   // Android : paysage verrouillé
-      .catch(() => {});                                      // iPhone : ni plein écran ni verrou ; l'écran « tourner » prend le relais
+    document.documentElement.requestFullscreen().catch(() => {});   // iPhone : pas d'API plein écran, les encarts se masquent seulement
   if(!zen && document.fullscreenElement) document.exitFullscreen();
 }
 document.addEventListener('fullscreenchange', () => {

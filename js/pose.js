@@ -1,7 +1,7 @@
 // File: js/pose.js
 // Desc: Enregistrement de la nuit : une image de 30 s par tranche de 30 s (galerie) et leur empilement « plus clair ».
-// Version 1.1.0
-// Date: [October 05, 2026]
+// Version 1.1.1
+// Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -162,8 +162,9 @@ function majBoutonRec(){
   const pose = ETAT.vue === 'iss';
   bPose.hidden = !pose;
   bPose.classList.toggle('rec', pose && POSE.actif);
-  const t = POSE.actif ? '⏺️ ' + POSE.finies : '⏺️';
-  if(bPose.textContent !== t) bPose.textContent = t;
+  if(bPose.textContent !== '⏺️') bPose.textContent = '⏺️';                 // le libellé ne change jamais : le bouton garde sa taille carrée
+  const n = POSE.actif ? String(POSE.finies) : '';                         // nombre de photos terminées : pastille dans le coin (CSS)
+  if(bPose.dataset.n !== n) bPose.dataset.n = n;
   const titre = pose ? 'Capture · pose 30 s' : 'Capture';
   if($('titrePose').textContent !== titre) $('titrePose').textContent = titre;
 }

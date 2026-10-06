@@ -31,11 +31,11 @@ function rafraichirFond(ms){
   if(ms - JFOND.derniere < JFOND.periode) return;
   JFOND.derniere = ms;
   const R = JFOND.R, N = 2*R;
-  const rhoE = Math.asin(CFG.R/CFG.R_ORB), rE = R*rhoE/Math.PI;
+  const rhoE = Math.asin(CFG.R/OBS.R), rE = R*rhoE/Math.PI;
   const img = JFOND.cx.createImageData(N, N), out = img.data;
-  _jq.makeRotationFromQuaternion(ISS.groupe.quaternion); const q = _jq.elements;            // repère ISS → monde
+  _jq.makeRotationFromQuaternion(OBS.groupe.quaternion); const q = _jq.elements;            // repère ISS → monde
   _jg.copy(TERRE.globe.matrixWorld).invert(); const g = _jg.elements;                        // monde → repère du globe
-  const p = ISS.groupe.position, S = ETAT.S, p2 = p.lengthSq() - CFG.R*CFG.R;
+  const p = OBS.groupe.position, S = ETAT.S, p2 = p.lengthSq() - CFG.R*CFG.R;
   for(let j=0;j<N;j++) for(let i=0;i<N;i++){
     const dx = i + 0.5 - R, dy = j + 0.5 - R, r = Math.hypot(dx, dy);
     if(r > rE) continue;

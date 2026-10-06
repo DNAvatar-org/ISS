@@ -38,8 +38,8 @@ const _nad = new THREE.Vector3();
 function colorerSoleil(){
   let chaud = 0;
   if(ETAT.vue === 'iss'){
-    _nad.copy(ISS.groupe.position).negate().normalize();
-    const hauteur = Math.acos(Math.max(-1, Math.min(1, _nad.dot(SOL.dir))))/DEG - Math.asin(CFG.R/CFG.R_ORB)/DEG;   // ° au-dessus du limbe
+    _nad.copy(OBS.groupe.position).negate().normalize();
+    const hauteur = Math.acos(Math.max(-1, Math.min(1, _nad.dot(SOL.dir))))/DEG - Math.asin(CFG.R/OBS.R)/DEG;   // ° au-dessus du limbe
     chaud = Math.max(0, Math.min(1, 1 - hauteur/6));
   }
   SOL.disque.material.color.setRGB(1, 1.0 - 0.25*chaud, 0.92 - 0.45*chaud);   // blanc-chaud, un peu rouge au ras de l'horizon

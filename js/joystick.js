@@ -63,7 +63,7 @@ function dessinerJoystick(ms){
   c.drawImage(JFOND.cv, 0, 0);                                           // la Terre sous l'ISS
 
   // limbe de la Terre et horizon (ρ = 90°)
-  const rE = R*Math.asin(CFG.R/CFG.R_ORB)/Math.PI;
+  const rE = R*Math.asin(CFG.R/OBS.R)/Math.PI;
   c.lineWidth = 2; c.strokeStyle = 'rgba(110,170,255,.85)'; c.beginPath(); c.arc(R, R, rE, 0, 2*Math.PI); c.stroke();
   c.lineWidth = 1; c.strokeStyle = 'rgba(255,255,255,.28)'; c.setLineDash([3, 4]);
   c.beginPath(); c.arc(R, R, R/2, 0, 2*Math.PI); c.stroke(); c.setLineDash([]);

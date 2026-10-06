@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ISS — cercles d'étoiles et traînées de Terre</title>
 <meta name="description" content="Simulation 3D (Three.js) d'un passage de nuit de l'ISS : pourquoi les étoiles dessinent des cercles centrés sur le pôle orbital, et la Terre des traînées parallèles à l'horizon.">
+<link rel="icon" type="image/png" href="logo.png">
 <link rel="stylesheet" href="css/pesquet.css">
 </head>
 <body>
@@ -49,7 +50,7 @@
 
 <aside id="panel">
   <section class="grp">
-    <h2>Point de vue</h2>
+    <div class="tete"><h2>Point de vue</h2><div id="sats"></div></div>
     <div class="btns">
       <button data-vue="iss" id="bVueIss" class="on" title="Caméra embarquée ; la flèche indique la visée choisie">ISS → Pôle</button>
       <button data-vue="ext" title="Vue éloignée, centrée sur la Terre">Terre</button>
@@ -109,7 +110,10 @@
 <script src="js/terre.js"></script>
 <script src="js/tuiles-rendu.js"></script>
 <script src="js/tuiles.js"></script>
+<script src="js/satellites.js"></script>
 <script src="js/iss.js"></script>
+<script src="js/hubble.js"></script>
+<script src="js/iridium.js"></script>
 <script src="js/reperes.js"></script>
 <script src="js/cameras.js"></script>
 <script src="js/cone.js"></script>

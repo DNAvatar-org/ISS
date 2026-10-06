@@ -191,3 +191,11 @@ body.zen #pied{display:none !important}
 #credits .credit{margin:0;font-size:10.5px!important}
 body.zen #credits{display:none !important}
 @media (max-width:760px){ #credits{display:none} }
+
+/* choix du satellite : logos à droite du titre « Point de vue » */
+.tete{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px}
+.tete h2{margin:0 !important;font-size:10.5px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);font-weight:600}
+#sats{display:flex;gap:4px}
+.b-sat{padding:2px 5px}
+.b-sat .ico{width:22px;height:16px}
+.b-sat.on{border-color:var(--acc)}

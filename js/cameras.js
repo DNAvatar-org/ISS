@@ -33,10 +33,10 @@ function viseePreset(nom){
 
 const _qi = new THREE.Quaternion(), _sd = new THREE.Vector3();
 // Direction d'un astre (vecteur monde unitaire) dans le repère local de l'ISS.
-const localDe = (dirMonde, out) => out.copy(dirMonde).applyQuaternion(_qi.copy(ISS.groupe.quaternion).invert());
+const localDe = (dirMonde, out) => out.copy(dirMonde).applyQuaternion(_qi.copy(OBS.groupe.quaternion).invert());
 const solISS  = out => localDe(SOL.dir, out);
 const _dl = new THREE.Vector3();
-const luneISS = out => localDe(_dl.copy(LUNE.mesh.position).sub(ISS.groupe.position).normalize(), out);   // parallaxe incluse
+const luneISS = out => localDe(_dl.copy(LUNE.mesh.position).sub(OBS.groupe.position).normalize(), out);   // parallaxe incluse
 // (cap, site) en radians d'un vecteur unitaire local.
 const capDe  = d => Math.atan2(d.y, -d.z);
 const siteDe = d => Math.asin(Math.max(-1, Math.min(1, d.x)));

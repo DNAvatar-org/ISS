@@ -19,9 +19,7 @@ function redimensionner(){
 
 // Place tout selon ETAT.t.
 function majScene(){
-  const th = thetaISS(ETAT.t);
-  posISS(th, ISS.groupe.position);
-  ISS.groupe.rotation.y = th;
+  majSats(ETAT.t);                                 // position et orientation de chaque satellite, anneaux compris
   orienterTerre();                                 // rotation réelle (temps sidéral de la date)
   majLune();
   TERRE.uLune.value.copy(LUNE.mesh.position);
@@ -29,17 +27,19 @@ function majScene(){
   scene.updateMatrixWorld();
 
   // éclipses : part du Soleil cachée par la Lune vue de l'ISS, part cachée par la Terre vue de la Lune
-  ETAT.ecl = 1 - partSoleil(ISS.groupe.position, LUNE.mesh.position, CFG.R_LUNE);
+  ETAT.ecl = 1 - partSoleil(OBS.groupe.position, LUNE.mesh.position, CFG.R_LUNE);
   ETAT.eclLune = eclipseLune();
-  const nuit = enNuit(ISS.groupe.position);
+  const nuit = enNuit(OBS.groupe.position);
   ETAT.nuitISS = nuit;
   SOL.lumiere.intensity = nuit ? 0 : 2.5*(1 - ETAT.ecl);
-  if(ETAT.montrer.trace) majTrace(ISS.groupe.position, ETAT.t);
+  if(ETAT.montrer.trace) majTrace(OBS.groupe.position, ETAT.t);
 
   const iss = ETAT.vue === 'iss', m = ETAT.montrer;
-  ISS.modele.visible = !iss;                       // caméra à l'intérieur : pas de modèle devant l'objectif
-  ISS.marque.visible = !iss;
-  ISS.anneau.visible = m.orbite;
+  for(const sat of SATS){
+    const dedans = iss && sat === OBS;             // caméra à l'intérieur : pas de modèle devant l'objectif
+    sat.modele.visible = !dedans; sat.marque.visible = !dedans;
+    sat.anneau.visible = m.orbite;
+  }
   TERRE.trace.visible = m.trace;
   REP.lignes.forEach(l => l.visible = m.reperes && !iss);
   REP.pastilles.forEach(p => p.visible = m.reperes && iss);
@@ -53,7 +53,7 @@ function majScene(){
   majCamExt(); majCamIss(); majCone(); colorerSoleil();
   // Soleil et voûte à l'infini : posés relativement à l'observateur, quelle que soit la vue (aucune parallaxe).
   // Le Soleil réel est 390 fois plus loin que la Lune ; dessiné à distance fixe du centre, il semblait sur son orbite.
-  SOL.groupe.position.copy(ETAT.vue === 'iss' ? ISS.groupe.position : camExt.position).addScaledVector(ETAT.S, CFG.SUN_D);
+  SOL.groupe.position.copy(ETAT.vue === 'iss' ? OBS.groupe.position : camExt.position).addScaledVector(ETAT.S, CFG.SUN_D);
   majCiel();
   // pastille « Lune » : direction vue de l'observateur (la parallaxe de ~1° depuis l'ISS est réelle)
   REP.lune.position.copy(LUNE.mesh.position).sub(CIEL.groupe.position).setLength(CFG.SKY_R*0.93).add(CIEL.groupe.position);
@@ -99,8 +99,8 @@ function demarrer(){
   creerSoleil();
   TEX.lune.anisotropy = 4;
   creerLune(TEX.lune);
-  creerISS();
-  ISS.groupe.add(camIss);
+  creerSats();
+  OBS.groupe.add(camIss);
   creerCone();
   creerReperes();
   preparerFond(); creerJoystick();

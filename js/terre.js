@@ -143,7 +143,7 @@ function creerTerre(tex){
 
 const _tp = new THREE.Vector3();
 function majTrace(posWorld, t){
-  if(t < TERRE.tTrace || t - TERRE.tTrace > 4*CFG.T_ISS || TERRE.nTrace >= TRACE_MAX){
+  if(t < TERRE.tTrace || t - TERRE.tTrace > 4*OBS.T || TERRE.nTrace >= TRACE_MAX){
     TERRE.nTrace = 0; TERRE.tTrace = -1e12;       // saut dans le temps : on repart d'une trace vide
   }
   if(t - TERRE.tTrace < TRACE_PAS) return;

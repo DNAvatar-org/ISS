@@ -8,6 +8,10 @@
       "dest": "pages/ISS/index.html"
     },
     {
+      "src": "logo.png",
+      "dest": "pages/ISS/logo.png"
+    },
+    {
       "src": "css/pesquet.css",
       "dest": "pages/ISS/css/pesquet.css"
     },
@@ -44,8 +48,20 @@
       "dest": "pages/ISS/js/entrees.js"
     },
     {
+      "src": "js/satellites.js",
+      "dest": "pages/ISS/js/satellites.js"
+    },
+    {
       "src": "js/iss.js",
       "dest": "pages/ISS/js/iss.js"
+    },
+    {
+      "src": "js/hubble.js",
+      "dest": "pages/ISS/js/hubble.js"
+    },
+    {
+      "src": "js/iridium.js",
+      "dest": "pages/ISS/js/iridium.js"
     },
     {
       "src": "js/joystick-fond.js",

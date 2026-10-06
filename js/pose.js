@@ -80,7 +80,7 @@ function poseFinirPhoto(){
 // entre deux images (vitesse angulaire max = vitesse de rotation de l'ISS).
 function posePas(){
   const fpx = poseCv.height/2/Math.tan(VUE_ISS.fov*DEG/2);
-  return Math.max(0.5, CFG.PAS_PX/(2*Math.PI/CFG.T_ISS*fpx));
+  return Math.max(0.5, CFG.PAS_PX/(2*Math.PI/OBS.T*fpx));
 }
 
 function poseAjouter(){

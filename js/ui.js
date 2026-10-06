@@ -26,9 +26,9 @@ function marquer(sel, test){
   document.querySelectorAll(sel).forEach(b => b.classList.toggle('on', test(b)));
 }
 const NOMS_VISEE = {pole:'Pôle', poleSol:'Pôle ☀', nadir:'Nadir', oblique:'Oblique', avant:'Avant', soleil:'Soleil', lune:'Lune'};
-// Bouton ISS : « ISS → visée » ; le joystick et la focale n'existent que dans la vue ISS.
+// Bouton de la vue embarquée : « satellite → visée » ; le joystick et la focale n'existent que dans la vue ISS.
 function majVisee(){
-  const t = 'ISS → ' + (ETAT.preset ? NOMS_VISEE[ETAT.preset] : 'libre');
+  const t = OBS.nom + ' → ' + (ETAT.preset ? NOMS_VISEE[ETAT.preset] : 'libre');
   const b = $('bVueIss'); if(b.textContent !== t) b.textContent = t;
   $('viseeIss').hidden = ETAT.vue !== 'iss';
 }
@@ -49,14 +49,15 @@ function majBoutons(){
   majVisee();
   const v = ETAT.vue === 'iss' ? 'iss' : (VUE_EXT.mode === 'lune' ? 'lune' : 'ext');
   marquer('[data-vue]', b => b.dataset.vue === v);
+  marquer('[data-sat]', b => b.dataset.sat === OBS.id);
   majAffichage(v);
   majJaugeVitesse();
 }
 
 // Position θ du curseur : met à jour t en conservant le cycle courant.
 function themeToT(deg){
-  const base = Math.floor(ETAT.t/CFG.T_ISS)*CFG.T_ISS;
-  return base + deg/360*CFG.T_ISS;
+  const t0 = tTheta(0), base = t0 + Math.floor((ETAT.t - t0)/OBS.T)*OBS.T;     // début du cycle courant (θ = 0)
+  return base + deg/360*OBS.T;
 }
 
 // Date et β : texte et curseur lisent le même état (date0 + t), toujours synchrones.
@@ -83,7 +84,18 @@ function majSoleilDate(){
   majSoleil(); colorerOrbite();
 }
 
+// Un bouton (logo) par satellite : choisir l'observateur et passer dans sa vue embarquée.
+function creerBoutonsSats(){
+  for(const sat of SATS){
+    const b = document.createElement('button');
+    b.className = 'b-ico b-sat'; b.dataset.sat = sat.id; b.title = sat.info; b.innerHTML = sat.logo;
+    b.onclick = () => { poseEffacer(); activerSat(sat.id); ETAT.vue = 'iss'; majBoutons(); };
+    $('sats').appendChild(b);
+  }
+}
+
 function creerUI(){
+  creerBoutonsSats();
   document.querySelectorAll('[data-vue]').forEach(b => b.onclick = () => {
     const v = b.dataset.vue;
     poseEffacer();                                       // changer de vue : on retire l'empilement pour revoir la vue normale
@@ -167,7 +179,7 @@ function majCurseurFocale(){
 
 // Le curseur θ suit le temps (sauf pendant la manipulation).
 function majCurseurTheta(){
-  const th = ((thetaISS(ETAT.t)/DEG) % 360 + 360) % 360;
+  const th = ((thetaObs(ETAT.t)/DEG) % 360 + 360) % 360;
   $('sTheta').value = th;
   const sec = Math.floor(((jourDate() % 1) + 1) % 1 * 86400), p2 = n => String(n).padStart(2, '0');   // heure de Greenwich (UT)
   $('oTheta').textContent = p2(Math.floor(sec/3600)) + ':' + p2(Math.floor(sec/60) % 60) + ':' + p2(sec % 60);

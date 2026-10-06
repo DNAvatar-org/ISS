@@ -12,11 +12,6 @@
    – le plan de l'orbite pivote de ~−5°/jour (régression des nœuds, due à l'aplatissement de la Terre),
    d'où un cycle de β d'environ 60 jours, modulé par la saison. */
 
-const thetaISS   = t => 2*Math.PI*t/CFG.T_ISS;
-
-function posISS(theta, out){
-  return out.set(Math.cos(theta), 0, -Math.sin(theta)).multiplyScalar(CFG.R_ORB);
-}
 const dirSoleil = out => out.copy(ETAT.S);
 
 /* Éphéméride solaire basse précision (Astronomical Almanac). jours = jours depuis le 1er janvier 2021, 0 h UTC. */
@@ -99,8 +94,6 @@ function calculerSoleil(jours){
   ETAT.gmst = gmst(jours);
   vers(Seq, ETAT.S);
   ETAT.rSol = 0.26656*DEG/e.ua;                           // rayon apparent : 0,262° en juillet, 0,271° en janvier
-  ETAT.beta = Math.asin(ETAT.S.y);
-  ETAT.thetaSol = Math.atan2(-ETAT.S.z, ETAT.S.x);        // direction du Soleil projeté dans le plan orbital
 
   // Lune dans le même repère ; pôle nord écliptique (celui de son axe, à 1,5° près) ; phase
   const m = ephemLune(jours);
@@ -111,15 +104,18 @@ function calculerSoleil(jours){
   const dlam = (((m.lam - e.lam)/DEG % 360) + 360) % 360;
   ETAT.lune.illum = (1 - Math.cos(elong))/2;
   ETAT.lune.croissante = dlam < 180;
+  majPlansSat(jours);                                     // plan de chaque satellite ; β et direction du Soleil dans le plan de l'observateur
 }
 
-// Demi-arc d'ombre (rad), centré sur l'anti-solaire θ = θs + π.
-function demiNuit(){
-  const s = Math.sqrt(1 - (CFG.R/CFG.R_ORB)**2) / Math.cos(ETAT.beta);
-  return s >= 1 ? 0 : Math.acos(s);
+// Demi-arc d'ombre (rad) du satellite s (observateur par défaut), centré sur l'anti-solaire θ = θs + π.
+function demiNuit(s = OBS){
+  const k = Math.sqrt(1 - (CFG.R/s.R)**2) / Math.cos(s.beta);
+  return k >= 1 ? 0 : Math.acos(k);
 }
-const dureeNuit = () => CFG.T_ISS * demiNuit() / Math.PI;
-const tEntree   = k => CFG.T_ISS*(ETAT.thetaSol + Math.PI - demiNuit())/(2*Math.PI) + k*CFG.T_ISS;
+const dureeNuit = () => OBS.T * demiNuit() / Math.PI;
+// instant (s) où l'observateur est à l'angle θ ; t = 0 ↔ θ = phi
+const tTheta = th => OBS.T*(th - OBS.phi)/(2*Math.PI);
+const tEntree   = k => tTheta(OBS.thetaSol + Math.PI - demiNuit()) + k*OBS.T;
 
 const _perp = new THREE.Vector3();
 function enNuit(pos){
@@ -130,7 +126,7 @@ function enNuit(pos){
 
 // Position dans le cycle jour/nuit : k = n° du cycle (depuis l'entrée dans l'ombre).
 function cycleNuit(t){
-  const k = Math.floor((t - tEntree(0))/CFG.T_ISS);
+  const k = Math.floor((t - tEntree(0))/OBS.T);
   const ecoule = t - tEntree(k), duree = dureeNuit();
   return {k, ecoule, duree, nuit: ecoule < duree};
 }

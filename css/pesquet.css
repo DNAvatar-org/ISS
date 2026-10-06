@@ -219,23 +219,40 @@ body.zen #credits{display:none !important}
 .b-sat{padding:2px 5px}
 .b-sat .ico{width:22px;height:16px}
 
-/* TÉLÉPHONE (portrait OU paysage) : les encarts passent avant tout. Le pied n'est plus un cadre posé dessus mais une
-   simple ligne tout en bas, sous les encarts, qui lui laissent sa hauteur ; les crédits (licences) sont masqués.
+/* PETIT ÉCRAN (téléphone, portrait OU paysage, ou fenêtre basse) : les encarts passent avant tout et tiennent SANS barre
+   de défilement. Le pied n'est plus un cadre posé dessus mais une simple ligne tout en bas, sous les encarts.
+   Les crédits des cartes restent visibles (obligation de licence), en petit, sans cadre.
+   Pour gagner de la hauteur : plus de noms sous les logos des satellites, plus de titre « Capture · Pose 30 s »,
+   et le joystick rétrécit avec la hauteur de l'écran (192 px au plus, 96 px au moins).
    Toucher le canevas masque / remet les encarts (entrees.js). */
 @media (max-width:760px), (max-height:500px){
   .menu-liste button{font-size:14px;padding:9px 12px}            /* au doigt */
   #pied{display:flex !important;bottom:2px;padding:0;gap:8px;background:none;border:0;border-radius:0;z-index:1;
         transform:translateX(-50%) scale(.75);transform-origin:50% 100%;opacity:.8}
-  #credits{display:none}
+  #credits{display:block;max-height:none;overflow:visible;padding:2px 6px;border:0;border-radius:6px;background:rgba(3,5,10,.45)}
+  #credits .credit{font-size:8.5px!important;line-height:1.3}
+  .sat span{display:none}
+  #titrePose{display:none}
+  .grp{padding-bottom:8px;margin-bottom:8px}
 }
-@media (max-width:760px){
-  #panel{bottom:30px;max-height:calc(42% - 22px)}
+/* paysage bas : encarts en haut à gauche / à droite, crédits sous l'encart Temps, pied centré en bas */
+@media (max-height:500px) and (orientation:landscape){
+  #panel{top:8px;left:8px;right:auto;bottom:auto;width:min(300px, calc(50vw - 12px));max-height:calc(100% - 52px);padding:10px 12px 10px}
+  #joy{width:clamp(96px, calc(100vh - 236px), 192px);height:clamp(96px, calc(100vh - 236px), 192px)}
+  #hud{top:8px;right:8px;width:min(280px, calc(50vw - 12px));max-height:calc(100% - 120px)}
+  #credits{left:auto;right:8px;bottom:48px;width:min(280px, calc(50vw - 12px))}   /* colonne de droite, au-dessus de ⛶ */
+}
+@media (max-height:500px) and (orientation:landscape) and (max-width:640px){
   #pied{transform:translateX(-50%) scale(.6)}
-  #pied .git{font-size:0}                                   /* portrait : le logo GitHub seul, sans libellé */
+  #pied .git{font-size:0}
+  #panel .btns button{padding:4px 7px}
 }
-@media (max-height:500px) and (min-width:761px){
-  #panel{top:8px;left:8px;max-height:calc(100% - 44px)}
-  #hud{top:8px;right:8px;max-height:calc(100% - 44px)}
+/* portrait étroit (fenêtre de bureau ; un téléphone en portrait voit l'écran « tourner ») */
+@media (max-width:760px) and (orientation:portrait){
+  #pied{transform:translateX(-50%) scale(.6)}
+  #pied .git{font-size:0}                                   /* le logo GitHub seul, sans libellé */
+  #credits{left:8px;right:8px;bottom:30px;width:auto}
+  #panel{bottom:76px;max-height:calc(100% - 290px)}
 }
 
 /* Paysage imposé sur téléphone : aucune page ne peut tourner l'écran (sauf Android en plein écran, cf. basculerZen) ;

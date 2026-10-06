@@ -7,7 +7,7 @@
 <title>ISS — cercles d'étoiles et traînées de Terre</title>
 <meta name="description" content="Simulation 3D (Three.js) d'un passage de nuit de l'ISS : pourquoi les étoiles dessinent des cercles centrés sur le pôle orbital, et la Terre des traînées parallèles à l'horizon.">
 <link rel="icon" type="image/png" href="logo.png">
-<link rel="stylesheet" href="css/pesquet.css">
+<link rel="stylesheet" href="css/pesquet.css?v=20261006b">
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -102,34 +102,37 @@
 <script src="https://dnavatar.org/_interfaces/kill-native-tooltip.js"></script>
 <script>window.killNativeTooltip && window.killNativeTooltip();</script>
 <script src="https://dnavatar.org/_interfaces/tooltips.js"></script>
-<script src="js/erreurs.js"></script>
+<!-- ?v= : version des scripts et feuilles locaux. index.html n'est jamais en cache, mais js/ et css/ le sont 4 h :
+     sans ce numéro, un téléphone garde l'ancien JS face à la nouvelle page (ex. « #sEcl absent »).
+     À CHANGER à chaque publication qui touche js/ ou css/ (le même partout). -->
+<script src="js/erreurs.js?v=20261006b"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="js/config.js"></script>
-<script src="js/dates.js"></script>
-<script src="js/cartes-data.js"></script>
-<script src="js/dom.js"></script>
-<script src="js/orbite.js"></script>
-<script src="js/scene.js"></script>
-<script src="js/ciel.js"></script>
-<script src="js/soleil.js"></script>
-<script src="js/eblouissement.js"></script>
-<script src="js/couronne.js"></script>
-<script src="js/lune.js"></script>
-<script src="js/terre.js"></script>
-<script src="js/tuiles-rendu.js"></script>
-<script src="js/tuiles.js"></script>
-<script src="js/satellites.js"></script>
-<script src="js/iss.js"></script>
-<script src="js/hubble.js"></script>
-<script src="js/iridium.js"></script>
-<script src="js/reperes.js"></script>
-<script src="js/cameras.js"></script>
-<script src="js/cone.js"></script>
-<script src="js/joystick-fond.js"></script>
-<script src="js/joystick.js"></script>
-<script src="js/pose.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/entrees.js"></script>
-<script src="js/main.js"></script>
+<script src="js/config.js?v=20261006b"></script>
+<script src="js/dates.js?v=20261006b"></script>
+<script src="js/cartes-data.js?v=20261006b"></script>
+<script src="js/dom.js?v=20261006b"></script>
+<script src="js/orbite.js?v=20261006b"></script>
+<script src="js/scene.js?v=20261006b"></script>
+<script src="js/ciel.js?v=20261006b"></script>
+<script src="js/soleil.js?v=20261006b"></script>
+<script src="js/eblouissement.js?v=20261006b"></script>
+<script src="js/couronne.js?v=20261006b"></script>
+<script src="js/lune.js?v=20261006b"></script>
+<script src="js/terre.js?v=20261006b"></script>
+<script src="js/tuiles-rendu.js?v=20261006b"></script>
+<script src="js/tuiles.js?v=20261006b"></script>
+<script src="js/satellites.js?v=20261006b"></script>
+<script src="js/iss.js?v=20261006b"></script>
+<script src="js/hubble.js?v=20261006b"></script>
+<script src="js/iridium.js?v=20261006b"></script>
+<script src="js/reperes.js?v=20261006b"></script>
+<script src="js/cameras.js?v=20261006b"></script>
+<script src="js/cone.js?v=20261006b"></script>
+<script src="js/joystick-fond.js?v=20261006b"></script>
+<script src="js/joystick.js?v=20261006b"></script>
+<script src="js/pose.js?v=20261006b"></script>
+<script src="js/ui.js?v=20261006b"></script>
+<script src="js/entrees.js?v=20261006b"></script>
+<script src="js/main.js?v=20261006b"></script>
 </body>
 </html>

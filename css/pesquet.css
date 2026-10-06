@@ -247,18 +247,38 @@ body.zen #credits{display:none !important}
   #temps{border-bottom:0;margin-bottom:0;padding-bottom:0}
   #galerie{max-height:calc(var(--alt, 100vh) - 190px)}              /* les vignettes de captures prennent la place, même sous les crédits */
 }
-/* paysage bas : encarts en haut à gauche / à droite, crédits tout en bas à droite ; le pied, dessous, ne réserve rien */
+/* colonne de boutons carrés à icônes, à gauche du joystick : les mêmes repères que dans le disque, toujours cliquables
+   (même cachés par une rangée), le repère choisi est allumé. Partout ; plus grands en paysage bas (cf. plus bas). */
+:root{--ic:25px}
+#viseeIss{display:grid;grid-template-columns:auto 1fr;column-gap:6px}
+#viseeIss > .row{grid-column:1 / -1}
+#reperes{display:flex;flex-direction:column;gap:3px;position:relative;z-index:2}
+#reperes button{width:var(--ic);height:var(--ic);padding:0;font-size:calc(var(--ic) * .58);line-height:1;
+                display:flex;align-items:center;justify-content:center}
+/* paysage bas : encarts en haut à gauche / à droite, crédits tout en bas à droite ; le pied, dessous, ne réserve rien.
+   Encart de gauche : colonne de boutons carrés à icônes (les repères du joystick, dupliqués) sous « ISS → … », et un joystick
+   GÉANT (jusqu'à ×1,8 : 346 px) qui « mord » derrière la rangée de boutons du haut et derrière Focale / capture en bas :
+   le disque occupe toute la hauteur de l'encart, ces rangées passent par-dessus. Ce qui est caché reste accessible par la colonne. */
 @media (max-height:500px) and (orientation:landscape){
-  #panel{top:8px;left:8px;right:auto;bottom:auto;width:min(300px, calc(50vw - 12px));max-height:calc(100% - 16px);padding:10px 12px 10px}
-  /* le joystick prend TOUTE la hauteur que laisse le reste de l'encart (jusqu'en bas de l'écran, par-dessus la signature),
-     borné par la largeur de l'encart ; --joy-reste = hauteur du reste de l'encart + marges (mesurée) */
   /* --alt = hauteur VISIBLE (innerHeight, posée par main.js) : sur Android, 100vh ignore la barre d'adresse et dépasse l'écran */
-  :root{--joy-max:calc(min(300px, 50vw - 12px) - 26px)}          /* = largeur intérieure de l'encart : le cercle touche ses bords */
-  #joy{width:max(96px, calc(clamp(96px, calc(var(--alt, 100vh) - var(--joy-reste)), var(--joy-max)) - var(--joy-moins, 0px)));height:max(96px, calc(clamp(96px, calc(var(--alt, 100vh) - var(--joy-reste)), var(--joy-max)) - var(--joy-moins, 0px)))}
+  :root{
+    --hudw:min(280px, 50vw - 12px);
+    /* diamètre du joystick : 1,8 × 192 px au plus ; borné par la hauteur de l'encart (écran − marges − remplissage)
+       et par la largeur laissée à gauche de l'encart Temps (écran − Temps − marges − colonne d'icônes) */
+    --jd:max(96px, min(346px, calc(var(--alt, 100vh) - 44px), calc(100vw - var(--hudw) - 90px)));
+    --ic:28px;                      /* côté des boutons carrés de la colonne */
+    --mord-bas:76px;                /* hauteur de ce qui passe par-dessus le bas du disque : Focale + trait + capture */
+  }
+  #panel{top:8px;left:8px;right:auto;bottom:auto;max-height:calc(100% - 16px);padding:10px 12px 10px;
+         width:min(max(300px, calc(var(--jd) + 66px)), calc(100vw - var(--hudw) - 24px))}
+  #joy{width:max(96px, calc(var(--jd) - var(--joy-moins, 0px)));height:max(96px, calc(var(--jd) - var(--joy-moins, 0px)))}
   /* plus de titre « Point de vue » : les 3 satellites passent en colonne à droite des boutons de vue (une ligne de gagnée) */
-  :root{--joy-reste:128px}             /* hauteur de tout le reste du panneau + marges (mesurée), moins le chevauchement */
-  /* le joystick grossit et passe SOUS la rangée de boutons de vue (ses coins sont vides : c'est un disque) */
-  #joyWrap{margin-top:-28px;position:relative;z-index:0}
+  #viseeIss{display:grid;grid-template-columns:auto 1fr;column-gap:6px}
+  #viseeIss > .row{grid-column:1 / -1;position:relative;z-index:1;text-shadow:0 0 4px #000, 0 0 2px #000}
+  #reperes{display:flex;flex-direction:column;gap:3px;position:relative;z-index:2}
+  #reperes button{width:var(--ic);height:var(--ic);padding:0;font-size:calc(var(--ic) * .58);line-height:1;
+                  display:flex;align-items:center;justify-content:center;background:rgba(22,27,38,.88)}
+  #joyWrap{margin:-30px 0 calc(-1 * var(--mord-bas));position:relative;z-index:0}
   #panel .grp:first-child > .btns, .tete, #panel .grp + .grp{position:relative;z-index:2}
   #panel .btns button{background:rgba(22,27,38,.88)}
   #panel .grp:first-child{position:relative}
@@ -268,7 +288,7 @@ body.zen #credits{display:none !important}
   #panel .grp:first-child > .btns, #affichageTerre{margin-right:38px}
   #panel .grp:first-child > .btns{flex-wrap:nowrap;gap:4px}
   #panel .grp:first-child > .btns button{padding:4px 7px;white-space:nowrap}
-  #hud{top:8px;right:8px;width:min(280px, calc(50vw - 12px));max-height:calc(100% - 16px)}
+  #hud{top:8px;right:8px;width:var(--hudw);max-height:calc(100% - 16px)}
   #credits{left:auto;right:52px;bottom:6px;width:min(280px, calc(50vw - 56px))}   /* en bas, à gauche de ⛶, par-dessus le pied */
 }
 @media (max-height:500px) and (orientation:landscape) and (max-width:640px){
@@ -277,11 +297,12 @@ body.zen #credits{display:none !important}
   #panel .btns button{padding:4px 7px}
   #panel .grp:first-child > .btns button{padding:4px 5px;font-size:11px}
 }
-/* très bas : on retire aussi la ligne Focale et le trait séparateur */
+/* un peu plus bas : boutons carrés plus petits (la colonne de 7 ne doit pas imposer la hauteur de l'encart) */
+@media (max-height:399px) and (orientation:landscape){ :root{--ic:25px} }
+/* très bas : on retire aussi la ligne Focale et le trait séparateur ; boutons carrés plus petits */
 @media (max-height:350px) and (orientation:landscape){
-  :root{--joy-reste:78px}
-  #joyWrap{margin-bottom:-16px}                              /* … et aussi sous les boutons de capture */
-  #viseeIss .row{display:none}
+  :root{--ic:23px;--mord-bas:42px}
+  #viseeIss > .row{display:none}
   #panel .grp{border-bottom:0;padding-bottom:2px;margin-bottom:2px}
 }
 /* portrait étroit (téléphone tenu droit, ou fenêtre étroite) */
@@ -290,7 +311,7 @@ body.zen #credits{display:none !important}
   #pied .git{font-size:0}                                   /* le logo GitHub seul, sans libellé */
   #credits{left:8px;right:52px;bottom:6px;width:auto}
   #panel{bottom:calc(var(--haut-credits, 56px) + 6px);max-height:calc(100% - var(--haut-credits, 56px) - var(--bas-hud, 200px) - 20px)}
-  /* le joystick prend toute la largeur de l'encart (cercle tangent aux bords : 100vw − marges 16 − remplissage 28 − bordure 2) ;
+  /* le joystick prend toute la largeur de l'encart (cercle tangent aux bords : 100vw − marges 16 − remplissage 28 − bordure 2 − colonne d'icônes 40) ;
      si la hauteur manque, ajusterPanneau() (ui.js) le rétrécit juste ce qu'il faut */
-  #joy{width:max(96px, calc(min(100vw - 46px, 420px) - var(--joy-moins, 0px)));height:max(96px, calc(min(100vw - 46px, 420px) - var(--joy-moins, 0px)))}
+  #joy{width:max(96px, calc(min(100vw - 86px, 380px) - var(--joy-moins, 0px)));height:max(96px, calc(min(100vw - 86px, 380px) - var(--joy-moins, 0px)))}
 }

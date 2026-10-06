@@ -1,6 +1,6 @@
 // File: js/joystick.js
 // Desc: Joystick de visée : une cible sur un disque (cap/site), cône vu de dessus, visées prédéfinies illustrées, molette = focale.
-// Version 1.1.0
+// Version 1.2.0
 // Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -13,13 +13,13 @@ JOY.cx = JOY.cv.getContext('2d');
 JOY.cv.width = JOY.cv.height = 2*JOY.R;
 
 const JOY_REPERES = [
-  {nom:'pole',    court:'Pôle',   titre:'Pôle (photo) : pôle orbital côté nuit, la Terre en bas'},
-  {nom:'poleSol', court:'',       titre:'Pôle orbital côté Soleil'},
-  {nom:'nadir',   court:'',       titre:'Terre (nadir) : droit vers le bas, puis zoomer pour le détail'},
-  {nom:'oblique', court:'Obl.',   titre:'Terre oblique : vers l\'avant et le bas, que de la Terre'},
-  {nom:'avant',   court:'Avant',  titre:'Avant : vers l\'horizon, dans le sens du vol'},
-  {nom:'soleil',  court:'',       titre:'Soleil : la visée le suit'},
-  {nom:'lune',    court:'',       titre:'Lune : la visée la suit'}
+  {nom:'pole',    court:'Pôle',   titre:'Pôle (photo) : pôle orbital côté nuit, la Terre en bas', icone:'🌌'},
+  {nom:'poleSol', court:'',       titre:'Pôle orbital côté Soleil', icone:'🌅'},
+  {nom:'nadir',   court:'',       titre:'Terre (nadir) : droit vers le bas, puis zoomer pour le détail', icone:'🌍'},
+  {nom:'oblique', court:'Obl.',   titre:'Terre oblique : vers l\'avant et le bas, que de la Terre', icone:'↘️'},
+  {nom:'avant',   court:'Avant',  titre:'Avant : vers l\'horizon, dans le sens du vol', icone:'➡️'},
+  {nom:'soleil',  court:'',       titre:'Soleil : la visée le suit', icone:'☀️'},
+  {nom:'lune',    court:'',       titre:'Lune : la visée la suit', icone:'🌙'}
 ];
 
 const REP_PHASE = {}; JOY_REPERES.forEach((rp, i) => REP_PHASE[rp.nom] = i*0.37);
@@ -132,6 +132,13 @@ function joyViser(x, y){
 }
 
 function creerJoystick(){
+  // colonne de boutons carrés (paysage bas, cf. css) : les mêmes repères que dans le disque, toujours cliquables même cachés par les rangées
+  for(const rp of JOY_REPERES){
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.preset = rp.nom; b.title = rp.titre; b.textContent = rp.icone;
+    b.onclick = () => { poseInterrompre(); choisirPreset(rp.nom); };
+    $('reperes').appendChild(b);
+  }
   JOY.cv.addEventListener('pointerdown', ev => {
     poseInterrompre();                                   // viser = nouvelle vue : l'empilement s'efface (SAVE avant)
     const [x, y] = joyPointeur(ev), rp = joyRepereSous(x, y);

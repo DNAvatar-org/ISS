@@ -31,6 +31,7 @@ function majVisee(){
   const t = OBS.nom + ' → ' + (ETAT.preset ? NOMS_VISEE[ETAT.preset] : 'libre');
   const b = $('bVueIss'); if(b.textContent !== t) b.textContent = t;
   $('viseeIss').hidden = ETAT.vue !== 'iss';
+  for(const b of $('reperes').children) b.classList.toggle('on', b.dataset.preset === ETAT.preset);   // le repère choisi est allumé
 }
 
 // Cases « Affichage » : vue Terre seulement, toutes cochées ; ISS et Terre–Lune : toutes décochées et masquées.

@@ -1,6 +1,6 @@
 // File: js/eblouissement.js
 // Desc: Éblouissement du Soleil : diffusion dans l'objectif, image floutée de la partie VISIBLE du disque solaire.
-// Version 1.0.0
+// Version 1.0.1
 // Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -29,7 +29,7 @@ void main(){
   gl_Position = projectionMatrix * c;
 }`;
 const GLSL_ECL_FS = `
-uniform vec3 uEch[${ECL.N}]; uniform vec3 uTeinte; varying vec2 vP;
+uniform vec3 uEch[${ECL.N}]; uniform vec3 uTeinte; uniform float uAile; varying vec2 vP;
 void main(){
   float E = 0.0;
   for(int i = 0; i < ${ECL.N}; i++){
@@ -39,7 +39,7 @@ void main(){
     float xa = 0.09 + u2, xc = 0.0036 + u2;
     float aile = 2.23 * inversesqrt(xa) * inversesqrt(sqrt(xa)) * (1.0 - smoothstep(9.0, 17.5, sqrt(u2)));
     float coeur = 0.2 / (xc*xc*xc);
-    E += s.z * (aile + coeur);
+    E += s.z * (aile*uAile + coeur);
   }
   // saturation de la pellicule par canal : blanc là où c'est fort, orangé dans les ailes
   gl_FragColor = vec4(1.0 - exp(-E * uTeinte * vec3(1.0, 0.75, 0.45)), 1.0);
@@ -66,9 +66,10 @@ function creerEblouissement(){
   ECL.uEch = {value:ECL.cellules.map(() => new THREE.Vector3())};
   ECL.uDemi = {value:1};
   ECL.uTeinte = {value:new THREE.Vector3(1, 1, 1)};
+  ECL.uAile = {value:1};
   ECL.mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
     vertexShader:GLSL_ECL_VS, fragmentShader:GLSL_ECL_FS,
-    uniforms:{uEch:ECL.uEch, uDemi:ECL.uDemi, uTeinte:ECL.uTeinte},
+    uniforms:{uEch:ECL.uEch, uDemi:ECL.uDemi, uTeinte:ECL.uTeinte, uAile:ECL.uAile},
     blending:THREE.AdditiveBlending, depthTest:false, depthWrite:false, transparent:true}));
   ECL.mesh.frustumCulled = false;
   ECL.mesh.renderOrder = 20;                                // par-dessus tout : il naît dans l'objectif
@@ -104,6 +105,9 @@ function majEblouissement(cam){
   const fTerre = 1 - aireLentille(rs, rt, sepT)/(Math.PI*rs*rs);
   const part = fLune*fTerre;                                 // les deux à la fois : rare, produit approché
   ECL.mesh.visible = part > 0;
+  // le voile large (aile) sur le disque lunaire s'atténue quand l'éclipse avance : plein hors éclipse, ~35 % à l'approche de la
+  // totalité (sinon il noie la Lune d'un beige uniforme). Le cœur raide (anneau de diamant) n'est pas touché.
+  ECL.uAile.value = 0.35 + 0.65*part*part;
   if(part <= 0) return fLune;
 
   if(fLune >= 1 && fTerre >= 1){                             // rien devant le Soleil

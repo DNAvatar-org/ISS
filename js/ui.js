@@ -91,12 +91,24 @@ let anMenuEcl = null;
 function majMenuEclipses(an){
   if(an === anMenuEcl) return;
   anMenuEcl = an;
-  const sel = $('sEcl');
-  sel.textContent = '';
-  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Éclipses ' + an + '…'; sel.appendChild(o0);
+  $('bEclTxt').textContent = 'Éclipses ' + an + '…';
+  const l = $('lEcl');
+  l.textContent = '';
   for(const e of eclipsesAnnee(an)){
-    const o = document.createElement('option'); o.value = e[0] + '|' + e[1]; o.textContent = libelleEclipse(e); sel.appendChild(o);
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.jour = e[0]; b.textContent = libelleEclipse(e); l.appendChild(b);
   }
+}
+// La liste s'ouvre sous le bouton, alignée à droite, bornée par le bas de l'écran (défile au besoin).
+function ouvrirMenuEclipses(ouvrir){
+  const l = $('lEcl');
+  l.hidden = !ouvrir;
+  $('bEcl').classList.toggle('on', ouvrir);
+  if(!ouvrir) return;
+  const r = $('bEcl').getBoundingClientRect();
+  l.style.top = (r.bottom + 4) + 'px';
+  l.style.right = (innerWidth - r.right) + 'px';
+  l.style.minWidth = r.width + 'px';
+  l.style.maxHeight = (innerHeight - r.bottom - 12) + 'px';
 }
 
 function majDateUI(){
@@ -157,12 +169,16 @@ function creerUI(){
     if(v === 'lune') vueTerreLune(); else if(v === 'ext') vueTerre(); else ETAT.vue = 'iss';
     majBoutons(); });
 
-  $('sVit').oninput = e => {
-    const c = +e.target.value;
+  // cran c de la jauge (0 = pause) ; les doubles flèches de « Vit. » passent au cran voisin
+  const reglerCran = c => {
+    c = Math.max(0, Math.min(VITESSES.length - 1, c));
     if(c === 0){ ETAT.pause = true; }
     else { ETAT.vitesse = VITESSES[c]; ETAT.pause = false; }
     majJaugeVitesse();
   };
+  $('sVit').oninput = e => reglerCran(+e.target.value);
+  $('bVitMoins').onclick = () => reglerCran(cranVitesse() - 1);
+  $('bVitPlus').onclick  = () => reglerCran(cranVitesse() + 1);
 
   // coucher de Soleil : vue ISS braquée sur le Soleil encore visible, 45 s avant l'entrée dans l'ombre, au ralenti
   $('bDebutNuit').onclick = () => {
@@ -183,14 +199,20 @@ function creerUI(){
     ETAT.vitesse = 10; ETAT.pause = false; majBoutons();
   };
   // éclipses 2021 (instants du maximum, UT) : toujours la vue ISS au téléobjectif, braquée sur la Lune
-  $('sEcl').onchange = e => {
-    if(!e.target.value) return;
-    const j = e.target.value.split('|')[0];
+  $('bEcl').onclick = () => ouvrirMenuEclipses($('lEcl').hidden);
+  $('lEcl').onclick = e => {
+    const b = e.target.closest('button');
+    if(!b) return;
+    ouvrirMenuEclipses(false);
     poseInterrompre();
-    ETAT.date0 = +j - ETAT.t/86400; majSoleilDate();
+    ETAT.date0 = +b.dataset.jour - ETAT.t/86400; majSoleilDate();
     ETAT.vue = 'iss'; choisirPreset('lune'); VUE_ISS.fov = 2;     // toute éclipse : vue ISS braquée sur la Lune
-    e.target.value = ''; majBoutons();
+    majBoutons();
   };
+  // ailleurs (canevas, encarts, Échap, redimensionnement) : la liste se ferme
+  addEventListener('pointerdown', e => { if(!e.target.closest('#lEcl, #bEcl')) ouvrirMenuEclipses(false); });
+  addEventListener('keydown', e => { if(e.key === 'Escape') ouvrirMenuEclipses(false); });
+  addEventListener('resize', () => ouvrirMenuEclipses(false));
   // glisser la date : on ne touche pas à t (la phase sur l'orbite reste) ; β en découle.
   // Bord droit → 1er janv. de l'année suivante (jauge à gauche toute) ; bord gauche → 31 déc. de l'année précédente.
   const JD = jaugeCompteur($('sDate'), sens => {
@@ -266,7 +288,10 @@ function dessinerPhase(cv, illum, croissante){
 function basculerZen(){
   const zen = !document.body.classList.contains('zen');
   document.body.classList.toggle('zen', zen);
-  if(zen && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+  if(zen && document.documentElement.requestFullscreen && !document.fullscreenElement)
+    document.documentElement.requestFullscreen()
+      .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'))   // Android : paysage verrouillé
+      .catch(() => {});                                      // iPhone : ni plein écran ni verrou ; l'écran « tourner » prend le relais
   if(!zen && document.fullscreenElement) document.exitFullscreen();
 }
 document.addEventListener('fullscreenchange', () => {

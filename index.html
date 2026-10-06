@@ -15,12 +15,17 @@
 <img id="photoVue" alt="Photo de 30 s" hidden>
 
 <div id="erreur" hidden></div>
+<!-- liste du menu « Éclipses » : hors de l'encart (son flou d'arrière-plan et son défilement la rogneraient) ;
+     menu dessiné par la page, pas un <select> : sur Android la liste native est mal placée et minuscule en paysage -->
+<div id="lEcl" class="menu-liste" hidden></div>
+<!-- téléphone tenu en portrait : la simulation se regarde en paysage (voir css, « TÉLÉPHONE ») -->
+<div id="tourner"><div><span class="tel" aria-hidden="true">📱</span><p>Tournez le téléphone</p><p class="aide">L'ISS se regarde en paysage.</p></div></div>
 <button id="bZen" title="Plein écran sans fenêtres (Échap ou re-clic pour revenir)">⛶</button>
 
 <aside id="hud">
   <section id="temps">
     <h2>Temps</h2>
-    <div class="row ligne-jauge"><label for="sVit" title="Vitesse de défilement. 0 = pause. Crans logarithmiques.">Vit.</label><input type="range" id="sVit" min="0" max="13" step="1" value="6" list="crans"><output id="oVit"></output></div>
+    <div class="row ligne-jauge"><span class="vit-btn"><button type="button" id="bVitMoins" title="Cran précédent : plus lent (jusqu'à la pause)"><svg viewBox="0 0 12 10" aria-hidden="true"><path d="M6 1 L2 5 L6 9 M10.5 1 L6.5 5 L10.5 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><label for="sVit" title="Vitesse de défilement. 0 = pause. Crans logarithmiques.">Vit.</label><button type="button" id="bVitPlus" title="Cran suivant : plus rapide"><svg viewBox="0 0 12 10" aria-hidden="true"><path d="M1.5 1 L5.5 5 L1.5 9 M6 1 L10 5 L6 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span><input type="range" id="sVit" min="0" max="13" step="1" value="6" list="crans"><output id="oVit"></output></div>
     <datalist id="crans">
       <option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option>
       <option value="4"></option><option value="5"></option><option value="6"></option><option value="7"></option>
@@ -35,8 +40,7 @@
     <div class="btns">
       <button id="bDebutNuit" class="b-ico" title="Coucher de Soleil : vue ISS braquée sur le Soleil, 45 s avant l'entrée dans l'ombre, au ralenti"><svg class="ico" viewBox="0 0 24 18" aria-hidden="true"><circle cx="12" cy="11.5" r="4.4" fill="#ff4a2a"/><path d="M0 12.5 Q12 9 24 12.5 L24 18 L0 18 Z" fill="#2f6bff"/><path d="M12 0.6 V5.4 M9.6 3.2 L12 5.6 L14.4 3.2" stroke="#ffd24a" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button id="bLever" class="b-ico" title="Lever de Soleil : vue ISS braquée sur le Soleil, 45 s avant la sortie de l'ombre, au ralenti"><svg class="ico" viewBox="0 0 24 18" aria-hidden="true"><circle cx="12" cy="11.5" r="4.4" fill="#ff4a2a"/><path d="M0 12.5 Q12 9 24 12.5 L24 18 L0 18 Z" fill="#2f6bff"/><path d="M12 5.6 V0.8 M9.6 3.0 L12 0.6 L14.4 3.0" stroke="#ffd24a" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <select id="sEcl" title="Aller au maximum d'une éclipse de l'année affichée">
-      </select>
+      <button type="button" id="bEcl" title="Aller au maximum d'une éclipse de l'année affichée"><span id="bEclTxt"></span><span aria-hidden="true">▾</span></button>
     </div>
   </section>
   <div class="ligne"><span>Lune</span><b><span id="hLune"></span> <canvas id="hLuneIco" width="36" height="36" title="Phase"></canvas></b></div>

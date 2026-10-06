@@ -1,7 +1,7 @@
 /* File: css/pesquet.css
    Desc: Mise en page : panneau de réglages, HUD du chrono, canvas plein écran.
-   Version 1.0.0
-   Date: [October 05, 2026]
+   Version 1.1.0
+   Date: [October 06, 2026]
    Copyright 2026 DNAvatar.org - Arnaud Maignan
    Licensed under Apache License 2.0 with Commons Clause. See LICENSE. */
 
@@ -16,6 +16,7 @@ body{margin:0;background:var(--bg);color:var(--txt);
      overflow:hidden;-webkit-font-smoothing:antialiased}
 canvas{display:block}
 #gl,#pose{position:fixed;inset:0;width:100%;height:100%}
+#gl{touch-action:none}   /* les gestes du canevas sont gérés par entrees.js (pas de défilement ni de zoom de page) */
 #pose{pointer-events:none;background:#000;display:none}
 #pose.on{display:block}
 
@@ -152,6 +153,15 @@ body.zen #panel, body.zen #hud, body.zen #galerie{display:none !important}
 #sDate::-moz-range-thumb{width:13px;height:13px;background:#ff9a2e;border:2px solid #1a1d26;border-radius:50%}
 #sTheta::-moz-range-thumb{width:8px;height:8px;background:#b9bec8;border:1px solid #1a1d26;border-radius:50%}
 
+/* bouton « ‹‹ Vit. ›› » : un seul cadre, les doubles flèches de part et d'autre passent au cran précédent / suivant */
+.vit-btn{display:inline-flex;align-items:center;flex:0 0 auto;border:1px solid var(--stroke);border-radius:7px;
+         background:rgba(255,255,255,.07);overflow:hidden}
+.vit-btn label{flex:0 0 auto;padding:0 2px;cursor:default}
+.vit-btn button{border:0;border-radius:0;background:none;padding:4px 5px;line-height:0;color:var(--dim)}
+.vit-btn button:hover{background:rgba(255,255,255,.14);color:var(--acc)}
+.vit-btn button:active{background:rgba(255,200,87,.25)}
+.vit-btn svg{width:12px;height:10px;display:block}
+
 /* curseur de vitesse : une flèche ▶ */
 #sVit::-webkit-slider-thumb{width:13px;height:15px;border:0;border-radius:0;background:transparent;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 15'%3E%3Cpath d='M1 1 L12 7.5 L1 14 Z' fill='%23ffc857' stroke='%231a1d26' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E")}
@@ -183,7 +193,15 @@ body.zen #pied{display:none !important}
 
 /* éclipses : le menu partage la ligne de coucher / lever de Soleil */
 #temps .btns{flex-wrap:nowrap;align-items:center}
-#temps .btns select{flex:1 1 0;min-width:0}
+#bEcl{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;text-align:left}
+#bEclTxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* liste du menu « Éclipses » (au niveau de la page, placée par ouvrirMenuEclipses) */
+.menu-liste{position:fixed;z-index:20;display:flex;flex-direction:column;overflow-y:auto;padding:4px;
+            background:#151a24;border:1px solid var(--stroke);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.55)}
+.menu-liste[hidden]{display:none}
+.menu-liste button{border:0;border-radius:6px;background:none;text-align:left;white-space:nowrap;font-size:12.5px;padding:6px 10px}
+.menu-liste button:hover{background:rgba(255,255,255,.12)}
+body.zen .menu-liste{display:none}
 
 /* imagerie et licences : encart séparé à droite, à gauche du bouton plein écran */
 #credits{position:fixed;right:12px;bottom:56px;width:300px;max-height:40%;overflow-y:auto;z-index:2;
@@ -200,3 +218,35 @@ body.zen #credits{display:none !important}
 .sat span{font-size:9px;line-height:1;color:var(--dim)}
 .b-sat{padding:2px 5px}
 .b-sat .ico{width:22px;height:16px}
+
+/* TÉLÉPHONE (portrait OU paysage) : les encarts passent avant tout. Le pied n'est plus un cadre posé dessus mais une
+   simple ligne tout en bas, sous les encarts, qui lui laissent sa hauteur ; les crédits (licences) sont masqués.
+   Toucher le canevas masque / remet les encarts (entrees.js). */
+@media (max-width:760px), (max-height:500px){
+  .menu-liste button{font-size:14px;padding:9px 12px}            /* au doigt */
+  #pied{display:flex !important;bottom:2px;padding:0;gap:8px;background:none;border:0;border-radius:0;z-index:1;
+        transform:translateX(-50%) scale(.75);transform-origin:50% 100%;opacity:.8}
+  #credits{display:none}
+}
+@media (max-width:760px){
+  #panel{bottom:30px;max-height:calc(42% - 22px)}
+  #pied{transform:translateX(-50%) scale(.6)}
+  #pied .git{font-size:0}                                   /* portrait : le logo GitHub seul, sans libellé */
+}
+@media (max-height:500px) and (min-width:761px){
+  #panel{top:8px;left:8px;max-height:calc(100% - 44px)}
+  #hud{top:8px;right:8px;max-height:calc(100% - 44px)}
+}
+
+/* Paysage imposé sur téléphone : aucune page ne peut tourner l'écran (sauf Android en plein écran, cf. basculerZen) ;
+   tenu en portrait, un écran couvre la simulation et demande de tourner l'appareil. */
+#tourner{display:none}
+@media (orientation:portrait) and (max-width:760px) and (pointer:coarse){
+  #tourner{display:flex;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;text-align:center;
+           background:var(--bg);color:var(--txt);padding:24px}
+  #tourner p{margin:10px 0 0;font-size:17px}
+  #tourner .aide{font-size:13px!important}
+  #tourner .tel{display:inline-block;font-size:64px;line-height:1;animation:tourner 2.4s ease-in-out infinite}
+  #bZen{display:none}
+}
+@keyframes tourner{0%,20%{transform:rotate(0)} 50%,80%{transform:rotate(-90deg)} 100%{transform:rotate(0)}}

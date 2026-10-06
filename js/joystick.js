@@ -1,7 +1,7 @@
 // File: js/joystick.js
 // Desc: Joystick de visée : une cible sur un disque (cap/site), cône vu de dessus, visées prédéfinies illustrées, molette = focale.
-// Version 1.0.0
-// Date: [October 05, 2026]
+// Version 1.1.0
+// Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -155,6 +155,6 @@ function creerJoystick(){
   // survol + molette = focale : on zoome sans quitter le joystick
   JOY.cv.addEventListener('wheel', ev => {
     ev.preventDefault(); poseInterrompre();
-    VUE_ISS.fov = Math.max(0.5, Math.min(FOV_MAX, VUE_ISS.fov*(1 + Math.sign(ev.deltaY)*0.1)));
+    zoomerFocale(facteurMolette(ev));                    // même réglage que sur le canevas (molette, pavé tactile)
   }, {passive:false});
 }

@@ -93,13 +93,37 @@ function placerCredits(){
   document.documentElement.style.setProperty('--haut-credits', Math.round(innerHeight - c.getBoundingClientRect().top) + 'px');   // portrait : l'encart du bas s'arrête dessous
 }
 
+/* Joystick : couche séparée, dessous (voir css « ZONE DE VISÉE »). Son diamètre = la hauteur de la zone (rangée « point de vue »
+   → Focale, ou jusqu'aux boutons de capture très bas), borné par la largeur disponible ; en paysage bas au plus ×1,8 (346 px),
+   et l'encart de gauche s'élargit d'autant (--jd). Il ne change jamais la hauteur de l'encart : pas de boucle de mise en page. */
+function dimensionnerJoystick(){
+  if($('viseeIss').hidden) return;
+  const j = $('joy'), wrap = $('joyWrap');
+  const bas = matchMedia('(max-height:500px) and (orientation:landscape)').matches;
+  let D = wrap.clientHeight;
+  if(bas){
+    D = Math.min(D, 346, innerWidth - $('hud').offsetWidth - 24 - 66);                 // largeur laissée à gauche de l'encart Temps
+    document.documentElement.style.setProperty('--jd', Math.max(96, Math.round(D)) + 'px');
+  }else{
+    document.documentElement.style.removeProperty('--jd');
+    D = Math.min(D, wrap.clientWidth - parseFloat(getComputedStyle(wrap).paddingLeft), 420);
+  }
+  D = Math.max(96, Math.round(D));
+  j.style.width = j.style.height = D + 'px';
+}
+
 /* Filet de sécurité : si, sur CET appareil (polices, barre d'adresse…), l'encart de gauche déborde malgré les calculs de la CSS,
-   le joystick rétrécit de ce débordement (--joy-moins) plutôt que de faire apparaître une barre de défilement. */
+   les boutons carrés rétrécissent (paysage) et la zone de visée raccourcit (portrait) plutôt que de faire apparaître une barre
+   de défilement. */
 function ajusterPanneau(){
   const p = $('panel'), r = document.documentElement.style;
-  r.setProperty('--joy-moins', '0px');
+  r.setProperty('--ic-moins', '0px'); r.setProperty('--zm', '0px');
   const trop = p.scrollHeight - p.clientHeight;
-  if(trop > 0 && $('viseeIss').offsetParent !== null) r.setProperty('--joy-moins', trop + 'px');
+  if(trop > 0 && !$('viseeIss').hidden){
+    r.setProperty('--ic-moins', Math.min(10, Math.ceil(trop/7)) + 'px');
+    r.setProperty('--zm', trop + 'px');
+  }
+  dimensionnerJoystick();
 }
 
 // Position θ du curseur : met à jour t en conservant le cycle courant.
@@ -248,6 +272,7 @@ function creerUI(){
   addEventListener('resize', placerCredits);
   addEventListener('resize', ajusterPanneau);
   new ResizeObserver(ajusterPanneau).observe($('panel'));
+  new ResizeObserver(dimensionnerJoystick).observe($('joyWrap'));          // la zone de visée change de hauteur (vue, Focale masquée…)
   ajusterPanneau();
   new ResizeObserver(placerCredits).observe($('hud'));         // la hauteur de l'encart Temps change (galerie, vues)
   placerCredits();

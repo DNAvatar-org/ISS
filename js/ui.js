@@ -211,6 +211,15 @@ function creerUI(){
     ETAT.vitesse = 10; ETAT.pause = false; majBoutons();
   };
 
+  // aujourd'hui : date et heure réelles (UT) lues sur l'horloge de l'appareil, en temps réel (×1). La phase de l'ISS
+  // sur son orbite (t) ne change pas : seule la date, donc le Soleil et le plan de l'orbite, saute à maintenant.
+  $('bAuj').onclick = () => {
+    poseInterrompre();
+    const jour = (Date.now() - Date.UTC(2021, 0, 1))/86400000;
+    if(jour < DATES.min || jour >= DATES.max) return;                       // bornes 2000 – 2035 (dates.js)
+    ETAT.date0 = jour - ETAT.t/86400; majSoleilDate();
+    ETAT.vitesse = 1; ETAT.pause = false; majBoutons(); majDateUI();
+  };
   // lever de Soleil : vue ISS braquée sur le Soleil juste avant la sortie de l'ombre, au ralenti
   $('bLever').onclick = () => {
     poseInterrompre();

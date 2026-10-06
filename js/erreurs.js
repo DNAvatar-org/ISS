@@ -1,6 +1,6 @@
 // File: js/erreurs.js
 // Desc: Crash-first visible : toute erreur (script, ressource, promesse) s'affiche dans la page, téléphone compris.
-// Version 1.0.0
+// Version 1.0.1
 // Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -23,6 +23,7 @@
     const el = e.target;
     if(el && (el.tagName === 'SCRIPT' || el.tagName === 'LINK')){ afficher('Ressource introuvable : ' + (el.src || el.href)); return; }
     if(el && el !== window) return;                         // images (tuiles GIBS…) : leurs échecs sont gérés par leur code
+    if(/^ResizeObserver loop/.test(e.message || '')) return;   // avertissement bénin de Chrome (signature, bulles), pas une panne
     afficher((e.message || 'Erreur') + (e.filename ? ' — ' + court(e.filename) + ':' + e.lineno : ''));
   }, true);
   addEventListener('unhandledrejection', e => afficher('Promesse rejetée : ' + (e.reason && e.reason.message || e.reason)));

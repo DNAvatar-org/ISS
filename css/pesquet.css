@@ -246,7 +246,7 @@ body.zen #credits{display:none !important}
   /* le joystick prend TOUTE la hauteur que laisse le reste de l'encart (jusqu'en bas de l'écran, par-dessus la signature),
      borné par la largeur de l'encart ; --joy-reste = hauteur du reste de l'encart + marges (mesurée) */
   /* --alt = hauteur VISIBLE (innerHeight, posée par main.js) : sur Android, 100vh ignore la barre d'adresse et dépasse l'écran */
-  :root{--joy-max:calc(min(300px, 50vw - 12px) - 36px)}
+  :root{--joy-max:calc(min(300px, 50vw - 12px) - 26px)}          /* = largeur intérieure de l'encart : le cercle touche ses bords */
   #joy{width:max(96px, calc(clamp(96px, calc(var(--alt, 100vh) - var(--joy-reste)), var(--joy-max)) - var(--joy-moins, 0px)));height:max(96px, calc(clamp(96px, calc(var(--alt, 100vh) - var(--joy-reste)), var(--joy-max)) - var(--joy-moins, 0px)))}
   /* plus de titre « Point de vue » : les 3 satellites passent en colonne à droite des boutons de vue (une ligne de gagnée) */
   :root{--joy-reste:128px}             /* hauteur de tout le reste du panneau + marges (mesurée), moins le chevauchement */
@@ -282,5 +282,8 @@ body.zen #credits{display:none !important}
   #pied{transform:translateX(-50%) scale(.6)}
   #pied .git{font-size:0}                                   /* le logo GitHub seul, sans libellé */
   #credits{left:8px;right:52px;bottom:6px;width:auto}
-  #panel{bottom:calc(var(--haut-credits, 56px) + 6px);max-height:calc(100% - 270px)}
+  #panel{bottom:calc(var(--haut-credits, 56px) + 6px);max-height:calc(100% - var(--haut-credits, 56px) - var(--bas-hud, 200px) - 20px)}
+  /* le joystick prend toute la largeur de l'encart (cercle tangent aux bords : 100vw − marges 16 − remplissage 28 − bordure 2) ;
+     si la hauteur manque, ajusterPanneau() (ui.js) le rétrécit juste ce qu'il faut */
+  #joy{width:max(96px, calc(min(100vw - 46px, 420px) - var(--joy-moins, 0px)));height:max(96px, calc(min(100vw - 46px, 420px) - var(--joy-moins, 0px)))}
 }

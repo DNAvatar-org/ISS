@@ -83,6 +83,7 @@ function jaugeCompteur(el, deborder){
    (priorité : ne rien superposer) ; sinon tout en bas, par-dessus la signature. Rappelé au redimensionnement. */
 function placerCredits(){
   const c = $('credits');
+  document.documentElement.style.setProperty('--bas-hud', Math.round($('hud').getBoundingClientRect().bottom) + 'px');   // portrait : l'encart du bas s'arrête sous celui du haut
   c.style.bottom = '';                                             // retour à la CSS (bureau : déjà au-dessus du pied)
   if(!matchMedia('(max-width:760px), (max-height:500px)').matches || getComputedStyle(c).display === 'none') return;   // (offsetParent vaut toujours null en position fixed)
   const h = $('hud').getBoundingClientRect(), p = $('pied').getBoundingClientRect(), ch = c.getBoundingClientRect().height;

@@ -248,5 +248,7 @@ body.zen #credits{display:none !important}
   #tourner .aide{font-size:13px!important}
   #tourner .tel{display:inline-block;font-size:64px;line-height:1;animation:tourner 2.4s ease-in-out infinite}
   #bZen{display:none}
+  body.portrait-ok #tourner{display:none}
+  body.portrait-ok #bZen{display:block}
 }
 @keyframes tourner{0%,20%{transform:rotate(0)} 50%,80%{transform:rotate(-90deg)} 100%{transform:rotate(0)}}

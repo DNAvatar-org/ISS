@@ -19,7 +19,7 @@
      menu dessiné par la page, pas un <select> : sur Android la liste native est mal placée et minuscule en paysage -->
 <div id="lEcl" class="menu-liste" hidden></div>
 <!-- téléphone tenu en portrait : la simulation se regarde en paysage (voir css, « TÉLÉPHONE ») -->
-<div id="tourner"><div><span class="tel" aria-hidden="true">📱</span><p>Tournez le téléphone</p><p class="aide">L'ISS se regarde en paysage.</p></div></div>
+<div id="tourner"><div><span class="tel" aria-hidden="true">📱</span><p>Tournez le téléphone</p><p class="aide">L'ISS se regarde en paysage.</p><p class="aide">(toucher pour continuer quand même)</p></div></div>
 <button id="bZen" title="Plein écran sans fenêtres (Échap ou re-clic pour revenir)">⛶</button>
 
 <aside id="hud">
@@ -102,6 +102,7 @@
 <script src="https://dnavatar.org/_interfaces/kill-native-tooltip.js"></script>
 <script>window.killNativeTooltip && window.killNativeTooltip();</script>
 <script src="https://dnavatar.org/_interfaces/tooltips.js"></script>
+<script src="js/erreurs.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/dates.js"></script>

@@ -36,6 +36,10 @@
       "dest": "pages/ISS/js/cone.js"
     },
     {
+      "src": "js/erreurs.js",
+      "dest": "pages/ISS/js/erreurs.js"
+    },
+    {
       "src": "js/config.js",
       "dest": "pages/ISS/js/config.js"
     },

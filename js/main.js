@@ -119,7 +119,7 @@ function demarrer(){
 const mgr = new THREE.LoadingManager();
 mgr.onError = url => {
   erreurEl.hidden = false;
-  erreurEl.textContent = 'Texture illisible : ' + String(url).slice(0, 60);
+  erreurEl.appendChild(document.createTextNode('Texture illisible : ' + String(url).slice(0, 60)));
   throw new Error('Texture introuvable : ' + url);
 };
 mgr.onLoad = demarrer;

@@ -199,6 +199,7 @@ function creerUI(){
     ETAT.vitesse = 10; ETAT.pause = false; majBoutons();
   };
   // éclipses 2021 (instants du maximum, UT) : toujours la vue ISS au téléobjectif, braquée sur la Lune
+  $('tourner').onclick = () => document.body.classList.add('portrait-ok');   // l'écran « tourner » se ferme au toucher
   $('bEcl').onclick = () => ouvrirMenuEclipses($('lEcl').hidden);
   $('lEcl').onclick = e => {
     const b = e.target.closest('button');

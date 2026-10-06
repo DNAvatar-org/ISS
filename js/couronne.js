@@ -1,6 +1,6 @@
 // File: js/couronne.js
 // Desc: Couronne solaire : atmosphère réelle du Soleil, structurée (jets, plumes polaires), visible seulement à la totalité.
-// Version 1.0.0
+// Version 1.1.0
 // Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -11,7 +11,7 @@
    de recouvrement par la Lune, en même temps que l'anneau de diamant. Orientation : axe du Soleil ≈ nord écliptique
    (à 7° près). Liseré rose au ras du limbe : la chromosphère, visible quelques secondes aux contacts. */
 
-const COUR = {DEMI:6, PX:1024};   // DEMI : demi-côté du carré en rayons solaires
+const COUR = {DEMI:6, PX:512};    // DEMI : demi-côté du carré en rayons solaires ; texture calculée à la 1re totalité
 
 function texCouronne(){
   const n = COUR.PX, cv = document.createElement('canvas'); cv.width = cv.height = n;
@@ -47,7 +47,8 @@ function texCouronne(){
 }
 
 function creerCouronne(){
-  COUR.mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({map:texCouronne(),
+  // texture calculée seulement à la première totalité (majCouronne) : ~0,15 s de calcul, pas au démarrage sur téléphone
+  COUR.mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({
     blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0}));   // test de profondeur : la Lune la masque
   SOL.groupe.add(COUR.mesh);
 }
@@ -58,6 +59,7 @@ function majCouronne(fLune){
   const k = 1 - lisseEcl(2e-4, 2e-3, fLune);
   COUR.mesh.visible = k > 0;
   if(!COUR.mesh.visible) return;
+  if(!COUR.mesh.material.map){ COUR.mesh.material.map = texCouronne(); COUR.mesh.material.needsUpdate = true; }
   COUR.mesh.material.opacity = k;
   COUR.mesh.scale.setScalar(CFG.SUN_D*Math.tan(ETAT.rSol)*COUR.DEMI);
   _cz.copy(ETAT.S).negate();                                                  // face à l'observateur

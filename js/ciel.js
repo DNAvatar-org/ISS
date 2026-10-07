@@ -14,24 +14,28 @@
    Voie lactée sur le plan galactique réel. Étoiles et lueur sont dans un sous-groupe « équatorial » (repère J2000)
    tourné à chaque trame vers la scène : précession jusqu'à la date, puis ETAT.vers. Une photo prise depuis l'ISS se
    retrouve donc étoile pour étoile (et c'est ce qui permet d'en déduire la visée). */
-const CIEL = {groupe:null, equat:null, sphere:null, points:null, uExpo:{value:1}, uPx:{value:1}};
+const CIEL = {groupe:null, equat:null, sphere:null, points:null, uExpo:{value:1}, uPx:{value:1}, uCalque:{value:0}};
 
+// uCalque = 1 quand une photo est superposée (Check Photo) : étoiles vertes, plus grosses et plus vives, pour les
+// distinguer à l'œil de celles de la photo (blanches) et voir si elles tombent dessus.
 const GLSL_ETOILES_VS = `
 attribute float aTaille; attribute vec3 aCouleur;
-uniform float uPx;
+uniform float uPx, uCalque;
 varying vec3 vC;
 void main(){
   vC = aCouleur;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = aTaille * uPx;
+  gl_PointSize = aTaille * uPx * (1.0 + 0.8*uCalque);
 }`;
 const GLSL_ETOILES_FS = `
-uniform float uExpo;
+uniform float uExpo, uCalque;
 varying vec3 vC;
 void main(){
   float r = length(gl_PointCoord - 0.5) * 2.0;
   float a = 1.0 - smoothstep(0.35, 1.0, r);           // cœur net, bord doux
-  gl_FragColor = vec4(vC * a * uExpo, 1.0);
+  float l = max(vC.r, max(vC.g, vC.b));
+  vec3 c = mix(vC, vec3(0.25, 1.0, 0.45) * min(1.0, 0.5 + l), uCalque);
+  gl_FragColor = vec4(c * a * uExpo, 1.0);
 }`;
 
 const TEINTES = [[0.61,0.69,1.0],[0.79,0.84,1.0],[0.97,0.97,1.0],[1.0,0.96,0.92],[1.0,0.82,0.63],[1.0,0.71,0.42]];
@@ -98,9 +102,9 @@ function creerCiel(){
       b = 0; t = TEINTES[(Math.random()*TEINTES.length)|0];
     }
     d.multiplyScalar(R).toArray(pos, i*3);
-    const lum = i < NC ? 0.35 + 0.65*b : 0.15 + 0.15*Math.random();
+    const lum = i < NC ? 0.45 + 0.55*b : 0.15 + 0.15*Math.random();
     col[i*3] = t[0]*lum; col[i*3+1] = t[1]*lum; col[i*3+2] = t[2]*lum;
-    taille[i] = i < NC ? 1.4 + 3.6*b : 1.2;                       // pixels CSS
+    taille[i] = i < NC ? 1.6 + 4.4*b : 1.2;                       // pixels CSS
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -108,7 +112,7 @@ function creerCiel(){
   g.setAttribute('aTaille',  new THREE.BufferAttribute(taille, 1));
   CIEL.uPx.value = renderer.getPixelRatio();
   CIEL.points = new THREE.Points(g, new THREE.ShaderMaterial({vertexShader:GLSL_ETOILES_VS, fragmentShader:GLSL_ETOILES_FS,
-    uniforms:{uExpo:CIEL.uExpo, uPx:CIEL.uPx}, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
+    uniforms:{uExpo:CIEL.uExpo, uPx:CIEL.uPx, uCalque:CIEL.uCalque}, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
   CIEL.points.frustumCulled = false;
   CIEL.points.renderOrder = -9;
   CIEL.equat.add(CIEL.points);

@@ -23,7 +23,8 @@ function creerSolveur(){
     const f = [...e.dataTransfer.files].find(x => x.type.startsWith('image/'));
     if(f) analyserPhoto(f);
   });
-  $('solAppliquer').onclick = appliquerSolution;
+  $('solAppliquer').onclick = () => appliquerSolution(false);
+  $('solChercher').onclick = chercherDates;         // (pas l'événement : il passerait pour « prudent »)
 }
 
 const p2 = n => String(n).padStart(2, '0');
@@ -36,7 +37,7 @@ function lignesSolveur(l){
 }
 
 async function analyserPhoto(fichier){
-  $('encartPhoto').hidden = false; $('solChamps').hidden = true;
+  $('encartPhoto').hidden = false; $('solChamps').hidden = true; $('solDates').hidden = true; $('solListe').textContent = '';
   lignesSolveur(['Analyse de « ' + fichier.name + ' »…']);
   const buf = await fichier.arrayBuffer();
   const exif = lireExif(buf), bmp = await createImageBitmap(new Blob([buf]));
@@ -61,12 +62,39 @@ async function analyserPhoto(fichier){
     '✓ ' + res.appariees.length + ' étoiles reconnues (± ' + fr(res.rms, 1) + ' px)' + (res.miroir ? ', image en miroir' : ''),
     'RA ' + Math.floor(ra) + ' h ' + fr((ra % 1)*60, 1) + ' min, Dec ' + fr(res.centre.dec, 2) + '° · ' + fr(res.F*36/W, 1) + ' mm' + (limbe ? ' · limbe vu' : ''),
     exif.date ? 'EXIF : ' + texteDate(exif.date) + ' ' + texteHeure(exif.date) + ' UT' + (exif.focale ? ', ' + exif.focale + ' mm' : '')
-              : 'Pas de date dans l\'image : corrige le jour (l\'heure peut être à ±40 min), puis Appliquer.'
+              : limbe ? 'Pas de date dans l\'image : les étoiles ne la donnent pas. « Dates possibles » cherche les instants où l\'ISS voyait ce limbe sous ces étoiles (une année, ou toutes).'
+                      : 'Pas de date dans l\'image ni de limbe : indique le jour et l\'heure UT, puis Appliquer.'
   ];
-  const u = exif.date || unixDeJour(jourDate());
-  $('solDate').value = texteDate(u); $('solHeure').value = texteHeure(u);
   $('solChamps').hidden = false;
-  appliquerSolution(!exif.date);                                       // sans EXIF : seulement si le limbe confirme l'heure
+  if(exif.date){
+    $('solDate').value = texteDate(exif.date); $('solHeure').value = texteHeure(exif.date);
+    appliquerSolution(false);
+  }else{
+    $('solDate').value = ''; $('solHeure').value = '';                // pas la date du jour : la photo est d'une autre époque
+    $('solDates').hidden = !limbe;
+    lignesSolveur(CHK.lignes);
+  }
+}
+
+// « Dates possibles » : instants de l'année (ou de 2000 à aujourd'hui) où l'ISS, de nuit, voyait ce limbe sous ces étoiles.
+function chercherDates(){
+  const v = $('solAn').value.trim(), an = /^\d{2}$/.test(v) ? 2000 + +v : /^\d{4}$/.test(v) ? +v : null;
+  const debut = an ? Date.UTC(an, 0, 1)/1000 : Date.UTC(DATES.AN_MIN, 0, 1)/1000, fin = an ? Date.UTC(an + 1, 0, 1)/1000 : Date.now()/1000;
+  const l = $('solListe'); l.textContent = 'Recherche…';
+  setTimeout(() => {                                                    // laisser s'afficher « Recherche… »
+    const c = datesPossibles(CHK.res, CHK.img, CHK.limbe, debut, fin);
+    l.textContent = '';
+    const p = document.createElement('p');
+    p.textContent = c.length ? c.length + ' instant' + (c.length > 1 ? 's' : '') + (an ? ' en ' + an : ' de ' + DATES.AN_MIN + ' à aujourd\'hui') + ' : clic pour appliquer, puis comparer les villes avec le calque.'
+                             : 'Aucun instant' + (an ? ' en ' + an : '') + ' : autre année ?';
+    l.appendChild(p);
+    for(const m of c.slice(0, 200)){
+      const b = document.createElement('button');
+      b.textContent = texteDate(m.unix) + ' ' + texteHeure(m.unix) + ' UT · bord à ' + m.alt.toFixed(0) + ' km';
+      b.onclick = () => { $('solDate').value = texteDate(m.unix); $('solHeure').value = texteHeure(m.unix); appliquerSolution(false); };
+      l.appendChild(b);
+    }
+  }, 30);
 }
 
 // prudent : n'appliquer que si le limbe confirme l'instant (date non sûre : celle affichée par défaut, sans EXIF)

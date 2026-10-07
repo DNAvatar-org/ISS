@@ -19,6 +19,7 @@ function creerEncart(){
 function montrerCalque(oui){
   $('calque').hidden = !(oui && ENC.url);
   $('encartPhoto').classList.toggle('calque', !$('calque').hidden);
+  CIEL.uCalque.value = $('calque').hidden ? 0 : 1;                     // étoiles de l'app vertes et grossies (ciel.js)
   majCalque();
 }
 

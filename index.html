@@ -52,7 +52,7 @@
   <div id="galerie" hidden></div>
 </aside>
 
-<!-- encart « Photo » (js/solveur/) : à droite, sous l'encart Temps — la photo analysée, le résultat, date/heure, Appliquer -->
+<!-- encart « Photo » (js/solveur/) : à droite, sous l'encart Temps — la photo analysée, le résultat, date/heure, ±1 s -->
 <aside id="encartPhoto" hidden>
   <div class="tete"><h2>Photo</h2><button type="button" id="encFermer" title="Fermer (et retirer le calque)">✕</button></div>
   <div id="encVue" title="Clic : superposer la photo à la vue (re-clic : la retirer)"><canvas id="encCv"></canvas></div>
@@ -60,7 +60,8 @@
   <div id="solChamps" hidden>
     <label>Date <input id="solDate" placeholder="JJ.MM.AA" size="8"></label>
     <label>Heure UT <input id="solHeure" placeholder="HH:MM:SS" size="8"></label>
-    <button type="button" id="solAppliquer" title="Placer l'ISS à cet instant, braquer la caméra, régler la focale">Appliquer</button>
+    <button type="button" id="solMoins" title="Reculer d'une seconde">◀ 1 s</button>
+    <button type="button" id="solPlus" title="Avancer d'une seconde">1 s ▶</button>
   </div>
   <div id="solDates" hidden>
     <label title="Vide : de 2000 à aujourd'hui (des centaines d'instants)">Année <input id="solAn" placeholder="toutes" size="5"></label>

@@ -9,7 +9,7 @@
    catalogue (astrometrie.js) → direction, rotation, focale. La date vient des EXIF s'il y en a (originaux Flickr,
    appareil), sinon on part de la date affichée (le limbe affine l'heure à ±40 min près, instant.js). Dès que les étoiles
    sont reconnues, c'est appliqué : l'ISS à cet instant (pause), la caméra braquée, la focale, les paramètres dans l'URL.
-   Tout s'affiche dans l'encart Photo (encart.js) ; corriger la date ou l'heure puis « Appliquer » recommence. */
+   Tout s'affiche dans l'encart Photo (encart.js) ; corriger la date ou l'heure (saisie ou ◀ ▶ 1 s) recommence. */
 const CHK = {res:null, img:null, data:null, limbe:null, exif:null, lignes:[]};
 const LARGEUR_MAX = 2400;                                               // au-delà, l'image est réduite (vitesse)
 
@@ -23,7 +23,9 @@ function creerSolveur(){
     const f = [...e.dataTransfer.files].find(x => x.type.startsWith('image/'));
     if(f) analyserPhoto(f);
   });
-  $('solAppliquer').onclick = () => appliquerSolution(false);
+  $('solMoins').onclick = () => decalerHeure(-1);
+  $('solPlus').onclick = () => decalerHeure(+1);
+  $('solDate').onchange = $('solHeure').onchange = () => appliquerSolution(false);   // saisie validée (Entrée / sortie du champ)
   $('solChercher').onclick = chercherDates;
   $('solAn').oninput = e => e.target.classList.toggle('attente', !e.target.value);
   $('solAn').onkeydown = e => { if(e.key === 'Enter') chercherDates(); };         // (pas l'événement : il passerait pour « prudent »)
@@ -65,7 +67,7 @@ async function analyserPhoto(fichier){
     'RA ' + Math.floor(ra) + ' h ' + fr((ra % 1)*60, 1) + ' min, Dec ' + fr(res.centre.dec, 2) + '° · ' + fr(res.F*36/W, 1) + ' mm' + (limbe ? ' · limbe vu' : ''),
     exif.date ? 'EXIF : ' + texteDate(exif.date) + ' ' + texteHeure(exif.date) + ' UT' + (exif.focale ? ', ' + exif.focale + ' mm' : '')
               : limbe ? 'Pas de date dans l\'image : les étoiles ne la donnent pas. « Dates possibles » cherche les instants où l\'ISS voyait ce limbe sous ces étoiles (une année, ou toutes).'
-                      : 'Pas de date dans l\'image ni de limbe : indique le jour et l\'heure UT, puis Appliquer.'
+                      : 'Pas de date dans l\'image ni de limbe : indique le jour et l\'heure UT.'
   ];
   $('solChamps').hidden = false;
   if(exif.date){
@@ -111,6 +113,15 @@ function chercherDates(){
     c.slice(0, 200).forEach((m, i) => { if(m.note !== null && (ib < 0 || m.note > c[ib].note)) ib = i; });
     if(ib >= 0){ choisir(c[ib], boutons[ib]); boutons[ib].scrollIntoView({block:'nearest'}); }
   }, 30);
+}
+
+// ±delta secondes sur l'instant saisi (la date suit au passage de minuit), puis on recommence
+function decalerHeure(delta){
+  const jour = lireDateURL($('solDate').value), frac = lireHeureURL($('solHeure').value);
+  if(jour === null || frac === null){ lignesSolveur([...CHK.lignes, 'Date ou heure illisible (JJ.MM.AA, HH:MM:SS).']); return; }
+  const unix = Math.round(unixDeJour(jour + frac)) + delta;
+  $('solDate').value = texteDate(unix); $('solHeure').value = texteHeure(unix);
+  appliquerSolution(false);
 }
 
 // prudent : n'appliquer que si le limbe confirme l'instant (date non sûre : celle affichée par défaut, sans EXIF)

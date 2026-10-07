@@ -111,6 +111,7 @@ function apparier(M, F, img, G, tol, vmax){
     if(-dot3(fwd, v[i]) < cosR) continue;
     const p = projeter(M, F, cx, cy, v[i]);
     if(!p || p.x < 0 || p.y < 0 || p.x >= img.W || p.y >= img.H) continue;
+    if(img.terre && Math.hypot(p.x - img.terre.x, p.y - img.terre.y) < img.terre.r) continue;   // derrière la Terre : invisible
     m++;
     const gx = Math.floor(p.x/G.c), gy = Math.floor(p.y/G.c);
     let jb = -1, db = tol;
@@ -145,7 +146,9 @@ function affiner(M, F, img, det){
 
 /* Résolution complète. img = {W, H}, det = détections triées par éclat. Rend null ou
    {M, F, appariees, rms, miroir, centre:{ra, dec} (degrés J2000), roulis (degrés, nord par rapport au haut)}. */
-function resoudreCiel(img, det, Flimbe){
+// limbe (facultatif) : les étoiles prédites derrière la Terre ne comptent ni pour l'appariement ni pour la note
+// (sinon, quand la Terre occupe la moitié du cadre, la part retrouvée est divisée par deux et la bonne solution rejetée).
+function resoudreCiel(img, det, Flimbe, limbe){
   preparerCatalogue();
   const cx = img.W/2, cy = img.H/2;
   // focales à essayer : autour de celle du limbe (−35 % → +50 %), sinon champ horizontal de 4° à 130° ; pas de 6 %
@@ -155,7 +158,7 @@ function resoudreCiel(img, det, Flimbe){
   const fin = Date.now() + 10000;                                       // au-delà de 10 s : pas assez d'étoiles sûres
   const tol = Math.max(5, img.W/250);
   // une focale F, une orientation (pts : détections, éventuellement retournées) → meilleure hypothèse, ou null
-  const essayer = (pts, F, verif, index, nHaut, cMax) => {
+  const essayer = (pts, F, verif, index, nHaut, cMax, img) => {
     const haut = pts.slice(0, nHaut);
     let best = null;
     {
@@ -187,19 +190,21 @@ function resoudreCiel(img, det, Flimbe){
     return best;
   };
   // chaque focale, à l'endroit puis en miroir (image retournée) ; arrêt à la première hypothèse nette
-  const sens = [det, det.map(p => ({x:img.W - 1 - p.x, y:p.y, eclat:p.eclat}))].map(p => ({pts:p, verif:grilleDet(p.slice(0, 400), tol)}));
+  const terre = m => limbe ? {x:m ? img.W - 1 - limbe.cx : limbe.cx, y:limbe.cy, r:limbe.r} : null;
+  const sens = [det, det.map(p => ({x:img.W - 1 - p.x, y:p.y, eclat:p.eclat}))]
+    .map((p, m) => ({pts:p, verif:grilleDet(p.slice(0, 400), tol), img:{W:img.W, H:img.H, terre:terre(m)}}));
   let h = null, miroir = false, pts = det;
   // 1) grands triangles des 30 plus brillantes ; 2) si l'éclat ne classe pas bien les étoiles (photo retouchée,
   // toutes saturées) : petits triangles (≤ 8°) de 80 détections, catalogue jusqu'à V = 5,5
   const passes = [[AST.tri, 30, 40*DEG], [AST.triP, 80, 8*DEG]];
   recherche: for(const [index, nHaut, cMax] of passes) for(const F of Fs) for(let m=0;m<2;m++){
     if(Date.now() > fin) break recherche;
-    const b = essayer(sens[m].pts, F, sens[m].verif, index, nHaut, cMax);
+    const b = essayer(sens[m].pts, F, sens[m].verif, index, nHaut, cMax, sens[m].img);
     if(b && (!h || b.note > h.note)){ h = b; miroir = m === 1; pts = sens[m].pts; }
     if(h && h.n >= 12 && h.note >= 4) break recherche;
   }
   if(!h || h.n < 8 || h.note < 4) return null;
-  const det200 = pts.slice(0, 200), r = affiner(h.M, h.F, img, det200);
+  const det200 = pts.slice(0, 200), r = affiner(h.M, h.F, sens[miroir ? 1 : 0].img, det200);
   const fwd = r.M[2].map(x => -x), up = r.M[1];
   const est = [-fwd[1], fwd[0], 0], en = Math.hypot(est[0], est[1]); est[0] /= en; est[1] /= en;
   const nord = [fwd[1]*est[2] - fwd[2]*est[1], fwd[2]*est[0] - fwd[0]*est[2], fwd[0]*est[1] - fwd[1]*est[0]];

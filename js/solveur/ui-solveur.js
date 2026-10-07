@@ -51,7 +51,7 @@ async function analyserPhoto(fichier){
   const limbe = detecterLimbe(img);
   const det = horsTerre(detecterEtoiles(img), limbe, H/100);
   const Fl = limbe ? focaleParLimbe(limbe, W, H) : null;               // la courbure du limbe borne la focale
-  const res = resoudreCiel({W, H}, det, Fl);
+  const res = resoudreCiel({W, H}, det, Fl, limbe);
   Object.assign(CHK, {res, img:{W, H}, data:img.data, limbe, exif});
   afficherEncart(cv, URL.createObjectURL(fichier), det, res, limbe);
   if(!res){

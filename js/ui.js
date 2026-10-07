@@ -169,24 +169,8 @@ function majDateUI(){
   $('sDate').max = (Date.UTC(an + 1, 0, 1) - Date.UTC(an, 0, 1))/86400000 - 1/1440;   // droite toute = 31 déc. 23:59 : on y reste
   $('sDate').value = j - debut;
   $('oDate').textContent = libelleDate(j);
-  majSourceISS();
   H.lune.textContent = ETAT.lune.croissante ? 'croissante' : 'décroissante';
   dessinerPhase($('hLuneIco'), ETAT.lune.illum, ETAT.lune.croissante);
-}
-
-// Pastille de la position de l'ISS : réelle (NASA, TLE) ou modèle (villes et sol ne sont alors pas les vrais).
-const SOURCES_ISS = {
-  nasa:'ISS réelle : éphémérides NASA (trajectoire reconstituée)',
-  prevision:'ISS réelle : prévision NASA (manœuvres prévues comprises)',
-  tle:'ISS réelle : TLE CelesTrak du jour (SGP4)',
-  modele:'ISS simulée : pas de position réelle à cette date (données NASA de oct. 2020 à aujourd\'hui + 2 semaines ; TLE à ±15 jours de maintenant)'
-};
-function majSourceISS(){
-  const o = $('oSrc');
-  if(o.dataset.src === EPH.src) return;
-  o.dataset.src = EPH.src;
-  o.title = SOURCES_ISS[EPH.src] + (EPH.tleEtat === 'ok' ? '' : ' — TLE : ' + EPH.tleEtat);
-  o.textContent = EPH.src === 'modele' ? 'sim.' : 'réelle';
 }
 
 // Le Soleil dépend de la date : recalculé à chaque trame, la scène n'est touchée que s'il a bougé.

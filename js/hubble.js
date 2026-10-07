@@ -1,12 +1,12 @@
 // File: js/hubble.js
 // Desc: Télescope spatial Hubble : éléments orbitaux (28,5°, ~540 km), modèle simple, logo.
-// Version 1.0.0
-// Date: [October 05, 2026]
+// Version 1.1.0
+// Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
-/* Éléments réalistes (inclinaison, altitude, période, régression du nœud par J2) ; le nœud et la phase sont choisis,
-   ce ne sont pas des TLE de la date affichée. */
+/* Position réelle par son TLE du jour (ephemerides.js, NORAD 20580). Les éléments ci-dessous (inclinaison, altitude,
+   période, régression du nœud par J2) ne servent qu'en l'absence de TLE pour la date (futur lointain). */
 const _alt_hubble = 5.4;
 enregistrerSat({
   id:'hubble', nom:'Hubble', info:'Hubble : 28,5°, 540 km, 95,5 min',

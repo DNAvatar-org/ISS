@@ -72,10 +72,28 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 
 #erreur{position:fixed;inset:auto 16px 16px 360px;z-index:5;padding:12px 14px;border-radius:10px;
         background:#5a1620;border:1px solid #ff6b81;color:#fff;font-size:13px}
-/* pastille « réelle / sim. » : position de l'ISS (ephemerides.js) */
-#oSrc{margin-left:6px;padding:0 5px;border-radius:6px;font-size:10px;line-height:15px;color:#062;background:#5fd38a}
-#oSrc[data-src="modele"]{color:var(--txt);background:rgba(255,255,255,.18)}
-#oSrc[data-src="prevision"],#oSrc[data-src="tle"]{background:#a9e6bf}
+/* « Check Photo » : panneau de résultat (js/solveur/), page en attente d'un dépôt */
+#solveur{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:21;width:min(520px,calc(100% - 32px));
+         padding:12px 14px;border-radius:10px;background:var(--panel);border:1px solid var(--c1);color:var(--txt);font-size:13px;
+         backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 6px 24px rgba(0,0,0,.5)}
+#solveur[hidden]{display:none}
+#solTxt p{margin:0 0 4px}
+#solChamps{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}
+#solChamps input{background:rgba(255,255,255,.08);border:1px solid var(--stroke);border-radius:6px;color:var(--txt);padding:3px 6px;font:inherit}
+#solveur .btns{margin-top:6px}
+body.depot::after{content:"Déposer la photo : visée, focale et heure retrouvées par les étoiles";position:fixed;inset:12px;z-index:30;
+                  display:flex;align-items:center;justify-content:center;border:2px dashed var(--c1);border-radius:16px;
+                  background:rgba(3,5,10,.7);color:var(--c1);font-size:18px;pointer-events:none}
+/* encart « Photo » : sous l'encart Temps (--bas-hud, cf. placerCredits), même largeur */
+#encartPhoto{position:fixed;right:12px;top:calc(var(--bas-hud, 200px) + 8px);width:250px;z-index:2;padding:8px 10px 10px;
+             background:var(--panel);border:1px solid var(--stroke);border-radius:12px;backdrop-filter:blur(10px)}
+#encartPhoto[hidden]{display:none}
+#encartPhoto .tete{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#encartPhoto h2{margin:0}
+#encFermer{background:none;border:0;color:var(--dim);cursor:pointer;font-size:14px;padding:0 2px}
+#encVue{position:relative;overflow:hidden;border-radius:6px;cursor:zoom-in;max-height:calc(100vh - var(--bas-hud, 200px) - 60px)}
+#encCv{display:block;width:100%;height:100%;transform-origin:0 0}
+@media (max-width:760px){ #encartPhoto{width:200px} }
 /* avis sur les paramètres d'URL (url.js) : en haut, au centre, au-dessus des encarts */
 #avis{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:20;width:min(440px,calc(100% - 32px));
       display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:10px;

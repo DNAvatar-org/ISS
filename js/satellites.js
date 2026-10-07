@@ -33,17 +33,18 @@ function enregistrerSat(d){
 const omegaISS = jours => REF.alpha + CFG.DEPHASAGE_REF + CFG.DERIVE_NOEUD*(jours - CFG.JOUR_REF);
 
 // Plan de chaque satellite dans la scène à la date (à rappeler quand ETAT.vers change : calculerSoleil).
-// ISS à position réelle (EPH.plan, ephemerides.js) : son plan, sa période, son rayon, et sa phase calée pour que
-// thetaSat(ISS, ETAT.t) = u + π (θ = 0 au nœud DESCENDANT, cf. e1) ; tEntree, cycleNuit, jauges en découlent.
+// Satellite à position réelle (TLE du jour, ephemerides.js ; l'ISS via EPH.plan, déjà calculé pour le repère de la scène) :
+// son plan, sa période, son rayon, et sa phase calée pour que thetaSat(s, ETAT.t) = u + π (θ = 0 au nœud DESCENDANT,
+// cf. e1) ; tEntree, cycleNuit, jauges en découlent. Sans TLE pour la date : le modèle (éléments du fichier du satellite).
 function majPlansSat(jours){
   for(const s of SATS){
     let nd, N;
-    if(s.id === 'iss' && EPH.plan){
-      const p = EPH.plan;
+    const p = s.id === 'iss' ? EPH.plan : planReel(s.id, jours);
+    if(p){
       nd = p.nd; N = p.N; s.T = p.T; s.R = p.R;
       s.phi = p.u + Math.PI - 2*Math.PI*ETAT.t/s.T;
     }else{
-      if(s.id === 'iss'){ s.T = s.T0; s.R = s.R0; }   // modèle : la phase reste, pour ne pas sauter
+      s.T = s.T0; s.R = s.R0;                          // modèle : la phase reste, pour ne pas sauter
       const om = omegaISS(jours) + s.dOm + (s.derive - CFG.DERIVE_NOEUD)*(jours - CFG.JOUR_REF);
       const si = Math.sin(s.incl), ci = Math.cos(s.incl);
       nd = [Math.cos(om), Math.sin(om), 0]; N = [Math.sin(om)*si, -Math.cos(om)*si, ci];

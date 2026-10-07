@@ -64,8 +64,40 @@
       "dest": "pages/ISS/js/ephemerides.js"
     },
     {
-      "src": "js/iss-ephem-data.js",
-      "dest": "pages/ISS/js/iss-ephem-data.js"
+      "src": "js/tle-data.js",
+      "dest": "pages/ISS/js/tle-data.js"
+    },
+    {
+      "src": "js/etoiles-data.js",
+      "dest": "pages/ISS/js/etoiles-data.js"
+    },
+    {
+      "src": "js/solveur/exif.js",
+      "dest": "pages/ISS/js/solveur/exif.js"
+    },
+    {
+      "src": "js/solveur/detection.js",
+      "dest": "pages/ISS/js/solveur/detection.js"
+    },
+    {
+      "src": "js/solveur/limbe.js",
+      "dest": "pages/ISS/js/solveur/limbe.js"
+    },
+    {
+      "src": "js/solveur/astrometrie.js",
+      "dest": "pages/ISS/js/solveur/astrometrie.js"
+    },
+    {
+      "src": "js/solveur/instant.js",
+      "dest": "pages/ISS/js/solveur/instant.js"
+    },
+    {
+      "src": "js/solveur/ui-solveur.js",
+      "dest": "pages/ISS/js/solveur/ui-solveur.js"
+    },
+    {
+      "src": "js/solveur/encart.js",
+      "dest": "pages/ISS/js/solveur/encart.js"
     },
     {
       "src": "js/satellites.js",

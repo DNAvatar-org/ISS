@@ -8,6 +8,8 @@
 /* sat   : id ou nom d'un satellite (iss, hubble, iridium ; casse indifférente). Absent : ISS.
    vue   : visée de la caméra embarquée : pole, antipole (pôle côté Soleil), soleil, obl (Terre oblique), lune, avant,
            nadir (casse indifférente). Absent : pole.
+   cap   : direction de visée en degrés, 0 = sens du vol, +90 = vers la gauche (normale orbitale), ±180 = vers l'arrière ;
+   site  : hauteur en degrés (0 = horizontale, −90 = nadir). Les deux ensemble remplacent vue= (visée libre).
    focale: focale en mm, équivalent 24×36 (ex. 58 ; « 58mm » accepté). Absent : celle de la vue choisie.
    date  : JJ.MM.AA ou JJ.MM.AAAA (format français ; séparateurs . / ou -), entre 2000 et 2035.
    heure : HH:MM ou HH:MM:SS, temps universel (UT, comme l'affichage). Sans date : ignorée, avec un avis.
@@ -71,6 +73,17 @@ function appliquerVueURL(){
   return [];
 }
 
+// Visée libre demandée (cap, site en degrés) : prioritaire sur vue=.
+function appliquerViseeURL(){
+  const c = URL_P.get('cap'), s = URL_P.get('site');
+  if(c === null && s === null) return [];
+  const cap = parseFloat(String(c).replace(',', '.')), site = parseFloat(String(s).replace(',', '.'));
+  if(!isFinite(cap) || !isFinite(site) || site < -90 || site > 90)
+    return ['Visée illisible : cap=' + c + ', site=' + s + '. Format attendu : cap=-46.4&site=-16.9 (degrés, site entre −90 et 90).'];
+  ETAT.vue = 'iss'; viser(cap*DEG, site*DEG);
+  return [];
+}
+
 // Focale demandée (mm) → champ vertical (cone.js), dans les bornes du zoom.
 function appliquerFocaleURL(){
   const v = URL_P.get('focale');
@@ -106,9 +119,9 @@ function appliquerDateURL(){
   }
   ETAT.date0 = jour + frac - ETAT.t/86400;
   majSoleilDate(); majDateUI();
-  const tleAttendu = EPH.tleEtat === 'chargement' && Math.abs(unixDeJour(jourDate()) - Date.now()/1000) < TLE_JOURS*86400;
+  const tleAttendu = EPH.sats.iss.etat === 'chargement' && Math.abs(unixDeJour(jourDate()) - Date.now()/1000) < TLE_JOURS*86400;
   if(EPH.src === 'modele' && !tleAttendu)                 // près de maintenant, le TLE (en route) la donnera
     msg.push('Position réelle de l\'ISS inconnue à cette date : elle est simulée (sol et villes ne sont pas les vrais).',
-             'Positions réelles : d\'octobre 2020 à aujourd\'hui + 2 semaines (éphémérides NASA), et à ±15 jours de maintenant (TLE).');
+             'Positions réelles : de 2000 à aujourd\'hui + 15 jours (un TLE par jour, et celui du jour chez CelesTrak).');
   return msg;
 }

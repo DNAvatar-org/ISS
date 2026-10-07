@@ -167,11 +167,7 @@ function appliquerSolution(prudent = false){
   const roulis = Math.atan2(u.dot(br), u.dot(bu))/DEG;
   majBoutons(); majDateUI();
 
-  const q = new URLSearchParams(location.search);
-  for(const k of ['vue', 'cap', 'site', 'focale', 'date', 'heure']) q.delete(k);
-  q.set('date', texteDate(unix)); q.set('heure', texteHeure(unix));
-  q.set('cap', (cap/DEG).toFixed(1)); q.set('site', (site/DEG).toFixed(1)); q.set('focale', focale.toFixed(1));
-  history.replaceState(null, '', '?' + q.toString().replace(/%3A/g, ':'));       // heure lisible : 22:21:03
+  majURL(0, true);                                                     // l'URL suit la vue (url.js)
   l.push('Appliqué : ' + texteDate(unix) + ' ' + texteHeure(unix) + ' UT, cap ' + fr(cap/DEG, 1) + '°, site ' + fr(site/DEG, 1) + '°, ' + fr(focale, 1) + ' mm'
          + (Math.abs(roulis) > 2 ? ' (roulis de ' + roulis.toFixed(0) + '° non reproduit)' : '') + ' — dans l\'URL.');
   lignesSolveur([...CHK.lignes.filter(x => !x.startsWith('Pas de date')), ...l]);   // appliqué : l'invite à dater est caduque

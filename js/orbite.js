@@ -1,7 +1,7 @@
 // File: js/orbite.js
 // Desc: Mécanique : position de l'ISS, Soleil à une date donnée (donc β), géométrie de l'éclipse, rotation de la Terre.
-// Version 1.1.0
-// Date: [October 05, 2026]
+// Version 1.2.0
+// Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -73,20 +73,23 @@ function gmst(jours){
   return (((280.46061837 + 360.98564736629*n) % 360) + 360) % 360 * DEG;
 }
 
-/* Orientation du plan orbital : on ne connaît pas l'ascension droite du nœud (Ω) du jour de la photo,
-   on la CALE pour que β = 49° (≈ 30 min de nuit) à la date de référence, puis elle dérive de −5°/jour. */
+/* Plan orbital de l'ISS : le vrai quand ephemerides.js a une source pour la date (NASA, TLE). Sinon le MODÈLE :
+   ascension droite du nœud (Ω) CALÉE pour que β = 49° (≈ 30 min de nuit) à la date de référence, puis −5°/jour. */
 const REF = ephemSoleil(CFG.JOUR_REF);
+
+function planModeleISS(jours){
+  const om = REF.alpha + CFG.DEPHASAGE_REF + CFG.DERIVE_NOEUD*(jours - CFG.JOUR_REF);   // Ω
+  const si = Math.sin(CFG.INCL), ci = Math.cos(CFG.INCL);
+  return {nd:[Math.cos(om), Math.sin(om), 0], N:[Math.sin(om)*si, -Math.cos(om)*si, ci]};   // nœud ascendant, normale
+}
 
 const dot3 = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
 
 function calculerSoleil(jours){
   const e = ephemSoleil(jours);
-  const om = REF.alpha + CFG.DEPHASAGE_REF + CFG.DERIVE_NOEUD*(jours - CFG.JOUR_REF);   // Ω
-  const si = Math.sin(CFG.INCL), ci = Math.cos(CFG.INCL);
   const cd = Math.cos(e.delta);
   const Seq = [cd*Math.cos(e.alpha), cd*Math.sin(e.alpha), Math.sin(e.delta)];          // Soleil, repère équatorial
-  const nd  = [Math.cos(om), Math.sin(om), 0];                                          // direction du nœud
-  const N   = [Math.sin(om)*si, -Math.cos(om)*si, ci];                                  // normale orbitale
+  const {nd, N} = planISS(jours);                                                       // nœud ascendant, normale (réels ou modèle)
   const nxN = [nd[1]*N[2]-nd[2]*N[1], nd[2]*N[0]-nd[0]*N[2], nd[0]*N[1]-nd[1]*N[0]];
   // repère de la scène : x = −nœud, y = normale orbitale, z = −(nœud × normale) (l'axe de la Terre y vaut (0, cos i, sin i))
   const vers = (v, out) => out.set(-dot3(v, nd), dot3(v, N), -dot3(v, nxN));

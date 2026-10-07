@@ -60,6 +60,14 @@
       "dest": "pages/ISS/js/url.js"
     },
     {
+      "src": "js/ephemerides.js",
+      "dest": "pages/ISS/js/ephemerides.js"
+    },
+    {
+      "src": "js/iss-ephem-data.js",
+      "dest": "pages/ISS/js/iss-ephem-data.js"
+    },
+    {
       "src": "js/satellites.js",
       "dest": "pages/ISS/js/satellites.js"
     },

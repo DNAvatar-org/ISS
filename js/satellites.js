@@ -1,7 +1,7 @@
 // File: js/satellites.js
 // Desc: Satellites : registre, orbite de chacun (plan, position, orientation), anneaux, satellite observateur (OBS).
-// Version 1.0.0
-// Date: [October 05, 2026]
+// Version 1.1.0
+// Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -24,6 +24,7 @@ function enregistrerSat(d){
   d.R = CFG.R + d.alt;
   d.e1 = new THREE.Vector3(1,0,0); d.e2 = new THREE.Vector3(0,0,-1); d.N = new THREE.Vector3(0,1,0);
   d.beta = 0; d.thetaSol = 0;
+  d.T0 = d.T; d.R0 = d.R;          // valeurs du modèle (l'ISS les quitte quand sa position réelle est connue)
   SATS.push(d);
   if(!OBS) OBS = d;
   return d;
@@ -32,11 +33,21 @@ function enregistrerSat(d){
 const omegaISS = jours => REF.alpha + CFG.DEPHASAGE_REF + CFG.DERIVE_NOEUD*(jours - CFG.JOUR_REF);
 
 // Plan de chaque satellite dans la scène à la date (à rappeler quand ETAT.vers change : calculerSoleil).
+// ISS à position réelle (EPH.plan, ephemerides.js) : son plan, sa période, son rayon, et sa phase calée pour que
+// thetaSat(ISS, ETAT.t) = u + π (θ = 0 au nœud DESCENDANT, cf. e1) ; tEntree, cycleNuit, jauges en découlent.
 function majPlansSat(jours){
   for(const s of SATS){
-    const om = omegaISS(jours) + s.dOm + (s.derive - CFG.DERIVE_NOEUD)*(jours - CFG.JOUR_REF);
-    const si = Math.sin(s.incl), ci = Math.cos(s.incl);
-    const nd = [Math.cos(om), Math.sin(om), 0], N = [Math.sin(om)*si, -Math.cos(om)*si, ci];
+    let nd, N;
+    if(s.id === 'iss' && EPH.plan){
+      const p = EPH.plan;
+      nd = p.nd; N = p.N; s.T = p.T; s.R = p.R;
+      s.phi = p.u + Math.PI - 2*Math.PI*ETAT.t/s.T;
+    }else{
+      if(s.id === 'iss'){ s.T = s.T0; s.R = s.R0; }   // modèle : la phase reste, pour ne pas sauter
+      const om = omegaISS(jours) + s.dOm + (s.derive - CFG.DERIVE_NOEUD)*(jours - CFG.JOUR_REF);
+      const si = Math.sin(s.incl), ci = Math.cos(s.incl);
+      nd = [Math.cos(om), Math.sin(om), 0]; N = [Math.sin(om)*si, -Math.cos(om)*si, ci];
+    }
     const nxN = [nd[1]*N[2]-nd[2]*N[1], nd[2]*N[0]-nd[0]*N[2], nd[0]*N[1]-nd[1]*N[0]];
     ETAT.vers([-nd[0], -nd[1], -nd[2]], s.e1); ETAT.vers(nxN, s.e2); ETAT.vers(N, s.N);
     s.beta = Math.asin(Math.max(-1, Math.min(1, ETAT.S.dot(s.N))));
@@ -107,6 +118,7 @@ function majSats(t){
     s.groupe.quaternion.setFromRotationMatrix(_sm.makeBasis(_sx, s.N, _sz));
     _sz.crossVectors(s.e1, s.N);
     s.anneau.quaternion.setFromRotationMatrix(_sm.makeBasis(s.e1, s.N, _sz));
+    s.anneau.scale.setScalar(s.R/s.R0);                            // anneau construit au rayon du modèle
   }
 }
 

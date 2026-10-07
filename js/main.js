@@ -114,6 +114,7 @@ function demarrer(){
   const avisURL = appliquerSatURL();               // ?sat= (url.js) : avant t, qui dépend de l'observateur
   ETAT.t = tEntree(0) - 300;                       // cinq minutes avant l'entrée dans l'ombre
   avisURL.push(...appliquerVueURL());              // ?vue= : visée prédéfinie
+  avisURL.push(...appliquerFocaleURL());           // ?focale= (mm)
   avisURL.push(...appliquerDateURL());             // ?date=&heure= : date + heure → en pause
   if(avisURL.length) avis(avisURL);
   addEventListener('resize', redimensionner); redimensionner();

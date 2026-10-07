@@ -1,6 +1,6 @@
 // File: js/url.js
-// Desc: Paramètres d'URL : ?sat=ISS&vue=pole&date=13.02.24&heure=04:29:51 (satellite, visée, date et heure UT au départ) ; avis si mal formés.
-// Version 1.0.0
+// Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés.
+// Version 1.1.0
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -8,11 +8,12 @@
 /* sat   : id ou nom d'un satellite (iss, hubble, iridium ; casse indifférente). Absent : ISS.
    vue   : visée de la caméra embarquée : pole, antipole (pôle côté Soleil), soleil, obl (Terre oblique), lune, avant,
            nadir (casse indifférente). Absent : pole.
+   focale: focale en mm, équivalent 24×36 (ex. 58 ; « 58mm » accepté). Absent : celle de la vue choisie.
    date  : JJ.MM.AA ou JJ.MM.AAAA (format français ; séparateurs . / ou -), entre 2000 et 2035.
    heure : HH:MM ou HH:MM:SS, temps universel (UT, comme l'affichage). Sans date : ignorée, avec un avis.
    Date + heure = un instant précis : la simulation démarre en pause. Les autres paramètres ne mettent pas en pause.
-   Comme le bouton « Auj. », seule la date (Soleil, Lune, plan de l'orbite) est réglée : la phase du satellite sur
-   son orbite reste celle du départ. */
+   L'ISS est placée à sa position RÉELLE à cet instant UTC (ephemerides.js) quand une source la donne ; sinon un avis
+   prévient qu'elle est simulée. */
 const URL_P = new URLSearchParams(location.search);
 const FORMAT_DATE = 'date=JJ.MM.AA (ex. date=13.02.24 pour le 13 février 2024)';
 const FORMAT_HEURE = 'heure=HH:MM:SS en temps universel (ex. heure=04:29:51)';
@@ -70,6 +71,17 @@ function appliquerVueURL(){
   return [];
 }
 
+// Focale demandée (mm) → champ vertical (cone.js), dans les bornes du zoom.
+function appliquerFocaleURL(){
+  const v = URL_P.get('focale');
+  if(v === null) return [];
+  const f = parseFloat(v.replace(',', '.'));
+  if(!/^\s*\d+([.,]\d+)?\s*(mm)?\s*$/i.test(v) || !(f > 0))
+    return ['Focale illisible : « ' + v + ' ». Format attendu : focale=58 (en mm, équivalent 24×36).'];
+  VUE_ISS.fov = Math.max(0.5, Math.min(FOV_MAX, fovDepuisFocale(f)));
+  return [];
+}
+
 // Date et heure demandées (après le t de départ : date0 en découle).
 function appliquerDateURL(){
   const ds = URL_P.get('date'), hs = URL_P.get('heure');
@@ -94,5 +106,9 @@ function appliquerDateURL(){
   }
   ETAT.date0 = jour + frac - ETAT.t/86400;
   majSoleilDate(); majDateUI();
+  const tleAttendu = EPH.tleEtat === 'chargement' && Math.abs(unixDeJour(jourDate()) - Date.now()/1000) < TLE_JOURS*86400;
+  if(EPH.src === 'modele' && !tleAttendu)                 // près de maintenant, le TLE (en route) la donnera
+    msg.push('Position réelle de l\'ISS inconnue à cette date : elle est simulée (sol et villes ne sont pas les vrais).',
+             'Positions réelles : d\'octobre 2020 à aujourd\'hui + 2 semaines (éphémérides NASA), et à ±15 jours de maintenant (TLE).');
   return msg;
 }

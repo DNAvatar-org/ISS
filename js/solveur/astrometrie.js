@@ -11,9 +11,10 @@
    envoie une direction J2000 v sur c = M·v ; pixel = (cx + F·c_r/(−c_b), cy − F·c_u/(−c_b)).
    1. Index des triangles du catalogue (V ≤ 4, ~500 étoiles, côtés ≤ 40°, ~250 000 triangles) par les rapports de côtés (petit/grand, moyen/grand),
       insensibles à l'échelle donc à la focale.
-   2. Triangles des 30 détections les plus brillantes (les villes en font partie : faute d'étoile, elles ne collent pas) : même invariants (en pixels) → candidats ; sommets associés
-      par côtés opposés ; F estimée sur le grand côté ; M par la méthode q de Davenport ; score = étoiles du catalogue
-      (V ≤ 5,5) qui retombent sur une détection.
+   2. Pour chaque focale essayée (autour de celle que donne la courbure du limbe, limbe.js, sinon de 4° à 130° de champ) :
+      les 30 détections les plus brillantes deviennent des directions, leurs triangles sont comparés en ANGLES (rapports
+      et taille) à ceux du catalogue ; sommets associés par côtés opposés ; M par la méthode q de Davenport ;
+      note = étoiles du catalogue (V ≤ 5) retrouvées sur une détection × part retrouvée.
    3. Meilleure hypothèse affinée : appariements, M (méthode q), F (section dorée), plusieurs passes. */
 const AST = {cat:null, tri:null};
 const _sub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
@@ -137,42 +138,57 @@ function affiner(M, F, img, det){
 
 /* Résolution complète. img = {W, H}, det = détections triées par éclat. Rend null ou
    {M, F, appariees, rms, miroir, centre:{ra, dec} (degrés J2000), roulis (degrés, nord par rapport au haut)}. */
-function resoudreCiel(img, det){
+function resoudreCiel(img, det, Flimbe){
   preparerCatalogue();
-  const essayer = (pts) => {
-    const cx = img.W/2, cy = img.H/2, haut = pts.slice(0, 30);
-    const tol = Math.max(5, img.W/250), verif = grilleDet(pts.slice(0, 150), tol);
-    const Fmin = img.W/2/Math.tan(75*DEG), Fmax = img.W/2/Math.tan(1.5*DEG);   // champ horizontal de 3° à 150°
+  const cx = img.W/2, cy = img.H/2;
+  // focales à essayer : autour de celle du limbe (−35 % → +50 %), sinon champ horizontal de 4° à 130° ; pas de 6 %
+  const Fs = [];
+  if(Flimbe) for(let k=0;k<=14;k++){ for(const s of k ? [-1, 1] : [1]){ const F = Flimbe*Math.pow(1.06, s*k); if(F > 0.65*Flimbe && F < 1.5*Flimbe) Fs.push(F); } }
+  else { const F0 = img.W/2/Math.tan(20*DEG); for(let k=0;k<=40;k++) for(const s of k ? [-1, 1] : [1]){ const F = F0*Math.pow(1.06, s*k), h = 2*Math.atan(img.W/2/F)/DEG; if(h > 4 && h < 130) Fs.push(F); } }
+  const fin = Date.now() + 8000;                                        // au-delà de 8 s : pas assez d'étoiles sûres
+  const tol = Math.max(5, img.W/250);
+  // une focale F, une orientation (pts : détections, éventuellement retournées) → meilleure hypothèse, ou null
+  const essayer = (pts, F, verif) => {
+    const haut = pts.slice(0, 30);
     let best = null;
-    const fin = Date.now() + 3000;                                      // au-delà de 3 s : pas assez d'étoiles sûres
-    // triangles des k plus brillantes d'abord (c croissant) : on s'arrête dès qu'une hypothèse est nette
-    triangles: for(let c=2;c<haut.length;c++) for(let b=1;b<c;b++) for(let a=0;a<b;a++){
-      if(Date.now() > fin) break triangles;
-      const d = trianglOrdonne([a, b, c], (p, q) => Math.hypot(haut[p].x - haut[q].x, haut[p].y - haut[q].y));
-      if(d.grand < img.W/40) continue;                                 // trop petit : invariants imprécis
-      for(let i1=-1;i1<=1;i1++) for(let i2=-1;i2<=1;i2++){
-        const l = AST.tri.get((Math.round(d.r1*100) + i1) + ',' + (Math.round(d.r2*100) + i2));
-        if(!l) continue;
-        for(const t of l){
-          if(Math.abs(t.r1 - d.r1) > 0.008 || Math.abs(t.r2 - d.r2) > 0.008) continue;
-          const F = d.grand/(2*Math.tan(t.grand/2));
-          if(F < Fmin || F > Fmax) continue;
-          const cs = [d.A, d.B, d.C].map(k => camDe(haut[k], F, cx, cy)), vs = [t.A, t.B, t.C].map(k => AST.cat.v[k]);
-          if(Math.sign(_det3(...cs)) !== Math.sign(_det3(...vs))) continue;   // orientation : sinon image miroir
-          // note = retrouvées × part retrouvée : un champ trop large (focale fausse) prédit des centaines d'étoiles,
-          // il en retrouve beaucoup par hasard mais une faible part
-          const M = rotationQ(cs, vs);
-          const ap = apparier(M, F, img, verif, tol, 5.0), n = ap.length, note = n*n/Math.max(1, ap.prevues);
-          if(!best || note > best.note) best = {n, note, M, F};
-          if(best.n >= 12 && best.note >= 4) break triangles;           // hypothèse sans ambiguïté (au hasard : note < 1)
+    {
+      // chaque détection devient une direction (focale supposée) : triangles comparés en ANGLES, justes même à grand angle
+      const U = haut.map(p => camDe(p, F, cx, cy));
+      // triangles des k plus brillantes d'abord (c croissant) : on s'arrête dès qu'une hypothèse est nette
+      for(let c=2;c<haut.length;c++) for(let b=1;b<c;b++) for(let a=0;a<b;a++){
+        if(Date.now() > fin) return best;
+        const d = trianglOrdonne([a, b, c], (p, q) => _ang(U[p], U[q]));
+        if(d.grand < 2*DEG) continue;                                  // trop petit : invariants imprécis
+        for(let i1=-1;i1<=1;i1++) for(let i2=-1;i2<=1;i2++){
+          const l = AST.tri.get((Math.round(d.r1*100) + i1) + ',' + (Math.round(d.r2*100) + i2));
+          if(!l) continue;
+          for(const t of l){
+            if(Math.abs(t.r1 - d.r1) > 0.008 || Math.abs(t.r2 - d.r2) > 0.008) continue;
+            if(Math.abs(t.grand/d.grand - 1) > 0.07) continue;         // même taille angulaire (à la focale près)
+            const cs = [d.A, d.B, d.C].map(k => U[k]), vs = [t.A, t.B, t.C].map(k => AST.cat.v[k]);
+            if(Math.sign(_det3(...cs)) !== Math.sign(_det3(...vs))) continue;   // orientation : sinon image miroir
+            // note = retrouvées × part retrouvée : un champ trop large (focale fausse) prédit des centaines d'étoiles,
+            // il en retrouve beaucoup par hasard mais une faible part
+            const M = rotationQ(cs, vs);
+            const ap = apparier(M, F, img, verif, tol, 5.0), n = ap.length, note = n*n/Math.max(1, ap.prevues);
+            if(!best || note > best.note) best = {n, note, M, F};
+            if(best.n >= 12 && best.note >= 4) return best;             // hypothèse sans ambiguïté (au hasard : note < 1)
+          }
         }
       }
     }
-    return best && best.n >= 8 && best.note >= 4 ? best : null;
+    return best;
   };
-  let miroir = false, pts = det, h = essayer(pts);
-  if(!h){ miroir = true; pts = det.map(p => ({x:img.W - 1 - p.x, y:p.y, eclat:p.eclat})); h = essayer(pts); }
-  if(!h) return null;
+  // chaque focale, à l'endroit puis en miroir (image retournée) ; arrêt à la première hypothèse nette
+  const sens = [det, det.map(p => ({x:img.W - 1 - p.x, y:p.y, eclat:p.eclat}))].map(p => ({pts:p, verif:grilleDet(p.slice(0, 150), tol)}));
+  let h = null, miroir = false, pts = det;
+  recherche: for(const F of Fs) for(let m=0;m<2;m++){
+    if(Date.now() > fin) break recherche;
+    const b = essayer(sens[m].pts, F, sens[m].verif);
+    if(b && (!h || b.note > h.note)){ h = b; miroir = m === 1; pts = sens[m].pts; }
+    if(h && h.n >= 12 && h.note >= 4) break recherche;
+  }
+  if(!h || h.n < 8 || h.note < 4) return null;
   const det200 = pts.slice(0, 200), r = affiner(h.M, h.F, img, det200);
   const fwd = r.M[2].map(x => -x), up = r.M[1];
   const est = [-fwd[1], fwd[0], 0], en = Math.hypot(est[0], est[1]); est[0] /= en; est[1] /= en;

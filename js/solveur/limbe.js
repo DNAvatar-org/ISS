@@ -102,3 +102,31 @@ function horsTerre(det, limbe, marge){
   if(!limbe) return det;
   return det.filter(p => Math.hypot(p.x - limbe.cx, p.y - limbe.cy) > limbe.r + marge);
 }
+
+/* Focale par la courbure du limbe (idée : l'altitude étant connue, le bord de la Terre est un cône de demi-angle
+   ρ = asin((R + hz)/(R + h)) autour du nadir ; sa trace dans l'image dépend de la focale). Le sommet de l'arc est à d px
+   du centre de l'image (vers la Terre) ; pour chaque focale F essayée, l'axe est incliné de α = ρ + atan(d/F) ; on
+   projette le cône près du sommet et on compare le rayon de courbure à celui du cercle ajusté. hz = altitude du bord vu
+   (haut de la bande d'airglow ≈ 100 km la nuit). À ~15 % près : de quoi borner la recherche des étoiles. */
+function focaleParLimbe(L, W, H, hz = 98, hISS = 420){
+  const d = Math.hypot(L.cx - W/2, L.cy - H/2) - L.r, rho = Math.asin((6371 + hz)/(6371 + hISS));
+  const proj = (F, a, phi) => {
+    const n = [0, -Math.sin(a), Math.cos(a)], e2 = [0, -Math.cos(a), -Math.sin(a)];   // e1 = (1,0,0), e2 = n × e1 (au signe près)
+    const v = [Math.sin(rho)*Math.cos(phi), Math.cos(rho)*n[1] + Math.sin(rho)*Math.sin(phi)*e2[1], Math.cos(rho)*n[2] + Math.sin(rho)*Math.sin(phi)*e2[2]];
+    return v[2] > 0 ? {x:F*v[0]/v[2], y:-F*v[1]/v[2], z:v[2]} : null;
+  };
+  let best = null;
+  for(let k=0;k<=300;k++){
+    const F = 100*Math.pow(300, k/300), a = rho + Math.atan(d/F);       // F de 100 à 30 000 px
+    const s = [Math.PI/2, -Math.PI/2].map(p => proj(F, a, p)).filter(Boolean).sort((p, q) => q.z - p.z)[0];
+    if(!s) continue;
+    const ph0 = Math.abs(proj(F, a, Math.PI/2)?.z - s.z) < 1e-12 ? Math.PI/2 : -Math.PI/2;
+    const p1 = proj(F, a, ph0 - 0.03), p2 = proj(F, a, ph0 + 0.03);
+    if(!p1 || !p2) continue;
+    const c = cercle3(p1, s, p2);
+    if(!c) continue;
+    const e = Math.abs(Math.log(c.r/L.r));
+    if(!best || e < best.e) best = {F, e};
+  }
+  return best && best.e < 0.1 ? best.F : null;
+}

@@ -111,28 +111,46 @@ function planISS(jours){
   return EPH.plan || planModeleISS(jours);
 }
 
-// Historiques embarqués, puis TLE du jour chez CelesTrak (seul accès réseau de la page, hors tuiles).
-// CelesTrak bloque (403) qui redemande le même TLE moins de 2 h après : on le garde dans le navigateur (localStorage),
-// on ne le redemande qu'au-delà de 2 h, et s'il refuse, l'ancien sert encore jusqu'à 15 jours de son époque.
+// Historiques embarqués, puis TLE du jour (seul accès réseau de la page, hors tuiles), gardé dans le navigateur
+// (localStorage) et redemandé au plus toutes les 2 h. Sources, dans l'ordre : CelesTrak, puis deux miroirs publics qui
+// répondent aux pages web (CORS) — tle.ivanstanojevic.me (JSON), wheretheiss.at (ISS seulement). CelesTrak bloque (403)
+// une adresse qui le sollicite trop : après un refus, on ne le redemande pas avant 2 h. Faute de tout, l'ancien TLE
+// gardé sert encore à ±15 jours de son époque, et l'historique embarqué au-delà.
 const lireCache = cle => { try { return JSON.parse(localStorage.getItem(cle)); } catch(e){ return null; } };
 const ecrireCache = (cle, v) => { try { localStorage.setItem(cle, JSON.stringify(v)); } catch(e){} };
+const DEUX_H = 2*3600*1000;
+const lignesDe = txt => { const l = txt.split('\n').map(x => x.trim()).filter(x => /^[12] /.test(x)); if(l.length < 2) throw new Error('TLE illisible'); return l; };
+const lire = url => fetch(url).then(r => { if(!r.ok) throw new Error(url.split('/')[2] + ' : HTTP ' + r.status); return r; });
+const SOURCES_TLE = [
+  {nom:'celestrak', url:CELESTRAK, lignes:r => r.text().then(lignesDe)},
+  {nom:'ivanstanojevic', url:n => 'https://tle.ivanstanojevic.me/api/tle/' + n, lignes:r => r.json().then(j => [j.line1, j.line2])},
+  {nom:'wheretheiss', url:n => n === 25544 ? 'https://api.wheretheiss.at/v1/satellites/25544/tles?format=text' : null, lignes:r => r.text().then(lignesDe)}
+];
 function poserTle(S, l1, l2, etat){
   S.live = satellite.twoline2satrec(l1, l2);
   S.liveEpoque = (S.live.jdsatepoch - 2440587.5)*86400;
   S.etat = etat;
 }
-for(const id of Object.keys(TLE_HIST)) EPH.sats[id] = {hist:decoderHist(id), live:null, liveEpoque:0, etat:'chargement'};
-for(const [id, S] of Object.entries(EPH.sats)){
+async function chargerTle(S){
   const cle = 'tle-' + S.hist.norad, c = lireCache(cle);
   if(c) poserTle(S, c.l1, c.l2, 'cache');
-  if(c && Date.now() - c.lu < 2*3600*1000){ S.etat = 'ok (cache)'; continue; }
-  fetch(CELESTRAK(S.hist.norad))
-    .then(r => { if(!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-    .then(txt => {
-      const l = txt.split('\n').map(x => x.trim()).filter(x => /^[12] /.test(x));
-      if(l.length < 2) throw new Error('TLE illisible');
-      poserTle(S, l[0], l[1], 'ok');
-      ecrireCache(cle, {l1:l[0], l2:l[1], lu:Date.now()});
-    })
-    .catch(err => { S.etat = (S.live ? 'cache (' : 'indisponible (') + err.message + ')'; });
+  if(c && Date.now() - c.lu < DEUX_H){ S.etat = 'ok (cache, ' + c.src + ')'; return; }
+  const refus = lireCache('tle-refus') || {};
+  const erreurs = [];
+  for(const src of SOURCES_TLE){
+    const url = src.url(S.hist.norad);
+    if(!url || Date.now() - (refus[src.nom] || 0) < DEUX_H) continue;   // source absente, ou refusée il y a moins de 2 h
+    try{
+      const [l1, l2] = await lire(url).then(src.lignes);
+      poserTle(S, l1, l2, 'ok (' + src.nom + ')');
+      ecrireCache(cle, {l1, l2, lu:Date.now(), src:src.nom});
+      return;
+    }catch(e){
+      erreurs.push(e.message);
+      refus[src.nom] = Date.now(); ecrireCache('tle-refus', refus);
+    }
+  }
+  S.etat = (S.live ? 'cache ancien' : 'indisponible') + (erreurs.length ? ' (' + erreurs.join(' ; ') + ')' : '');
 }
+for(const id of Object.keys(TLE_HIST)) EPH.sats[id] = {hist:decoderHist(id), live:null, liveEpoque:0, etat:'chargement'};
+for(const S of Object.values(EPH.sats)) chargerTle(S);

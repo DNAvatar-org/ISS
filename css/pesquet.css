@@ -72,27 +72,30 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 
 #erreur{position:fixed;inset:auto 16px 16px 360px;z-index:5;padding:12px 14px;border-radius:10px;
         background:#5a1620;border:1px solid #ff6b81;color:#fff;font-size:13px}
-/* « Check Photo » : panneau de résultat (js/solveur/), page en attente d'un dépôt */
-#solveur{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:21;width:min(520px,calc(100% - 32px));
-         padding:12px 14px;border-radius:10px;background:var(--panel);border:1px solid var(--c1);color:var(--txt);font-size:13px;
-         backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 6px 24px rgba(0,0,0,.5)}
-#solveur[hidden]{display:none}
-#solTxt p{margin:0 0 4px}
-#solChamps{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}
-#solChamps input{background:rgba(255,255,255,.08);border:1px solid var(--stroke);border-radius:6px;color:var(--txt);padding:3px 6px;font:inherit}
-#solveur .btns{margin-top:6px}
+/* « Check Photo » : page en attente d'un dépôt */
 body.depot::after{content:"Déposer la photo : visée, focale et heure retrouvées par les étoiles";position:fixed;inset:12px;z-index:30;
                   display:flex;align-items:center;justify-content:center;border:2px dashed var(--c1);border-radius:16px;
                   background:rgba(3,5,10,.7);color:var(--c1);font-size:18px;pointer-events:none}
 /* encart « Photo » : sous l'encart Temps (--bas-hud, cf. placerCredits), même largeur */
-#encartPhoto{position:fixed;right:12px;top:calc(var(--bas-hud, 200px) + 8px);width:250px;z-index:2;padding:8px 10px 10px;
+#encartPhoto{position:fixed;right:12px;top:calc(var(--bas-hud, 200px) + 8px);width:250px;z-index:3;padding:8px 10px 10px;
+             max-height:calc(var(--alt, 100vh) - var(--bas-hud, 200px) - 20px);overflow-y:auto;
              background:var(--panel);border:1px solid var(--stroke);border-radius:12px;backdrop-filter:blur(10px)}
 #encartPhoto[hidden]{display:none}
 #encartPhoto .tete{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 #encartPhoto h2{margin:0}
 #encFermer{background:none;border:0;color:var(--dim);cursor:pointer;font-size:14px;padding:0 2px}
-#encVue{position:relative;overflow:hidden;border-radius:6px;cursor:zoom-in;max-height:calc(100vh - var(--bas-hud, 200px) - 60px)}
-#encCv{display:block;width:100%;height:100%;transform-origin:0 0}
+#encVue{position:relative;overflow:hidden;border-radius:6px;cursor:pointer}
+#encCv{display:block;width:100%;height:100%}
+#encartPhoto.calque #encVue{outline:2px solid var(--c1)}
+#solTxt{font-size:11.5px;line-height:1.35;margin-top:6px;color:var(--dim)}
+#solTxt p{margin:0 0 3px}
+#solTxt p:first-child{color:var(--txt)}
+#solChamps{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px;font-size:11.5px;color:var(--dim)}
+#solChamps input{width:72px;background:rgba(255,255,255,.08);border:1px solid var(--stroke);border-radius:6px;color:var(--txt);padding:2px 5px;font:inherit}
+#solChamps[hidden]{display:none}
+/* calque : photo superposée à la vue, centrée, à l'échelle de la caméra (taille et rotation posées par encart.js) */
+#calque{position:fixed;left:50%;top:50%;z-index:1;pointer-events:none;opacity:.6;transform-origin:50% 50%;max-width:none}
+#calque[hidden]{display:none}
 @media (max-width:760px){ #encartPhoto{width:200px} }
 /* avis sur les paramètres d'URL (url.js) : en haut, au centre, au-dessus des encarts */
 #avis{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:20;width:min(440px,calc(100% - 32px));
@@ -138,6 +141,11 @@ button.rec{background:#2fb457;border-color:#2fb457;color:#06210f}
 /* encart Temps (à droite, au-dessus du temps simulé) */
 #hud{width:290px;max-height:calc(100% - 24px);overflow-y:auto}
 #temps{margin:0 0 10px;padding:0 0 8px;border-bottom:1px solid var(--stroke)}
+/* en-tête de Temps : titre à gauche, Auj. et Check Photo à droite */
+.tete-temps{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px}
+.tete-temps h2{margin:0 !important}
+.btns-tete{display:flex;gap:4px}
+.btns-tete button{padding:2px 7px;font-size:11px}
 #temps h2{font-size:10.5px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin:0 0 4px;font-weight:600}
 #temps .row label{font-size:12px}
 #temps .btns{margin:4px 0 0}

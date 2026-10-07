@@ -88,7 +88,7 @@ function boucle(ms){
     ETAT.t += (DATES.min - jourDate())*86400; ETAT.pause = true;
   }
   if(ms - TUILES.derniere > GIBS.periode){ TUILES.derniere = ms; majTuiles(); }
-  majBoutonRec(); majVisee(); majSelections(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms);
+  majBoutonRec(); majVisee(); majSelections(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms); majCalque();
 }
 
 function demarrer(){

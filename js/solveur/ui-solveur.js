@@ -1,15 +1,16 @@
 // File: js/solveur/ui-solveur.js
 // Desc: « Check Photo » : une photo prise depuis l'ISS (bouton ou glisser-déposer) → visée, focale, heure ; appliquées à la vue.
-// Version 1.0.0
+// Version 1.1.0
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
 /* Tout se fait dans le navigateur, sans serveur ni IA : limbe (limbe.js) → Terre masquée → étoiles (detection.js) →
    catalogue (astrometrie.js) → direction, rotation, focale. La date vient des EXIF s'il y en a (originaux Flickr,
-   appareil), sinon on la saisit (l'heure peut être approximative : le limbe l'affine, instant.js). « Appliquer » place
-   l'ISS à cet instant (pause), braque la caméra, règle la focale et met les paramètres dans l'URL. */
-const CHK = {res:null, img:null, limbe:null, exif:null};
+   appareil), sinon on part de la date affichée (le limbe affine l'heure à ±40 min près, instant.js). Dès que les étoiles
+   sont reconnues, c'est appliqué : l'ISS à cet instant (pause), la caméra braquée, la focale, les paramètres dans l'URL.
+   Tout s'affiche dans l'encart Photo (encart.js) ; corriger la date ou l'heure puis « Appliquer » recommence. */
+const CHK = {res:null, img:null, limbe:null, exif:null, lignes:[]};
 const LARGEUR_MAX = 2400;                                               // au-delà, l'image est réduite (vitesse)
 
 function creerSolveur(){
@@ -22,7 +23,6 @@ function creerSolveur(){
     const f = [...e.dataTransfer.files].find(x => x.type.startsWith('image/'));
     if(f) analyserPhoto(f);
   });
-  $('solFermer').onclick = () => { $('solveur').hidden = true; };
   $('solAppliquer').onclick = appliquerSolution;
 }
 
@@ -36,7 +36,7 @@ function lignesSolveur(l){
 }
 
 async function analyserPhoto(fichier){
-  $('solveur').hidden = false; $('solChamps').hidden = true; $('solAppliquer').hidden = true;
+  $('encartPhoto').hidden = false; $('solChamps').hidden = true;
   lignesSolveur(['Analyse de « ' + fichier.name + ' »…']);
   const buf = await fichier.arrayBuffer();
   const exif = lireExif(buf), bmp = await createImageBitmap(new Blob([buf]));
@@ -47,39 +47,44 @@ async function analyserPhoto(fichier){
   await new Promise(r => setTimeout(r, 30));                            // laisser s'afficher « Analyse… »
   const limbe = detecterLimbe(img);
   const det = horsTerre(detecterEtoiles(img), limbe, H/100);
-  const res = resoudreCiel({W, H}, det);
+  const Fl = limbe ? focaleParLimbe(limbe, W, H) : null;               // la courbure du limbe borne la focale
+  const res = resoudreCiel({W, H}, det, Fl);
   Object.assign(CHK, {res, img:{W, H}, limbe, exif});
-  afficherEncart(cv, det, res, limbe);
+  afficherEncart(cv, URL.createObjectURL(fichier), det, res, limbe);
   if(!res){
-    lignesSolveur(['Étoiles non reconnues (' + det.length + ' points détectés hors de la Terre).',
-                   'Il faut une photo de nuit, nette, avec au moins une dizaine d\'étoiles visibles (le bruit coloré',
-                   'd\'une caméra vidéo à fort gain ne compte pas). Points détectés : en gris dans l\'encart Photo.']);
+    lignesSolveur(['Étoiles non reconnues (' + det.length + ' points, en gris).',
+                   'Il faut une photo de nuit, nette, avec au moins une dizaine d\'étoiles (le bruit coloré d\'une caméra vidéo ne compte pas).']);
     return;
   }
-  const ra = res.centre.ra/15, l = [
-    '✓ ' + res.appariees.length + ' étoiles reconnues (écart moyen ' + fr(res.rms, 1) + ' px)' + (res.miroir ? ' — image retournée (miroir)' : ''),
-    'Centre : RA ' + Math.floor(ra) + ' h ' + fr((ra % 1)*60, 1) + ' min, Dec ' + fr(res.centre.dec, 2) + '° · focale ' + fr(res.F*36/W, 1) + ' mm (équiv. 24×36)',
-    limbe ? 'Limbe de la Terre détecté : elle est masquée pour la recherche des étoiles.' : 'Pas de limbe détecté : toute l\'image a servi.'
+  const ra = res.centre.ra/15;
+  CHK.lignes = [
+    '✓ ' + res.appariees.length + ' étoiles reconnues (± ' + fr(res.rms, 1) + ' px)' + (res.miroir ? ', image en miroir' : ''),
+    'RA ' + Math.floor(ra) + ' h ' + fr((ra % 1)*60, 1) + ' min, Dec ' + fr(res.centre.dec, 2) + '° · ' + fr(res.F*36/W, 1) + ' mm' + (limbe ? ' · limbe vu' : ''),
+    exif.date ? 'EXIF : ' + texteDate(exif.date) + ' ' + texteHeure(exif.date) + ' UT' + (exif.focale ? ', ' + exif.focale + ' mm' : '')
+              : 'Pas de date dans l\'image : corrige le jour (l\'heure peut être à ±40 min), puis Appliquer.'
   ];
-  if(exif.date) l.push('EXIF : ' + texteDate(exif.date) + ' ' + texteHeure(exif.date) + ' UT' + (exif.focale ? ', ' + exif.focale + ' mm' : ''));
-  else l.push('Pas de date dans l\'image : indique le jour et l\'heure UT (approximative, à ±40 min : le limbe l\'affine).');
-  lignesSolveur(l);
   const u = exif.date || unixDeJour(jourDate());
   $('solDate').value = texteDate(u); $('solHeure').value = texteHeure(u);
-  $('solChamps').hidden = false; $('solAppliquer').hidden = false;
+  $('solChamps').hidden = false;
+  appliquerSolution(!exif.date);                                       // sans EXIF : seulement si le limbe confirme l'heure
 }
 
-function appliquerSolution(){
+// prudent : n'appliquer que si le limbe confirme l'instant (date non sûre : celle affichée par défaut, sans EXIF)
+function appliquerSolution(prudent = false){
   const {res, img, limbe, exif} = CHK;
   const jour = lireDateURL($('solDate').value), frac = lireHeureURL($('solHeure').value);
-  if(jour === null || frac === null){ lignesSolveur(['Date ou heure illisible.', 'Formats : ' + FORMAT_DATE + ' ; ' + FORMAT_HEURE + '.']); return; }
+  if(jour === null || frac === null){ lignesSolveur([...CHK.lignes, 'Date ou heure illisible (JJ.MM.AA, HH:MM:SS).']); return; }
   let unix = unixDeJour(jour + frac);
   const l = [];
   const h = limbe ? heureParLimbe(res, img, limbe, unix, 2400) : null;
-  if(h && h.sdDeg < 0.15){
-    l.push('Heure d\'après le limbe : ' + texteHeure(h.unix) + ' UT (' + (h.ecart >= 0 ? '+' : '') + h.ecart + ' s ; bord vu à ' + h.alt.toFixed(0) + ' km d\'altitude)');
+  // limbe concordant : points bien sur un même cône autour du nadir, bord vu entre le sol et le haut de l'airglow
+  if(h && h.sdDeg < 0.08 && h.alt > -20 && h.alt < 150){
+    l.push('Heure par le limbe : ' + texteHeure(h.unix) + ' UT (' + (h.ecart >= 0 ? '+' : '') + h.ecart + ' s ; bord à ' + h.alt.toFixed(0) + ' km)');
     if(!exif.date) unix = h.unix;                                       // sans EXIF, l'heure saisie n'était qu'une estimation
-  }else if(limbe) l.push('Le limbe ne correspond pas à l\'ISS à ±40 min de cette heure : vérifier la date.');
+  }else{
+    if(limbe) l.push('Le limbe ne colle pas à l\'ISS à ±40 min de cette heure : vérifie la date.');
+    if(prudent){ lignesSolveur([...CHK.lignes, ...l]); return; }     // date inconnue : on attend la bonne
+  }
 
   // l'ISS à cet instant, en pause ; puis la visée dans son repère
   activerSat('iss');
@@ -101,7 +106,9 @@ function appliquerSolution(){
   q.set('date', texteDate(unix)); q.set('heure', texteHeure(unix));
   q.set('cap', (cap/DEG).toFixed(1)); q.set('site', (site/DEG).toFixed(1)); q.set('focale', focale.toFixed(1));
   history.replaceState(null, '', '?' + q.toString().replace(/%3A/g, ':'));       // heure lisible : 22:21:03
-  l.push('Appliqué : ' + texteDate(unix) + ' ' + texteHeure(unix) + ' UT, cap ' + fr(cap/DEG, 1) + '°, site ' + fr(site/DEG, 1) + '°, focale ' + fr(focale, 1) + ' mm'
-         + (Math.abs(roulis) > 2 ? ' (roulis de ' + roulis.toFixed(0) + '° non reproduit)' : '') + '. L\'URL de la page les contient.');
-  lignesSolveur(l);
+  l.push('Appliqué : ' + texteDate(unix) + ' ' + texteHeure(unix) + ' UT, cap ' + fr(cap/DEG, 1) + '°, site ' + fr(site/DEG, 1) + '°, ' + fr(focale, 1) + ' mm'
+         + (Math.abs(roulis) > 2 ? ' (roulis de ' + roulis.toFixed(0) + '° non reproduit)' : '') + ' — dans l\'URL. Clic sur la photo : la superposer.');
+  lignesSolveur([...CHK.lignes.filter(x => !x.startsWith('Pas de date')), ...l]);   // appliqué : l'invite à dater est caduque
+  ENC.roulis = roulis;
+  majCalque();
 }

@@ -16,10 +16,6 @@
       "dest": "pages/ISS/css/pesquet.css"
     },
     {
-      "src": "LICENSE.txt",
-      "dest": "pages/ISS/LICENSE.txt"
-    },
-    {
       "src": "js/cameras.js",
       "dest": "pages/ISS/js/cameras.js"
     },

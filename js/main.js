@@ -33,6 +33,7 @@ function majScene(){
   const nuit = enNuit(OBS.groupe.position);
   ETAT.nuitISS = nuit;
   SOL.lumiere.intensity = nuit ? 0 : 2.5*(1 - ETAT.ecl);
+  majAtmo();                                       // exposition : luminescence la nuit, invisible au Soleil
   if(ETAT.montrer.trace) majTrace(OBS.groupe.position, ETAT.t);
 
   const iss = ETAT.vue === 'iss', m = ETAT.montrer;

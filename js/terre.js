@@ -1,7 +1,7 @@
 // File: js/terre.js
 // Desc: Terre jour/nuit (geoview.jpg + steamNight.jpg), atmosphère, trace de l'ISS au sol.
-// Version 1.0.0
-// Date: [October 05, 2026]
+// Version 2.0.0
+// Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -73,40 +73,101 @@ void main(){
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
-/* Le limbe vu de côté : l'altitude se lit dans |n·v| (0 au bord extérieur de la coque, ~0,18 au bord du globe).
-   hh = 1 → bas de l'atmosphère, hh → 0 → haut. Le Soleil (lit = n·S, sa hauteur au limbe) colore par couches :
-   de jour bleu ; au lever / coucher, du bas vers le haut rouge, orange, jaune-blanc, bleu (la fameuse « rainure » des photos) ;
-   de nuit, la raie verte de la luminescence atmosphérique. */
+/* Atmosphère PHYSIQUE, rien de calé sur une photo. Pour chaque pixel : le rayon issu de la caméra, son paramètre
+   d'impact p (distance minimale au centre de la Terre). Le long du rayon, la variable u = √(r² − p²) (distance au point
+   tangent) donne l'altitude h = √(p² + u²) − R sans singularité au point tangent. Unités : 100 km.
+   NUIT — luminescence (airglow) : raies d'émission en couches gaussiennes, altitude du pic, écart-type σ, intensité
+   zénithale I (rayleighs) — valeurs typiques de la littérature (Leinert et al. 1998, A&AS 127 ; Broadfoot & Kendall 1968),
+   variables d'une nuit à l'autre (×2–3, Na saisonnier). Émissivité ε(h) = I/(σ√2π)·exp(−(h−h0)²/2σ²), intégrée le long du
+   rayon (deux traversées si le rayon manque la Terre, une s'il la touche) : au limbe, ~45× la valeur zénithale.
+     OH, bandes de Meinel visibles (λ < 700 nm) : 87 km, σ 3,5 km, ~300 R
+     Na D 589 nm  : 92 km, σ 4 km,   ~60 R
+     O₂ Herzberg/Chamberlain (bleu) : 95 km, σ 4 km, ~60 R
+     OI 557,7 nm (vert) : 97 km, σ 4,5 km, ~250 R
+     OI 630,0 nm (rouge) : 250 km, σ 35 km, ~60 R
+   Couleur de chaque raie : fonctions colorimétriques CIE 1931 → sRGB linéaire (D65), photons → énergie, hors gamut
+   ramené à 0 (calcul fait une fois, valeurs ci-dessous). On obtient de lui-même, vu de côté : rouge-orangé (OH, Na)
+   en bas, vert (OI) au-dessus, voile rouge très haut (OI 630).
+   JOUR — diffusion Rayleigh, diffusion simple : densité ∝ exp(−h/H), H = 8 km ; épaisseur optique zénithale au niveau de
+   la mer 0,050 / 0,098 / 0,225 (650 / 550 / 450 nm) ; lumière du Soleil atténuée sur son trajet jusqu'au point (Chapman
+   au-dessus de l'horizon, passage rasant sinon, ombre de la Terre) ; atténuation le long de la vue ; phase de Rayleigh.
+   Le bleu du limbe, sa base blanche et le rougissement au terminateur en découlent. Luminance rapportée à celle du sol
+   (réflectance lambertienne, en E/π) : phase normalisée sur 4π → facteur π/4π = 1/4.
+   Seul réglage non physique : l'exposition, comme celle d'un appareil photo. Le jour (ISS au Soleil), un appareil
+   exposé pour la Terre éclairée ne voit pas la luminescence (~10⁵ fois plus faible) : son exposition baisse (majAtmo). */
 const GLSL_ATMO_FS = `
 uniform vec3 uSun;
+uniform float uR, uExpoJour, uExpoNuit;
 ${GLSL_ECLIPSE}
 varying vec3 vN; varying vec3 vV; varying vec3 vW;
+// couche gaussienne : intégrale le long du rayon (rayleighs vus) ; k = 2 traversées (rayon libre) ou 1 (il touche la Terre)
+float couche(float p, float h0, float s, float I, float k){
+  float ra = uR + max(h0 - 4.0*s, 0.0), rb = uR + h0 + 4.0*s;
+  if(p >= rb) return 0.0;
+  float ua = sqrt(max(ra*ra - p*p, 0.0)), ub = sqrt(rb*rb - p*p), du = (ub - ua)/24.0, acc = 0.0;
+  for(int i=0;i<24;i++){
+    float u = ua + (float(i) + 0.5)*du, x = (sqrt(p*p + u*u) - uR - h0)/s;
+    acc += exp(-0.5*x*x);
+  }
+  return k*I/(s*2.5066)*acc*du;
+}
+// colonne d'air (× H, à multiplier par β) sur le trajet de la lumière du Soleil jusqu'au point x ; −1 dans l'ombre
+float chapman(float h, float c, float H){                         // colonne de x vers l'espace, c = cos(angle au zénith) ≥ 0
+  return H*exp(-h/H)/(c + 0.15*pow(max(93.885 - degrees(acos(c)), 0.5), -1.253));
+}
+float colonneSoleil(vec3 x, float H){
+  float r = length(x), h = r - uR, c = dot(x, uSun)/r;
+  if(c >= 0.0) return chapman(h, c, H);                           // Soleil au-dessus de l'horizon du point
+  float q = r*sqrt(1.0 - c*c);                                    // sinon la lumière est passée plus bas, au plus près en q
+  if(q < uR) return -1.0;                                          // ombre de la Terre
+  return max(H*exp(-(q - uR)/H)*sqrt(6.2832*q/H) - chapman(h, -c, H), 0.0);   // colonne tangente − partie au-delà de x
+}
 void main(){
-  float rim = abs(dot(vN, vV));
-  float hh  = rim/0.177;
-  float dens = hh < 1.0 ? pow(hh, 2.0) : mix(1.0, 0.22, smoothstep(1.0, 2.2, hh));
-  float lit  = dot(vN, uSun);
+  vec3 o = cameraPosition, d = normalize(vW - cameraPosition);
+  float tc = -dot(o, d);
+  if(tc < 0.0){ gl_FragColor = vec4(0.0); return; }                // le rayon s'éloigne de la Terre
+  vec3 pc = o + tc*d;
+  float p = length(pc), k = p >= uR ? 2.0 : 1.0;
 
-  float tw   = smoothstep(-0.28, 0.0, lit) * (1.0 - smoothstep(0.0, 0.40, lit));          // crépuscule : pic au terminateur
-  float low  = smoothstep(0.55, 0.97, hh);
-  float mid  = smoothstep(0.25, 0.65, hh) * (1.0 - low);
-  float high = 1.0 - smoothstep(0.10, 0.50, hh);
-  vec3 cTw  = low*vec3(1.0, 0.22, 0.04) + mid*vec3(1.0, 0.70, 0.28) + high*vec3(0.28, 0.52, 1.0);
-  vec3 cJour = vec3(0.34, 0.60, 1.0) * (0.55 + 0.45*hh);
-  float vert = exp(-pow((hh - 0.78)/0.12, 2.0));                                           // raie verte de nuit
-  vec3 cNuit = vec3(0.20, 0.95, 0.35) * vert * 0.55;
+  // --- nuit : luminescence (rayleighs vus × couleur CIE→sRGB par rayleigh)
+  vec3 glow = couche(p, 0.87, 0.035, 300.0, k)*vec3(0.905, 0.0, 0.0)       // OH (Meinel, visible)
+            + couche(p, 0.92, 0.040,  60.0, k)*vec3(2.000, 0.433, 0.0)     // Na D 589 nm
+            + couche(p, 0.95, 0.040,  60.0, k)*vec3(0.183, 0.0, 2.335)     // O2 Herzberg/Chamberlain
+            + couche(p, 0.97, 0.045, 250.0, k)*vec3(0.268, 1.332, 0.0)     // OI 557,7 nm
+            + couche(p, 2.50, 0.350,  60.0, k)*vec3(1.482, 0.0, 0.0);      // OI 630,0 nm
 
-  float jour = smoothstep(0.0, 0.45, lit);
-  float nuit = 1.0 - smoothstep(-0.30, 0.0, lit);
-  vec3 col = cJour*jour*(1.0 - tw) + cTw*tw + cNuit*nuit;
-
-  // diffusion vers l'avant : plus chaud quand on regarde vers le Soleil
-  float glare = pow(max(dot(-vV, uSun), 0.0), 6.0);
-  col += vec3(1.0, 0.55, 0.15) * glare * 0.30 * (0.3 + 0.7*hh);
-
-  col *= lumiereSoleil(vW);                       // dans l'ombre de la Lune, l'air n'est plus éclairé
-  gl_FragColor = vec4(col * dens * 1.25, dens);
+  // --- jour : diffusion Rayleigh simple le long du rayon (côté caméra → fond)
+  const float H = 0.08;                                            // hauteur d'échelle : 8 km
+  vec3 beta = vec3(0.050, 0.098, 0.225)/H;                         // coefficient au niveau de la mer (par 100 km)
+  float top = uR + 0.8;                                            // au-delà de 80 km : négligeable
+  vec3 diff = vec3(0.0);
+  if(p < top){
+    float u0 = sqrt(top*top - p*p), u1 = p < uR ? sqrt(uR*uR - p*p) : -u0, du = (u0 - u1)/48.0;
+    vec3 trans = vec3(1.0);
+    float mu = dot(-d, uSun);                                      // angle de diffusion
+    float phase = 0.75*(1.0 + mu*mu);
+    for(int i=0;i<48;i++){
+      float u = u0 - (float(i) + 0.5)*du;
+      vec3 x = pc - u*d;
+      float h = length(x) - uR, n = exp(-h/H);
+      float cs = colonneSoleil(x, H);
+      vec3 sol = cs < 0.0 ? vec3(0.0) : exp(-beta*cs);
+      vec3 dn = beta*n*du;
+      diff += trans*sol*dn*phase;
+      trans *= exp(-dn);
+    }
+    diff *= lumiereSoleil(vW);                                     // dans l'ombre de la Lune, l'air n'est plus éclairé
+  }
+  vec3 col = 1.0 - exp(-(diff*uExpoJour + glow*uExpoNuit));        // saturation douce (capteur)
+  gl_FragColor = vec4(col, 1.0);
 }`;
+
+const ATMO_EXPO_NUIT = 1/25000;           // exposition de nuit (par rayleigh vu) ; au Soleil : × 0,02
+
+// Exposition de l'« appareil » : de nuit, la luminescence ; l'ISS au Soleil, le jour (cf. GLSL_ATMO_FS).
+function majAtmo(){
+  TERRE.atmo.material.uniforms.uExpoNuit.value = ATMO_EXPO_NUIT*(ETAT.nuitISS ? 1 : 0.02);
+}
 
 const TRACE_MAX = 4000, TRACE_PAS = 20;   // points, secondes simulées entre deux points
 
@@ -126,9 +187,12 @@ function creerTerre(tex){
       uniforms:{uJour:{value:tex.jour}, uNuit:{value:tex.nuit}, uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS}}));
   TERRE.axe.add(TERRE.globe);
 
-  TERRE.atmo = new THREE.Mesh(new THREE.SphereGeometry(CFG.R*1.016, 96, 48),
+  // coque jusqu'à 390 km : couche OI 630 nm comprise (250 km ± 4σ) ; l'ISS (≈ 420 km) reste au-dessus
+  TERRE.atmo = new THREE.Mesh(new THREE.SphereGeometry(CFG.R + 3.9, 128, 64),
     new THREE.ShaderMaterial({vertexShader:GLSL_ATMO_VS, fragmentShader:GLSL_ATMO_FS,
-      uniforms:{uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS}, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
+      uniforms:{uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS,
+                uR:{value:CFG.R}, uExpoJour:{value:0.25}, uExpoNuit:{value:ATMO_EXPO_NUIT}},
+      transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
   scene.add(TERRE.atmo);
 
   // trace au sol de l'ISS : enfant du globe, donc fixe sur la carte

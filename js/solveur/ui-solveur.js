@@ -10,7 +10,7 @@
    appareil), sinon on part de la date affichée (le limbe affine l'heure à ±40 min près, instant.js). Dès que les étoiles
    sont reconnues, c'est appliqué : l'ISS à cet instant (pause), la caméra braquée, la focale, les paramètres dans l'URL.
    Tout s'affiche dans l'encart Photo (encart.js) ; corriger la date ou l'heure puis « Appliquer » recommence. */
-const CHK = {res:null, img:null, limbe:null, exif:null, lignes:[]};
+const CHK = {res:null, img:null, data:null, limbe:null, exif:null, lignes:[]};
 const LARGEUR_MAX = 2400;                                               // au-delà, l'image est réduite (vitesse)
 
 function creerSolveur(){
@@ -24,7 +24,9 @@ function creerSolveur(){
     if(f) analyserPhoto(f);
   });
   $('solAppliquer').onclick = () => appliquerSolution(false);
-  $('solChercher').onclick = chercherDates;         // (pas l'événement : il passerait pour « prudent »)
+  $('solChercher').onclick = chercherDates;
+  $('solAn').oninput = e => e.target.classList.toggle('attente', !e.target.value);
+  $('solAn').onkeydown = e => { if(e.key === 'Enter') chercherDates(); };         // (pas l'événement : il passerait pour « prudent »)
 }
 
 const p2 = n => String(n).padStart(2, '0');
@@ -50,7 +52,7 @@ async function analyserPhoto(fichier){
   const det = horsTerre(detecterEtoiles(img), limbe, H/100);
   const Fl = limbe ? focaleParLimbe(limbe, W, H) : null;               // la courbure du limbe borne la focale
   const res = resoudreCiel({W, H}, det, Fl);
-  Object.assign(CHK, {res, img:{W, H}, limbe, exif});
+  Object.assign(CHK, {res, img:{W, H}, data:img.data, limbe, exif});
   afficherEncart(cv, URL.createObjectURL(fichier), det, res, limbe);
   if(!res){
     lignesSolveur(['Étoiles non reconnues (' + det.length + ' points, en gris).',
@@ -72,28 +74,42 @@ async function analyserPhoto(fichier){
   }else{
     $('solDate').value = ''; $('solHeure').value = '';                // pas la date du jour : la photo est d'une autre époque
     $('solDates').hidden = !limbe;
+    $('solAn').classList.toggle('attente', !$('solAn').value);         // contour qui clignote : il faut une année
     lignesSolveur(CHK.lignes);
   }
 }
 
-// « Dates possibles » : instants de l'année (ou de 2000 à aujourd'hui) où l'ISS, de nuit, voyait ce limbe sous ces étoiles.
+// « Dates possibles » : instants de l'année (ou de 2000 à aujourd'hui) où l'ISS, de nuit, voyait ce limbe sous ces étoiles ;
+// chacun noté sur les lumières des villes (villes.js), le mieux noté sélectionné (cadre rouge) et appliqué.
 function chercherDates(){
   const v = $('solAn').value.trim(), an = /^\d{2}$/.test(v) ? 2000 + +v : /^\d{4}$/.test(v) ? +v : null;
   const debut = an ? Date.UTC(an, 0, 1)/1000 : Date.UTC(DATES.AN_MIN, 0, 1)/1000, fin = an ? Date.UTC(an + 1, 0, 1)/1000 : Date.now()/1000;
   const l = $('solListe'); l.textContent = 'Recherche…';
-  setTimeout(() => {                                                    // laisser s'afficher « Recherche… »
+  setTimeout(async () => {                                              // laisser s'afficher « Recherche… »
     const c = datesPossibles(CHK.res, CHK.img, CHK.limbe, debut, fin);
+    const pts = echantillonsTerre(CHK.data, CHK.img.W, CHK.img.H, CHK.limbe);
     l.textContent = '';
     const p = document.createElement('p');
-    p.textContent = c.length ? c.length + ' instant' + (c.length > 1 ? 's' : '') + (an ? ' en ' + an : ' de ' + DATES.AN_MIN + ' à aujourd\'hui') + ' : clic pour appliquer, puis comparer les villes avec le calque.'
+    p.textContent = c.length ? c.length + ' instant' + (c.length > 1 ? 's' : '') + (an ? ' en ' + an : ' de ' + DATES.AN_MIN + ' à aujourd\'hui')
+                               + ' ; note = accord des lumières de villes avec la carte VIIRS de la NASA. Le meilleur est appliqué ; clic sur un autre pour comparer (calque).'
                              : 'Aucun instant' + (an ? ' en ' + an : '') + ' : autre année ?';
     l.appendChild(p);
-    for(const m of c.slice(0, 200)){
+    const choisir = (m, b) => {
+      l.querySelectorAll('button.sel').forEach(x => x.classList.remove('sel')); b.classList.add('sel');
+      $('solDate').value = texteDate(m.unix); $('solHeure').value = texteHeure(m.unix); appliquerSolution(false);
+    };
+    const libelle = m => texteDate(m.unix) + ' ' + texteHeure(m.unix) + ' UT · villes ' + (m.note === undefined ? '…' : m.note === null ? '—' : Math.round(m.note*100) + ' %');
+    const boutons = c.slice(0, 200).map(m => {
       const b = document.createElement('button');
-      b.textContent = texteDate(m.unix) + ' ' + texteHeure(m.unix) + ' UT · bord à ' + m.alt.toFixed(0) + ' km';
-      b.onclick = () => { $('solDate').value = texteDate(m.unix); $('solHeure').value = texteHeure(m.unix); appliquerSolution(false); };
+      b.textContent = libelle(m); b.onclick = () => choisir(m, b);
       l.appendChild(b);
-    }
+      return b;
+    });
+    // notes une par une (tuiles VIIRS chargées au fil de l'eau), puis le meilleur choisi
+    for(let i=0;i<boutons.length;i++){ c[i].note = await noteVilles(CHK.res, CHK.img, pts, c[i].unix); boutons[i].textContent = libelle(c[i]); }
+    let ib = -1;
+    c.slice(0, 200).forEach((m, i) => { if(m.note !== null && (ib < 0 || m.note > c[ib].note)) ib = i; });
+    if(ib >= 0){ choisir(c[ib], boutons[ib]); boutons[ib].scrollIntoView({block:'nearest'}); }
   }, 30);
 }
 

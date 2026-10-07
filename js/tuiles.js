@@ -26,7 +26,7 @@ const EOX = {
   zMin:8, zMax:14, niveaux:3
 };
 const TUILES = {map:new Map(), erreurs:0, derniere:0, zg:0, ze:0};
-const _tp2 = new THREE.Vector3(), _tl = new THREE.Vector3(), _td = new THREE.Vector3();
+const _tp2 = new THREE.Vector3(), _tl = new THREE.Vector3(), _td = new THREE.Vector3(), _tu = new THREE.Vector3(), _t0 = new THREE.Vector3(), _tq = new THREE.Quaternion();
 
 function creerTuiles(){
   TUILES.chargeur = new THREE.TextureLoader();
@@ -85,12 +85,18 @@ function majTuiles(){
   cam.getWorldPosition(_tp2);
   const dist = _tp2.length();
   let h = dist - CFG.R;
-  // point visé : intersection du rayon de visée avec la Terre (viser le sol et zoomer donne le détail là où on regarde) ;
-  // si on regarde le ciel, point sous la caméra
-  cam.getWorldDirection(_td);
-  const b = _tp2.dot(_td), disc = b*b - (dist*dist - CFG.R*CFG.R);
-  if(disc > 0 && -b - Math.sqrt(disc) > 0){
-    const s = -b - Math.sqrt(disc);
+  // point visé : intersection du rayon de visée avec la Terre (viser le sol et zoomer donne le détail là où on regarde).
+  // Si le centre de l'image regarde le ciel (ex. horizon en bas du cadre, comme sur les photos depuis l'ISS), on descend
+  // le rayon dans l'image jusqu'à toucher la Terre : le détail se charge sur le sol visible, pas sous l'ISS, loin du cadre.
+  // Sinon (que du ciel), point sous la caméra.
+  cam.getWorldDirection(_t0);
+  _tu.set(0, 1, 0).applyQuaternion(cam.getWorldQuaternion(_tq));       // « haut » de l'image (⟂ à l'axe)
+  const touche = () => { const b = _tp2.dot(_td), disc = b*b - (dist*dist - CFG.R*CFG.R); return disc > 0 && -b - Math.sqrt(disc) > 0 ? -b - Math.sqrt(disc) : 0; };
+  _td.copy(_t0);
+  let s = touche();
+  const pas = cam.fov*DEG/20;                                           // 1/20 de la hauteur du champ
+  for(let k=1;k<=30 && !s;k++){ _td.copy(_t0).multiplyScalar(Math.cos(k*pas)).addScaledVector(_tu, -Math.sin(k*pas)); s = touche(); }
+  if(s){
     _tl.copy(_tp2).addScaledVector(_td, s);
     h = s;                                                              // distance de la caméra au sol visé
   }else _tl.copy(_tp2);

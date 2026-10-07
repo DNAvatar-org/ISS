@@ -92,6 +92,10 @@
       "dest": "pages/ISS/js/solveur/instant.js"
     },
     {
+      "src": "js/solveur/villes.js",
+      "dest": "pages/ISS/js/solveur/villes.js"
+    },
+    {
       "src": "js/solveur/ui-solveur.js",
       "dest": "pages/ISS/js/solveur/ui-solveur.js"
     },

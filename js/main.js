@@ -1,7 +1,7 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
-// Version 1.0.1
-// Date: [October 06, 2026]
+// Version 1.0.2
+// Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -111,7 +111,11 @@ function demarrer(){
   preparerFond(); creerJoystick();
   creerUI();
   choisirPreset('pole');
+  const avisURL = appliquerSatURL();               // ?sat= (url.js) : avant t, qui dépend de l'observateur
   ETAT.t = tEntree(0) - 300;                       // cinq minutes avant l'entrée dans l'ombre
+  avisURL.push(...appliquerVueURL());              // ?vue= : visée prédéfinie
+  avisURL.push(...appliquerDateURL());             // ?date=&heure= : date + heure → en pause
+  if(avisURL.length) avis(avisURL);
   addEventListener('resize', redimensionner); redimensionner();
   requestAnimationFrame(boucle);
 }

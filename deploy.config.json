@@ -56,6 +56,10 @@
       "dest": "pages/ISS/js/entrees.js"
     },
     {
+      "src": "js/url.js",
+      "dest": "pages/ISS/js/url.js"
+    },
+    {
       "src": "js/satellites.js",
       "dest": "pages/ISS/js/satellites.js"
     },

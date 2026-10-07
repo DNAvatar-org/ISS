@@ -6,12 +6,13 @@
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
 /* Luminance légèrement lissée (boîte 3×3), fond = moyenne sur une boîte de 51 px (images intégrales), puis maxima
-   locaux dans un carré de 21 px, au moins 25 niveaux au-dessus du fond. Éclat = somme de l'excès dans 11×11
+   locaux dans un carré de 11 px (étoiles serrées des amas), au moins 25 niveaux au-dessus du fond. Éclat = somme de l'excès dans 11×11
    (les étoiles brillantes saturent : leur halo, plus large, les classe quand même devant). Position au barycentre.
    Pixels chauds (capteur vidéo, pose longue) rejetés : un seul pixel allumé, sans voisin à 25 % de son excès. Une étoile,
    même fine, s'étale (optique, dématriçage, compression) ; le bruit non.
    Points non ponctuels rejetés : sur un anneau de rayon 8 px, une étoile laisse le fond (au plus quelques voisines) ;
-   un bord de module, de panneau ou de nuage en allume une bonne part. Critère : le 3e quart de l'anneau sous 25 % du pic.
+   un bord de module, de panneau ou de nuage en allume la moitié. Critère : la médiane de l'anneau sous 25 % du pic (dans
+   un amas ou la Voie lactée, quelques voisines tombent dans l'anneau sans rejeter l'étoile).
    Points d'une seule couleur rejetés : le bruit d'un capteur vidéo à fort gain fait des taches rouges, vertes ou bleues
    (étalées sur 2×2 par la compression) ; une étoile, même frangée de violet, mêle les trois canaux.
    Les lumières de villes passent aussi : le masque (limbe.js) et l'appariement (astrometrie.js) les écartent. */
@@ -33,7 +34,7 @@ function detecterEtoiles(img){
     return out;
   };
   const G = moy(L, 1), F = moy(L, 25);
-  const res = [], R = 10, B = 5;
+  const res = [], R = 5, B = 5;                                        // maximum local sur 11×11 : amas serrés compris
   for(let y=R;y<H-R;y++) for(let x=R;x<W-R;x++){
     const g = G[y*W + x];
     if(g - F[y*W + x] < 25) continue;
@@ -53,7 +54,7 @@ function detecterEtoiles(img){
       if(xx >= 0 && yy >= 0 && xx < W && yy < H) anneau.push(G[yy*W + xx] - F[yy*W + xx]);
     }
     anneau.sort((p, q) => p - q);
-    if(anneau[Math.floor(anneau.length*0.75)] > 0.25*(g - F[y*W + x])) continue;   // pas ponctuel : bord, surface
+    if(anneau[Math.floor(anneau.length*0.5)] > 0.25*(g - F[y*W + x])) continue;    // pas ponctuel : bord, surface (médiane : des voisines ne suffisent pas)
     let cr = 0, cg = 0, cb = 0;
     for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){ const i = 4*((y + dy)*W + x + dx); cr += data[i]; cg += data[i+1]; cb += data[i+2]; }
     const cmax = Math.max(cr, cg, cb);

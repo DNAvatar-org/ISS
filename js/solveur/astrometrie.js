@@ -30,20 +30,27 @@ function preparerCatalogue(){
   }
   const ordre = v.map((_, i) => i).sort((a, b) => V[a] - V[b]);     // du plus brillant au plus faible
   AST.cat = {v, V, ordre};
-  const sel = []; for(let i=0;i<n;i++) if(V[i] <= 4.0) sel.push(i);
-  const cmax = Math.cos(40*DEG), idx = new Map();
+  AST.tri = indexTriangles(v, V, 4.0, 40*DEG);                         // brillantes, grands triangles
+  AST.triP = indexTriangles(v, V, 5.5, 8*DEG);                         // plus faibles, petits triangles (éclat aplati)
+}
+
+// Triangles d'étoiles (V ≤ vmax, côtés ≤ cmax), rangés par leurs rapports de côtés.
+function indexTriangles(v, V, vmax, cmax){
+  const n = V.length, sel = [];
+  for(let i=0;i<n;i++) if(V[i] <= vmax) sel.push(i);
+  const c = Math.cos(cmax), idx = new Map();
   for(let a=0;a<sel.length;a++){
     const nb = [];
-    for(let b=a+1;b<sel.length;b++) if(dot3(v[sel[a]], v[sel[b]]) > cmax) nb.push(sel[b]);
+    for(let b=a+1;b<sel.length;b++) if(dot3(v[sel[a]], v[sel[b]]) > c) nb.push(sel[b]);
     for(let j=0;j<nb.length;j++) for(let k=j+1;k<nb.length;k++){
-      if(dot3(v[nb[j]], v[nb[k]]) <= cmax) continue;
+      if(dot3(v[nb[j]], v[nb[k]]) <= c) continue;
       const t = trianglOrdonne([sel[a], nb[j], nb[k]], (p, q) => _ang(v[p], v[q]));
       const cle = Math.round(t.r1*100) + ',' + Math.round(t.r2*100);
       if(!idx.has(cle)) idx.set(cle, []);
       idx.get(cle).push(t);
     }
   }
-  AST.tri = idx;
+  return idx;
 }
 
 // Sommets rangés A, B, C = opposés au petit, au moyen, au grand côté ; r1 = petit/grand, r2 = moyen/grand.
@@ -145,11 +152,11 @@ function resoudreCiel(img, det, Flimbe){
   const Fs = [];
   if(Flimbe) for(let k=0;k<=14;k++){ for(const s of k ? [-1, 1] : [1]){ const F = Flimbe*Math.pow(1.06, s*k); if(F > 0.65*Flimbe && F < 1.5*Flimbe) Fs.push(F); } }
   else { const F0 = img.W/2/Math.tan(20*DEG); for(let k=0;k<=40;k++) for(const s of k ? [-1, 1] : [1]){ const F = F0*Math.pow(1.06, s*k), h = 2*Math.atan(img.W/2/F)/DEG; if(h > 4 && h < 130) Fs.push(F); } }
-  const fin = Date.now() + 8000;                                        // au-delà de 8 s : pas assez d'étoiles sûres
+  const fin = Date.now() + 10000;                                       // au-delà de 10 s : pas assez d'étoiles sûres
   const tol = Math.max(5, img.W/250);
   // une focale F, une orientation (pts : détections, éventuellement retournées) → meilleure hypothèse, ou null
-  const essayer = (pts, F, verif) => {
-    const haut = pts.slice(0, 30);
+  const essayer = (pts, F, verif, index, nHaut, cMax) => {
+    const haut = pts.slice(0, nHaut);
     let best = null;
     {
       // chaque détection devient une direction (focale supposée) : triangles comparés en ANGLES, justes même à grand angle
@@ -158,9 +165,9 @@ function resoudreCiel(img, det, Flimbe){
       for(let c=2;c<haut.length;c++) for(let b=1;b<c;b++) for(let a=0;a<b;a++){
         if(Date.now() > fin) return best;
         const d = trianglOrdonne([a, b, c], (p, q) => _ang(U[p], U[q]));
-        if(d.grand < 2*DEG) continue;                                  // trop petit : invariants imprécis
+        if(d.grand < 1.5*DEG || d.grand > cMax) continue;              // trop petit (invariants imprécis) ou hors index
         for(let i1=-1;i1<=1;i1++) for(let i2=-1;i2<=1;i2++){
-          const l = AST.tri.get((Math.round(d.r1*100) + i1) + ',' + (Math.round(d.r2*100) + i2));
+          const l = index.get((Math.round(d.r1*100) + i1) + ',' + (Math.round(d.r2*100) + i2));
           if(!l) continue;
           for(const t of l){
             if(Math.abs(t.r1 - d.r1) > 0.008 || Math.abs(t.r2 - d.r2) > 0.008) continue;
@@ -180,11 +187,14 @@ function resoudreCiel(img, det, Flimbe){
     return best;
   };
   // chaque focale, à l'endroit puis en miroir (image retournée) ; arrêt à la première hypothèse nette
-  const sens = [det, det.map(p => ({x:img.W - 1 - p.x, y:p.y, eclat:p.eclat}))].map(p => ({pts:p, verif:grilleDet(p.slice(0, 150), tol)}));
+  const sens = [det, det.map(p => ({x:img.W - 1 - p.x, y:p.y, eclat:p.eclat}))].map(p => ({pts:p, verif:grilleDet(p.slice(0, 400), tol)}));
   let h = null, miroir = false, pts = det;
-  recherche: for(const F of Fs) for(let m=0;m<2;m++){
+  // 1) grands triangles des 30 plus brillantes ; 2) si l'éclat ne classe pas bien les étoiles (photo retouchée,
+  // toutes saturées) : petits triangles (≤ 8°) de 80 détections, catalogue jusqu'à V = 5,5
+  const passes = [[AST.tri, 30, 40*DEG], [AST.triP, 80, 8*DEG]];
+  recherche: for(const [index, nHaut, cMax] of passes) for(const F of Fs) for(let m=0;m<2;m++){
     if(Date.now() > fin) break recherche;
-    const b = essayer(sens[m].pts, F, sens[m].verif);
+    const b = essayer(sens[m].pts, F, sens[m].verif, index, nHaut, cMax);
     if(b && (!h || b.note > h.note)){ h = b; miroir = m === 1; pts = sens[m].pts; }
     if(h && h.n >= 12 && h.note >= 4) break recherche;
   }

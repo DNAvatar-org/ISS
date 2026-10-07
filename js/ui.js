@@ -302,6 +302,27 @@ function creerUI(){
   // 359,9° au plus : à 360°, themeToT donnerait déjà θ = 0 de l'orbite suivante
   $('sTheta').oninput = e => { if(JT.dehors) return; poseInterrompre(); ETAT.t = themeToT(Math.min(+e.target.value, 359.9)); };
 
+  // l'heure (UT) se saisit au clic, à la seconde : le curseur Date n'est pas assez fin pour ça. Même jour, en pause.
+  $('oTheta').onclick = () => {
+    const o = $('oTheta');
+    if(o.querySelector('input')) return;
+    const champ = document.createElement('input');
+    champ.value = o.textContent; champ.size = 8; champ.id = 'heureSaisie';
+    o.textContent = ''; o.appendChild(champ); champ.focus(); champ.select();
+    let fait = false;                                            // Entrée ou Échap retire le champ, ce qui déclenche blur
+    const fini = ok => {
+      if(fait) return; fait = true;
+      const f = ok ? lireHeureURL(champ.value) : null;
+      o.textContent = '';                                        // majCurseurTheta réécrit l'heure
+      if(f === null) return;
+      poseInterrompre();
+      ETAT.date0 = Math.floor(jourDate()) + f - ETAT.t/86400; ETAT.pause = true;
+      majSoleilDate(); majDateUI(); majBoutons();
+    };
+    champ.onkeydown = e => { if(e.key === 'Enter') fini(true); if(e.key === 'Escape') fini(false); };
+    champ.onblur = () => fini(true);
+  };
+
   $('cOrbite').onchange = e => { poseInterrompre(); ETAT.montrer.orbite = e.target.checked; };
   $('cReperes').onchange = e => { poseInterrompre(); ETAT.montrer.reperes = e.target.checked; };
   $('cTrace').onchange = e => { poseInterrompre(); ETAT.montrer.trace = e.target.checked; };
@@ -325,8 +346,8 @@ function majCurseurFocale(){
 function majCurseurTheta(){
   const th = ((thetaObs(ETAT.t)/DEG) % 360 + 360) % 360;
   $('sTheta').value = th;
-  const sec = Math.floor(((jourDate() % 1) + 1) % 1 * 86400), p2 = n => String(n).padStart(2, '0');   // heure de Greenwich (UT)
-  $('oTheta').textContent = p2(Math.floor(sec/3600)) + ':' + p2(Math.floor(sec/60) % 60) + ':' + p2(sec % 60);
+  const sec = Math.round(((jourDate() % 1) + 1) % 1 * 86400) % 86400, p2 = n => String(n).padStart(2, '0');   // heure de Greenwich (UT), à la seconde la plus proche
+  if(!$('oTheta').querySelector('input')) $('oTheta').textContent = p2(Math.floor(sec/3600)) + ':' + p2(Math.floor(sec/60) % 60) + ':' + p2(sec % 60);
 }
 
 /* Icône de phase, comme sur les calendriers (hémisphère nord) : la Lune croissante est éclairée à droite.

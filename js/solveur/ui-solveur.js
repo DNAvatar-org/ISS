@@ -122,9 +122,11 @@ function appliquerSolution(prudent = false){
   const l = [];
   const h = limbe ? heureParLimbe(res, img, limbe, unix, 2400) : null;
   // limbe concordant : points bien sur un même cône autour du nadir, bord vu entre le sol et le haut de l'airglow
+  // l'heure saisie est appliquée telle quelle ; celle du limbe est proposée (bouton) si elle diffère
+  let hLimbe = null;
   if(h && h.sdDeg < 0.08 && h.alt > -20 && h.alt < 150){
     l.push('Heure par le limbe : ' + texteHeure(h.unix) + ' UT (' + (h.ecart >= 0 ? '+' : '') + h.ecart + ' s ; bord à ' + h.alt.toFixed(0) + ' km)');
-    if(!exif.date) unix = h.unix;                                       // sans EXIF, l'heure saisie n'était qu'une estimation
+    if(h.ecart) hLimbe = h.unix;
   }else{
     if(limbe) l.push('Le limbe ne colle pas à l\'ISS à ±40 min de cette heure : vérifie la date.');
     if(prudent){ lignesSolveur([...CHK.lignes, ...l]); return; }     // date inconnue : on attend la bonne
@@ -153,6 +155,12 @@ function appliquerSolution(prudent = false){
   l.push('Appliqué : ' + texteDate(unix) + ' ' + texteHeure(unix) + ' UT, cap ' + fr(cap/DEG, 1) + '°, site ' + fr(site/DEG, 1) + '°, ' + fr(focale, 1) + ' mm'
          + (Math.abs(roulis) > 2 ? ' (roulis de ' + roulis.toFixed(0) + '° non reproduit)' : '') + ' — dans l\'URL.');
   lignesSolveur([...CHK.lignes.filter(x => !x.startsWith('Pas de date')), ...l]);   // appliqué : l'invite à dater est caduque
+  if(hLimbe){
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = 'Prendre l\'heure du limbe (' + texteHeure(hLimbe) + ')';
+    b.onclick = () => { $('solHeure').value = texteHeure(hLimbe); appliquerSolution(false); };
+    $('solTxt').appendChild(b);
+  }
   ENC.roulis = roulis;
   majCalque();
 }

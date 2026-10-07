@@ -72,6 +72,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 
 #erreur{position:fixed;inset:auto 16px 16px 360px;z-index:5;padding:12px 14px;border-radius:10px;
         background:#5a1620;border:1px solid #ff6b81;color:#fff;font-size:13px}
+/* heure de l'encart Temps : cliquable, saisie à la seconde */
+#oTheta{cursor:text}
+#heureSaisie{width:66px;background:rgba(255,255,255,.08);border:1px solid var(--acc);border-radius:5px;color:var(--txt);padding:0 4px;font:inherit}
+#solTxt button{margin-top:4px;padding:2px 7px;font-size:11px}
 /* « Check Photo » : page en attente d'un dépôt */
 body.depot::after{content:"Déposer la photo : visée, focale et heure retrouvées par les étoiles";position:fixed;inset:12px;z-index:30;
                   display:flex;align-items:center;justify-content:center;border:2px dashed var(--c1);border-radius:16px;

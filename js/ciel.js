@@ -16,7 +16,8 @@
    retrouve donc étoile pour étoile (et c'est ce qui permet d'en déduire la visée). */
 const CIEL = {groupe:null, equat:null, sphere:null, points:null, uExpo:{value:1}, uPx:{value:1}, uCalque:{value:0}};
 
-// uCalque = 1 quand une photo est superposée (Check Photo) : étoiles vertes, plus grosses et plus vives, pour les
+// uCalque = 1 quand une photo est superposée (Check Photo) : étoiles vertes, ×2,6 et plus vives (la photo, posée longtemps
+// à f/1,2 et 12 800 ISO, montre des étoiles jusqu'à la magnitude ~9, en taches), pour les
 // distinguer à l'œil de celles de la photo (blanches) et voir si elles tombent dessus.
 const GLSL_ETOILES_VS = `
 attribute float aTaille; attribute vec3 aCouleur;
@@ -25,7 +26,7 @@ varying vec3 vC;
 void main(){
   vC = aCouleur;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = aTaille * uPx * (1.0 + 0.8*uCalque);
+  gl_PointSize = aTaille * uPx * (1.0 + 1.6*uCalque);
 }`;
 const GLSL_ETOILES_FS = `
 uniform float uExpo, uCalque;
@@ -34,7 +35,7 @@ void main(){
   float r = length(gl_PointCoord - 0.5) * 2.0;
   float a = 1.0 - smoothstep(0.35, 1.0, r);           // cœur net, bord doux
   float l = max(vC.r, max(vC.g, vC.b));
-  vec3 c = mix(vC, vec3(0.25, 1.0, 0.45) * min(1.0, 0.5 + l), uCalque);
+  vec3 c = mix(vC, vec3(0.3, 1.0, 0.5) * min(1.0, 0.8 + 1.5*l), uCalque);
   gl_FragColor = vec4(c * a * uExpo, 1.0);
 }`;
 

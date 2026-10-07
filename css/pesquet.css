@@ -81,7 +81,7 @@ body.depot::after{content:"Déposer la photo : visée, focale et heure retrouvé
                   display:flex;align-items:center;justify-content:center;border:2px dashed var(--c1);border-radius:16px;
                   background:rgba(3,5,10,.7);color:var(--c1);font-size:18px;pointer-events:none}
 /* encart « Photo » : sous l'encart Temps (--bas-hud, cf. placerCredits), même largeur */
-#encartPhoto{position:fixed;right:12px;top:calc(var(--bas-hud, 200px) + 8px);width:250px;z-index:3;padding:8px 10px 10px;
+#encartPhoto{position:fixed;right:12px;top:calc(var(--bas-hud, 200px) + 8px);width:290px;z-index:3;padding:8px 10px 10px;
              max-height:calc(var(--alt, 100vh) - var(--bas-hud, 200px) - 20px);overflow-y:auto;
              background:var(--panel);border:1px solid var(--stroke);border-radius:12px;backdrop-filter:blur(10px)}
 #encartPhoto[hidden]{display:none}
@@ -165,8 +165,7 @@ button.rec{background:#2fb457;border-color:#2fb457;color:#06210f}
 #temps .btns button{font-size:11px;padding:4px 7px}
 
 /* joystick de visée */
-#joy{border-radius:50%;cursor:crosshair;user-select:none;touch-action:none;
-     border:2px solid rgba(255,255,255,.25);box-shadow:inset 0 1px 4px rgba(0,0,0,.4)}
+#joy{border-radius:50%;cursor:crosshair;user-select:none;touch-action:none}
 @media (max-width:760px){ #hud{width:200px} }
 
 /* Panneau gauche sans cadres : carte flottante comme l'encart de droite, groupes séparés par un filet */
@@ -313,7 +312,7 @@ body.zen #credits{display:none !important}
 #reperes{display:flex;flex-direction:column;gap:3px;align-self:start;position:relative;z-index:2}
 #reperes button{--c:calc(var(--ic-base) - var(--ic-moins, 0px));width:var(--c);height:var(--c);padding:0;font-size:calc(var(--c) * .58);
                 line-height:1;display:flex;align-items:center;justify-content:center;background:rgba(22,27,38,.88)}
-#joyWrap{position:absolute;z-index:0;left:0;right:0;top:0;bottom:var(--zone-bas, 10px);padding-left:calc(var(--ic-base) + 6px);
+#joyWrap{position:absolute;z-index:0;left:0;right:0;top:22px;bottom:var(--zone-bas, 10px);padding-left:calc(var(--ic-base) + 6px);
          display:flex;align-items:center;justify-content:center;pointer-events:none}
 #joy{pointer-events:auto}
 /* paysage bas : encarts en haut à gauche / à droite, crédits tout en bas à droite ; le pied, dessous, ne réserve rien.
@@ -335,6 +334,7 @@ body.zen #credits{display:none !important}
   #panel .grp:first-child > .btns{flex-wrap:nowrap;gap:4px}
   #panel .grp:first-child > .btns button{padding:4px 7px;white-space:nowrap}
   #hud{top:8px;right:8px;width:var(--hudw);max-height:calc(100% - 16px)}
+  #encartPhoto{right:8px;width:var(--hudw)}
   #credits{left:auto;right:52px;bottom:6px;width:min(280px, calc(50vw - 56px))}   /* en bas, à gauche de ⛶, par-dessus le pied */
 }
 @media (max-height:500px) and (orientation:landscape) and (max-width:640px){

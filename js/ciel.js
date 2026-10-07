@@ -14,11 +14,11 @@
    Voie lactée sur le plan galactique réel. Étoiles et lueur sont dans un sous-groupe « équatorial » (repère J2000)
    tourné à chaque trame vers la scène : précession jusqu'à la date, puis ETAT.vers. Une photo prise depuis l'ISS se
    retrouve donc étoile pour étoile (et c'est ce qui permet d'en déduire la visée). */
-const CIEL = {groupe:null, equat:null, sphere:null, points:null, uExpo:{value:1}, uPx:{value:1}, uCalque:{value:0}};
+const CIEL = {groupe:null, equat:null, sphere:null, points:null, uExpo:{value:1}, uPx:{value:1}, uCalque:{value:0}, testees:null};
 
-// uCalque = 1 quand une photo est superposée (Check Photo) : étoiles vertes, ×2,6 et plus vives (la photo, posée longtemps
-// à f/1,2 et 12 800 ISO, montre des étoiles jusqu'à la magnitude ~9, en taches), pour les
-// distinguer à l'œil de celles de la photo (blanches) et voir si elles tombent dessus.
+// uCalque = 1 quand une photo est superposée (Check Photo) : étoiles ×2 et plus vives, dans leur couleur (la photo, posée
+// longtemps à f/1,2 et 12 800 ISO, montre des étoiles jusqu'à la magnitude ~9, en taches). Les marques vertes sont sur la
+// photo (cercles autour de ses étoiles reconnues, encart.js) : une étoile de la simulation doit tomber dans chaque cercle.
 const GLSL_ETOILES_VS = `
 attribute float aTaille; attribute vec3 aCouleur;
 uniform float uPx, uCalque;
@@ -26,7 +26,7 @@ varying vec3 vC;
 void main(){
   vC = aCouleur;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = aTaille * uPx * (1.0 + 1.6*uCalque);
+  gl_PointSize = aTaille * uPx * (1.0 + uCalque);
 }`;
 const GLSL_ETOILES_FS = `
 uniform float uExpo, uCalque;
@@ -34,8 +34,7 @@ varying vec3 vC;
 void main(){
   float r = length(gl_PointCoord - 0.5) * 2.0;
   float a = 1.0 - smoothstep(0.35, 1.0, r);           // cœur net, bord doux
-  float l = max(vC.r, max(vC.g, vC.b));
-  vec3 c = mix(vC, vec3(0.3, 1.0, 0.5) * min(1.0, 0.8 + 1.5*l), uCalque);
+  vec3 c = vC * (1.0 + 0.8*uCalque);
   gl_FragColor = vec4(c * a * uExpo, 1.0);
 }`;
 
@@ -117,6 +116,25 @@ function creerCiel(){
   CIEL.points.frustumCulled = false;
   CIEL.points.renderOrder = -9;
   CIEL.equat.add(CIEL.points);
+}
+
+// Étoiles du catalogue appariées aux étoiles de la photo (Check Photo, astrometrie.js) : points rouges ronds, montrés
+// avec le calque (encart.js), dont les cercles verts entourent les étoiles de la photo : un point rouge dans chaque cercle.
+const GLSL_TESTEES_VS = `uniform float uPx; void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_PointSize = 6.0 * uPx; }`;
+const GLSL_TESTEES_FS = `void main(){ if(length(gl_PointCoord - 0.5) > 0.5) discard; gl_FragColor = vec4(1.0, 0.15, 0.1, 1.0); }`;
+function marquerEtoilesTestees(indices){
+  if(CIEL.testees){ CIEL.equat.remove(CIEL.testees); CIEL.testees.geometry.dispose(); CIEL.testees.material.dispose(); CIEL.testees = null; }
+  if(!indices.length) return;
+  const pos = new Float32Array(indices.length*3), d = new THREE.Vector3();
+  indices.forEach((i, n) => dirEquat(ETOILES[4*i]/1000, ETOILES[4*i+1]/1000, d).multiplyScalar(CFG.SKY_R*0.93).toArray(pos, n*3));
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  CIEL.testees = new THREE.Points(g, new THREE.ShaderMaterial({vertexShader:GLSL_TESTEES_VS, fragmentShader:GLSL_TESTEES_FS,
+    uniforms:{uPx:CIEL.uPx}, depthWrite:false}));
+  CIEL.testees.frustumCulled = false;
+  CIEL.testees.renderOrder = -8;
+  CIEL.testees.visible = CIEL.uCalque.value > 0;
+  CIEL.equat.add(CIEL.testees);
 }
 
 // Repère J2000 → scène à la date : colonnes = images des axes J2000 (précession, puis équatorial de la date → scène).

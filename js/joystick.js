@@ -57,9 +57,6 @@ function dessinerJoystick(ms){
   const c = JOY.cx, R = JOY.R;
   c.clearRect(0, 0, 2*R, 2*R);
   c.save(); c.beginPath(); c.arc(R, R, R-1, 0, 2*Math.PI); c.clip();
-  const ciel = c.createRadialGradient(R, R, 0, R, R, R);
-  ciel.addColorStop(0, '#0a1020'); ciel.addColorStop(1, '#02040a');
-  c.fillStyle = ciel; c.fillRect(0, 0, 2*R, 2*R);
   c.drawImage(JFOND.cv, 0, 0);                                           // la Terre sous l'ISS
 
   // limbe de la Terre et horizon (ρ = 90°)
@@ -68,7 +65,7 @@ function dessinerJoystick(ms){
   c.lineWidth = 1; c.strokeStyle = 'rgba(255,255,255,.28)'; c.setLineDash([3, 4]);
   c.beginPath(); c.arc(R, R, R/2, 0, 2*Math.PI); c.stroke(); c.setLineDash([]);
   c.fillStyle = 'rgba(255,255,255,.5)'; c.font = '9px sans-serif'; c.textAlign = 'center';
-  c.fillText('horizon', R, R + R/2 + 11); c.fillText('zénith ▸ bord', R, 2*R - 5); c.fillText('vol ▲', R, 11);
+  c.fillText('horizon', R, R + R/2 + 11);
 
   // cône de la caméra vu de dessus : l'ISS au centre (au-dessus du nadir), arêtes vers les coins du champ carré
   const e = empreinte(), n = e.length/4;

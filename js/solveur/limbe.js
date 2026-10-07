@@ -1,18 +1,24 @@
 // File: js/solveur/limbe.js
-// Desc: Limbe terrestre dans une photo : bord coloré de l'atmosphère, cercle ajusté (RANSAC) ; Terre masquée.
-// Version 1.1.0
+// Desc: Limbe terrestre dans une photo : bord de l'atmosphère (petits points retirés), cercle ajusté (RANSAC) ; Terre masquée.
+// Version 1.2.0
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
 /* La Terre vue de l'ISS a un bord convexe : sous lui, tout est Terre (villes, nuages, éclairs) et ne doit pas entrer
    dans la reconnaissance des étoiles. Méthode :
-   1. signal = chrominance (max − min des canaux), très floutée (boîte de H/40 : étoiles et pixels chauds disparaissent) :
-      l'atmosphère est colorée (airglow vert ou rouge-orangé la nuit, bleu-cyan le jour), le ciel noir, les étoiles et la
-      structure de l'ISS (gris, blanc) sont neutres — un bord de module ou de panneau n'est donc pas pris pour l'horizon ;
-   2. pour chacun des 4 sens possibles (Terre en bas, en haut, à droite, à gauche), le long de chaque ligne de balayage,
-      la position où l'écart « moyenne après − moyenne avant » est le plus grand : premier bord brillant vers la Terre ;
-   3. cercle ajusté sur ces points par RANSAC (le meilleur des 4 sens) : la Terre est le disque.
+   1. signal = luminance + chrominance (max − min des canaux), réduit à ~400 px de côté, puis OUVERTURE morphologique
+      (minimum puis maximum sur un carré de ~1/60 du petit côté) : étoiles, pixels chauds et petites lumières de villes
+      disparaissent, la bande d'airglow (continue, plus large) reste. La luminance la voit même quand elle est peu colorée
+      (ciel bleu nuit retouché presque aussi saturé que la bande) ; la chrominance, quand elle est sombre (aurore verte) ;
+   2. pour chacun des 4 sens possibles (Terre en bas, en haut, à droite, à gauche), 80 lignes de balayage ; sur chacune,
+      les sauts « moyenne après − moyenne avant » (vers la Terre) les plus forts, jusqu'à 4 candidats : le bord du ciel
+      n'est pas toujours le plus fort (une ville, un module éclairé de l'ISS peuvent le dépasser), mais il est sur toutes
+      les lignes, sur une même courbe ;
+   3. cercle par RANSAC (graine fixe : même photo, même résultat) : note = Σ √saut sur les lignes qui ont un point à moins
+      de tol du cercle (une ligne compte une fois) ; puis moindres carrés. Le meilleur des 4 sens : la Terre est le disque.
+   Sur l'arc visible, le cercle s'écarte de la vraie trace (une conique) de quelques pixels : assez pour masquer la Terre
+   et borner la focale ; l'heure (instant.js) utilise les points eux-mêmes.
    Le cercle donne aussi, avec l'altitude, la focale et la verticale (à comparer aux étoiles, cf. ui-solveur.js). */
 function detecterLimbe(img){
   const {width:W, height:H, data} = img;
@@ -22,37 +28,39 @@ function detecterLimbe(img){
     let s = 0;
     for(let dy=0;dy<k;dy++) for(let dx=0;dx<k;dx++){
       const i = 4*((y*k + dy)*W + x*k + dx), R = data[i], G = data[i+1], Bl = data[i+2];
-      s += Math.max(R, G, Bl) - Math.min(R, G, Bl);
+      s += 0.3*R + 0.59*G + 0.11*Bl + Math.max(R, G, Bl) - Math.min(R, G, Bl);
     }
     L[y*w + x] = s/(k*k);
   }
-  const r = Math.max(2, Math.round(Math.min(w, h)/40));
-  const B = flouBoite(L, w, h, r), fen = Math.max(3, Math.round(Math.min(w, h)/30));
+  const ro = Math.max(1, Math.round(Math.min(w, h)/120));
+  const B = flouBoite(extremum(extremum(L, w, h, ro, Math.min), w, h, ro, Math.max), w, h, 1);
+  const fen = Math.max(3, Math.round(Math.min(w, h)/30)), NL = 80, tol = Math.max(W, H)/150;
   const sens = [[0, 1], [0, -1], [1, 0], [-1, 0]];                     // direction vers la Terre : bas, haut, droite, gauche
   let meilleur = null;
   for(const [sx, sy] of sens){
-    const pts = [], lignes = sx === 0 ? w : h, long = sx === 0 ? h : w;
-    for(let l=0;l<lignes;l+=Math.max(1, Math.floor(lignes/60))){
-      const val = t => { const p = sx + sy > 0 ? t : long - 1 - t; return sx === 0 ? B[p*w + l] : B[l*w + p]; };
-      let best = 0, tb = -1;
-      for(let t=fen;t<long-fen;t++){
-        let av = 0, ap = 0;
-        for(let j=1;j<=fen;j++){ av += val(t - j); ap += val(t + j - 1); }
-        const e = (ap - av)/fen;
-        if(e > best){ best = e; tb = t; }
+    const pts = [], lignes = sx === 0 ? w : h, long = sx === 0 ? h : w, P = new Float64Array(long + 1);
+    for(let n=0;n<NL;n++){
+      const l = Math.floor((n + 0.5)*lignes/NL);
+      for(let t=0;t<long;t++){                                         // profil cumulé, t = 0 côté ciel
+        const p = sx + sy > 0 ? t : long - 1 - t;
+        P[t + 1] = P[t] + (sx === 0 ? B[p*w + l] : B[l*w + p]);
       }
-      if(tb < 0 || best < 10) continue;
-      const p = sx + sy > 0 ? tb : long - 1 - tb;
-      pts.push(sx === 0 ? {x:(l + 0.5)*k, y:p*k, c:best} : {x:p*k, y:(l + 0.5)*k, c:best});
+      const e = t => (P[t + fen] - 2*P[t] + P[t - fen])/fen, cand = [];
+      for(let t=fen;t<=long-fen;t++){
+        const v = e(t);
+        if(v < 8) continue;
+        let max = true;
+        for(let j=Math.max(fen, t - (fen >> 1));j<=Math.min(long - fen, t + (fen >> 1));j++) if(e(j) > v || (e(j) === v && j < t)){ max = false; break; }
+        if(max) cand.push({t, c:v});
+      }
+      cand.sort((a, b) => b.c - a.c);
+      for(const {t, c} of cand.slice(0, 4)){
+        const p = sx + sy > 0 ? t : long - 1 - t;
+        pts.push(sx === 0 ? {x:(l + 0.5)*k, y:p*k, c, l:n} : {x:p*k, y:(l + 0.5)*k, c, l:n});
+      }
     }
-    if(pts.length < 8) continue;
-    const c = ransacCercle(pts, Math.max(W, H)/150);
-    if(!c) continue;
-    // la Terre doit être du côté du centre (vers où le balayage allait)
-    const mx = pts.reduce((s, p) => s + p.x, 0)/pts.length, my = pts.reduce((s, p) => s + p.y, 0)/pts.length;
-    if((c.cx - mx)*sx + (c.cy - my)*sy <= 0) continue;
-    const note = c.inliers.length*c.inliers.reduce((s, p) => s + p.c, 0)/c.inliers.length;
-    if(!meilleur || note > meilleur.note) meilleur = Object.assign(c, {note, sens:[sx, sy]});
+    const C = ransacLimbe(pts, tol, sx, sy, Math.min(W, H)/4);
+    if(C && (!meilleur || C.note > meilleur.note)) meilleur = Object.assign(C, {sens:[sx, sy]});
   }
   return meilleur && meilleur.inliers.length >= 12 ? meilleur : null;
 }
@@ -64,25 +72,59 @@ function flouBoite(L, w, h, r){
   return o;
 }
 
-// Cercle par 3 points tirés au hasard, garde celui qui explique le plus de points (à tol près), puis moindres carrés.
-function ransacCercle(pts, tol){
-  let best = null;
-  for(let it=0;it<400;it++){
-    const a = pts[(Math.random()*pts.length)|0], b = pts[(Math.random()*pts.length)|0], c = pts[(Math.random()*pts.length)|0];
+// Minimum (ou maximum) sur un carré (2r+1)², en deux passes : érosion (dilatation) en niveaux de gris.
+function extremum(L, w, h, r, f){
+  const t = new Float32Array(w*h), o = new Float32Array(w*h);
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){ let m = L[y*w + x]; for(let xx=Math.max(0, x - r);xx<=Math.min(w - 1, x + r);xx++) m = f(m, L[y*w + xx]); t[y*w + x] = m; }
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){ let m = t[y*w + x]; for(let yy=Math.max(0, y - r);yy<=Math.min(h - 1, y + r);yy++) m = f(m, t[yy*w + x]); o[y*w + x] = m; }
+  return o;
+}
+
+// Points du cercle (cx, cy, r) à tol près, le plus fort par ligne de balayage ; note = Σ √saut.
+function inliersLimbe(pts, C, tol){
+  const parLigne = new Map();
+  for(const p of pts){
+    if(Math.abs(Math.hypot(p.x - C.cx, p.y - C.cy) - C.r) >= tol) continue;
+    const q = parLigne.get(p.l);
+    if(!q || p.c > q.c) parLigne.set(p.l, p);
+  }
+  const inl = [...parLigne.values()];
+  return {inliers:inl, note:inl.reduce((s, p) => s + Math.sqrt(p.c), 0)};
+}
+
+// Cercle du limbe : 3 points de lignes différentes, Terre du côté où allait le balayage (sx, sy), rayon ≥ rMin ;
+// le mieux noté, puis affiné (Kåsa) sur ses points, deux fois.
+function ransacLimbe(pts, tol, sx, sy, rMin){
+  if(new Set(pts.map(p => p.l)).size < 8) return null;
+  let graine = 20261007, best = null;
+  const alea = () => (graine = (graine*16807) % 2147483647)/2147483647;
+  for(let it=0;it<1500;it++){
+    const a = pts[(alea()*pts.length)|0], b = pts[(alea()*pts.length)|0], c = pts[(alea()*pts.length)|0];
+    if(a.l === b.l || a.l === c.l || b.l === c.l) continue;
     const C = cercle3(a, b, c);
-    if(!C) continue;
-    const inl = pts.filter(p => Math.abs(Math.hypot(p.x - C.cx, p.y - C.cy) - C.r) < tol);
-    if(!best || inl.length > best.inliers.length) best = Object.assign(C, {inliers:inl});
+    if(!C || C.r < rMin || (C.cx - (a.x + b.x + c.x)/3)*sx + (C.cy - (a.y + b.y + c.y)/3)*sy <= 0) continue;
+    const s = inliersLimbe(pts, C, tol);
+    if(!best || s.note > best.note) best = Object.assign(C, s);
   }
   if(!best || best.inliers.length < 3) return null;
-  // affinage algébrique (Kåsa) sur les points retenus
-  const P = best.inliers; let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, sz = 0, sxz = 0, syz = 0;
+  for(let passe=0;passe<2;passe++){
+    const C = kasa(best.inliers);
+    if(!C || C.r < rMin) break;
+    const s = inliersLimbe(pts, C, tol);
+    if(s.inliers.length < best.inliers.length) break;
+    best = Object.assign(C, s);
+  }
+  return best;
+}
+
+// Cercle algébrique (Kåsa) par moindres carrés sur des points.
+function kasa(P){
+  let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, sz = 0, sxz = 0, syz = 0;
   for(const p of P){ const z = p.x*p.x + p.y*p.y; sx += p.x; sy += p.y; sxx += p.x*p.x; syy += p.y*p.y; sxy += p.x*p.y; sz += z; sxz += p.x*z; syz += p.y*z; }
-  const n = P.length, A = [[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, n]], bb = [sxz, syz, sz];
-  const s = resoudre3(A, bb);
-  if(!s) return best;
-  const cx = s[0]/2, cy = s[1]/2, r = Math.sqrt(s[2] + cx*cx + cy*cy);
-  return {cx, cy, r, inliers:P};
+  const n = P.length, s = resoudre3([[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, n]], [sxz, syz, sz]);
+  if(!s) return null;
+  const cx = s[0]/2, cy = s[1]/2;
+  return {cx, cy, r:Math.sqrt(s[2] + cx*cx + cy*cy)};
 }
 function cercle3(a, b, c){
   const d = 2*(a.x*(b.y - c.y) + b.x*(c.y - a.y) + c.x*(a.y - b.y));

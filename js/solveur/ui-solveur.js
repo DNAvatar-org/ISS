@@ -1,6 +1,6 @@
 // File: js/solveur/ui-solveur.js
 // Desc: « Check Photo » : une photo prise depuis l'ISS (bouton ou glisser-déposer) → visée, focale, heure ; appliquées à la vue.
-// Version 1.1.0
+// Version 1.2.0
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -40,22 +40,31 @@ function lignesSolveur(l){
   for(const s of l){ const p = document.createElement('p'); p.textContent = s; t.appendChild(p); }
 }
 
+// laisser le navigateur peindre (photo, message) avant un calcul qui bloque ; onglet caché : pas de trame, la minuterie suffit
+const peindre = () => new Promise(r => { requestAnimationFrame(() => setTimeout(r, 0)); setTimeout(r, 100); });
+
+// La photo s'affiche dès qu'elle est lue ; puis limbe et points (rapide, dessinés) ; puis la reconnaissance (jusqu'à 10 s).
 async function analyserPhoto(fichier){
   $('encartPhoto').hidden = false; $('solChamps').hidden = true; $('solDates').hidden = true; $('solListe').textContent = '';
-  lignesSolveur(['Analyse de « ' + fichier.name + ' »…']);
+  lignesSolveur(['Lecture de « ' + fichier.name + ' »…']);
   const buf = await fichier.arrayBuffer();
   const exif = lireExif(buf), bmp = await createImageBitmap(new Blob([buf]));
   const k = Math.min(1, LARGEUR_MAX/bmp.width), W = Math.round(bmp.width*k), H = Math.round(bmp.height*k);
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const cx = cv.getContext('2d'); cx.drawImage(bmp, 0, 0, W, H);
+  afficherPhoto(cv);
+  lignesSolveur(['Analyse de « ' + fichier.name + ' » : limbe, étoiles…']);
+  await peindre();
   const img = cx.getImageData(0, 0, W, H);
-  await new Promise(r => setTimeout(r, 30));                            // laisser s'afficher « Analyse… »
   const limbe = detecterLimbe(img);
   const det = horsTerre(detecterEtoiles(img), limbe, H/100);
+  marquerPhoto(cv, det, null, limbe);
+  lignesSolveur([(limbe ? 'Limbe vu (trait bleu), ' : 'Pas de limbe, ') + det.length + ' points dans le ciel : reconnaissance des étoiles (jusqu\'à 10 s)…']);
+  await peindre();
   const Fl = limbe ? focaleParLimbe(limbe, W, H) : null;               // la courbure du limbe borne la focale
   const res = resoudreCiel({W, H}, det, Fl, limbe);
   Object.assign(CHK, {res, img:{W, H}, data:img.data, limbe, exif});
-  afficherEncart(cv, URL.createObjectURL(fichier), det, res, limbe);
+  marquerPhoto(cv, det, res, limbe);
   if(!res){
     lignesSolveur(['Étoiles non reconnues (' + det.length + ' points, en gris).',
                    'Il faut une photo de nuit, nette, avec au moins une dizaine d\'étoiles (le bruit coloré d\'une caméra vidéo ne compte pas).']);

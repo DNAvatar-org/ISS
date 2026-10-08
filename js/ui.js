@@ -1,7 +1,7 @@
 // File: js/ui.js
 // Desc: Commandes : vues, jauge de vitesse (crans logarithmiques), date (donc β), position sur l'orbite, affichages, pose.
-// Version 2.1.0
-// Date: [October 06, 2026]
+// Version 2.1.1
+// Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -372,10 +372,11 @@ function dessinerPhase(cv, illum, croissante){
 function basculerZen(){
   const zen = !document.body.classList.contains('zen');
   document.body.classList.toggle('zen', zen);
+  encartZen(zen);                                                  // encart Photo replié (encart.js)
   if(zen && document.documentElement.requestFullscreen && !document.fullscreenElement)
     document.documentElement.requestFullscreen().catch(() => {});   // iPhone : pas d'API plein écran, les encarts se masquent seulement
   if(!zen && document.fullscreenElement) document.exitFullscreen();
 }
 document.addEventListener('fullscreenchange', () => {
-  if(!document.fullscreenElement) document.body.classList.remove('zen');
+  if(!document.fullscreenElement && document.body.classList.contains('zen')){ document.body.classList.remove('zen'); encartZen(false); }
 });

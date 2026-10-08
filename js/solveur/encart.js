@@ -1,6 +1,6 @@
 // File: js/solveur/encart.js
 // Desc: Encart « Photo » (à droite, sous Temps) : la photo analysée et ce que le solveur y a trouvé ; clic = calque sur la vue.
-// Version 1.2.0
+// Version 1.3.0
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.txt.
@@ -12,11 +12,24 @@
    de la caméra : focale de la photo (pixels de l'image) → focale de l'écran, rotation (roulis) et miroir compris. Dans la
    simulation, les étoiles du catalogue appariées sont des points rouges (ciel.js) : un point rouge dans chaque cercle
    vert, et le trait bleu sur l'horizon de la vue, si la solution est bonne. Re-clic ou ✕ : retirée. Elle suit le zoom (majCalque, à chaque trame). */
-const ENC = {W:0, H:0, F:0, roulis:0, miroir:false};
+const ENC = {W:0, H:0, F:0, roulis:0, miroir:false, pliAvantZen:false};
 
 function creerEncart(){
   $('encFermer').onclick = () => { $('encartPhoto').hidden = true; montrerCalque(false); };
+  $('encPlier').onclick = () => plierEncart(!$('encartPhoto').classList.contains('plie'));
   $('encVue').onclick = () => montrerCalque($('calque').hidden);
+}
+
+// Replié : le titre seul (bouton + pour déplier) ; rien n'est retiré.
+function plierEncart(oui){
+  $('encartPhoto').classList.toggle('plie', oui);
+  $('encPlier').textContent = oui ? '+' : '−';
+  $('encPlier').title = oui ? 'Déplier' : 'Replier (la photo et le calque restent)';
+}
+// Plein écran (ui.js, basculerZen) : l'encart se replie ; en sortant, il reprend l'état d'avant.
+function encartZen(zen){
+  if(zen){ ENC.pliAvantZen = $('encartPhoto').classList.contains('plie'); plierEncart(true); }
+  else plierEncart(ENC.pliAvantZen);
 }
 
 function montrerCalque(oui){

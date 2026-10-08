@@ -1,6 +1,6 @@
 // File: js/solveur/ui-solveur.js
 // Desc: « Check Photo » : une photo prise depuis l'ISS (bouton ou glisser-déposer) → visée, focale, heure ; appliquées à la vue.
-// Version 1.3.0
+// Version 1.3.1
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -132,7 +132,13 @@ async function chercherDates(){
   }
   let ib = -1;
   c.forEach((m, i) => { if(m.note !== null && (ib < 0 || m.note > c[ib].note)) ib = i; });
-  if(ib >= 0){ choisir(c[ib], boutons[ib]); boutons[ib].scrollIntoView({block:'nearest'}); }
+  if(ib >= 0){ choisir(c[ib], boutons[ib]); centrerDans(l, boutons[ib]); }
+}
+
+// La date retenue (cadre rouge) au milieu de la liste, et la liste visible dans l'encart (qui défile lui aussi).
+function centrerDans(liste, b){
+  liste.scrollTop += b.getBoundingClientRect().top - liste.getBoundingClientRect().top - (liste.clientHeight - b.offsetHeight)/2;
+  liste.scrollIntoView({block:'nearest'});
 }
 
 // ±delta secondes sur l'instant saisi (la date suit au passage de minuit), puis on recommence

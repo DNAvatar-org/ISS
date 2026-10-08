@@ -87,7 +87,11 @@ body.depot::after{content:"Déposer la photo : visée, focale et heure retrouvé
 #encartPhoto[hidden]{display:none}
 #encartPhoto .tete{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 #encartPhoto h2{margin:0}
-#encFermer{background:none;border:0;color:var(--dim);cursor:pointer;font-size:14px;padding:0 2px}
+#encFermer, #encPlier{background:none;border:0;color:var(--dim);cursor:pointer;font-size:14px;padding:0 4px}
+/* replié (bouton − / +, ou plein écran) : le titre seul ; la photo et le calque restent */
+#encartPhoto.plie > :not(.tete){display:none}
+#encartPhoto.plie .tete{margin-bottom:0}
+body.zen #encartPhoto{top:12px}                                        /* plein écran : l'encart Temps est masqué */
 #encVue{position:relative;overflow:hidden;border-radius:6px;cursor:pointer}
 #encCv{display:block;width:100%;height:100%}
 #encartPhoto.calque #encVue{outline:2px solid var(--c1)}

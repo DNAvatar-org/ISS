@@ -1,6 +1,6 @@
 // File: js/solveur/instant.js
 // Desc: Heure de la photo par le limbe : instant où la verticale de l'ISS est l'axe du cône de l'horizon photographié.
-// Version 1.0.0
+// Version 1.1.0
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -12,12 +12,28 @@
    presque au même endroit du ciel à chaque orbite (le plan ne tourne que de ~0,3° par tour), seule une heure
    approximative lève l'ambiguïté. */
 
-function heureParLimbe(res, img, limbe, unix0, demi = 2400){
+// Directions J2000 des points du limbe (Mᵀ·c).
+function dirsLimbe(res, img, limbe){
   const cx = img.W/2, cy = img.H/2;
-  const dirs = limbe.inliers.map(p => {                                 // directions J2000 des points du limbe
+  return limbe.inliers.map(p => {
     const c = camDe(res.miroir ? {x:img.W - 1 - p.x, y:p.y} : p, res.F, cx, cy);
-    return [0, 1, 2].map(k => res.M[0][k]*c[0] + res.M[1][k]*c[1] + res.M[2][k]*c[2]);   // Mᵀ·c
+    return [0, 1, 2].map(k => res.M[0][k]*c[0] + res.M[1][k]*c[1] + res.M[2][k]*c[2]);
   });
+}
+
+/* Tolérance du limbe. Le meilleur cône possible (axe libre, axeLimbe) a déjà une dispersion : nulle pour un objectif
+   parfait, ~0,2° pour un 16 mm sur un arc de 95° (distorsion non modélisée). L'axe imposé par l'ISS ne peut faire mieux ;
+   on accepte jusqu'à 1,6 fois cette dispersion (au moins 0,08°). L'altitude du bord vu (39 km par degré d'angle de
+   cône) est biaisée par la même distorsion : fourchette élargie de ~3 fois l'excès de tolérance, ±60 km au plus. */
+function toleranceLimbe(res, img, limbe){
+  const n = axeLimbe(res, img, limbe), a = dirsLimbe(res, img, limbe).map(v => Math.acos(Math.max(-1, Math.min(1, dot3(v, n)))));
+  const m = a.reduce((s, x) => s + x, 0)/a.length, sdLibre = Math.sqrt(a.reduce((s, x) => s + (x - m)**2, 0)/a.length)/DEG;
+  const sd = Math.max(0.08, 1.6*sdLibre);
+  return {sdLibre, sd, alt:Math.min(60, 39*3*(sd - 0.08))};
+}
+
+function heureParLimbe(res, img, limbe, unix0, demi = 2400){
+  const dirs = dirsLimbe(res, img, limbe);                             // directions J2000 des points du limbe
   const P = precession(unix0), d = dirs.map(v => mulMat(P, v));        // vers l'équateur de la date
   const mesure = unix => {
     const e = etatSat('iss', unix);
@@ -41,11 +57,7 @@ function heureParLimbe(res, img, limbe, unix0, demi = 2400){
    de ces jours, affiné par le limbe (heureParLimbe) ; de nuit (Terre noire, villes), l'ISS doit être dans l'ombre.
    Reste une liste d'instants, à départager à l'œil (villes, Lune) avec le calque. */
 function axeLimbe(res, img, limbe){
-  const cx = img.W/2, cy = img.H/2;
-  const d = limbe.inliers.map(p => {
-    const c = camDe(res.miroir ? {x:img.W - 1 - p.x, y:p.y} : p, res.F, cx, cy);
-    return [0, 1, 2].map(k => res.M[0][k]*c[0] + res.M[1][k]*c[1] + res.M[2][k]*c[2]);
-  });
+  const d = dirsLimbe(res, img, limbe);
   // n, c tels que d·n = c pour tous les points : plus petit vecteur propre de Σ [d, −1][d, −1]ᵀ
   const A = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
   for(const v of d){ const w = [v[0], v[1], v[2], -1]; for(let i=0;i<4;i++) for(let j=0;j<4;j++) A[i][j] += w[i]*w[j]; }
@@ -56,7 +68,7 @@ function axeLimbe(res, img, limbe){
 }
 
 function datesPossibles(res, img, limbe, unixDebut, unixFin, nuit = true){
-  const n0 = axeLimbe(res, img, limbe), S = EPH.sats.iss, out = [];
+  const n0 = axeLimbe(res, img, limbe), S = EPH.sats.iss, out = [], tl = toleranceLimbe(res, img, limbe);
   for(let jour = Math.floor(unixDebut/86400)*86400 + 43200; jour < unixFin; jour += 86400){
     const e = etatSat('iss', jour);
     if(!e) continue;
@@ -72,7 +84,7 @@ function datesPossibles(res, img, limbe, unixDebut, unixFin, nuit = true){
     for(let t = t0; t < jour + 43200; t += T){
       const m = heureParLimbe(res, img, limbe, Math.round(t), 600);
       // de nuit, le bord vu est le haut de la bande d'airglow (80–120 km) ; de jour, le sol ou la brume (−20–150 km)
-      if(!m || m.sdDeg > 0.08 || m.alt < (nuit ? 80 : -20) || m.alt > (nuit ? 120 : 150)) continue;
+      if(!m || m.sdDeg > tl.sd || m.alt < (nuit ? 80 : -20) - tl.alt || m.alt > (nuit ? 120 : 150) + tl.alt) continue;
       if(nuit){
         const es = etatSat('iss', m.unix), sol = ephemSoleil((m.unix - unixDeJour(0))/86400);
         const Sv = [Math.cos(sol.delta)*Math.cos(sol.alpha), Math.cos(sol.delta)*Math.sin(sol.alpha), Math.sin(sol.delta)];

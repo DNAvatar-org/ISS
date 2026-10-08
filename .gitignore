@@ -2,3 +2,4 @@ photos/
 .DS_Store
 # Historiques TLE téléchargés sur space-track.org (compte personnel ; redistribution soumise à leur accord d utilisation)
 outils/space-track/
+.publish-last

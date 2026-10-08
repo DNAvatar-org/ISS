@@ -1,6 +1,6 @@
 // File: js/solveur/astrometrie.js
 // Desc: Astrométrie d'une photo : triangles d'étoiles détectées ↔ catalogue, puis rotation (méthode q) et focale ajustées.
-// Version 1.1.0
+// Version 1.2.0
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -14,8 +14,9 @@
    2. Pour les focales essayées (autour de celle que donne la courbure du limbe, limbe.js, sinon de 4° à 130° de champ),
       menées de front (triangle après triangle, des plus brillantes aux moins brillantes) : les 30 détections les plus brillantes deviennent des directions, leurs triangles sont comparés en ANGLES (rapports
       et taille) à ceux du catalogue ; sommets associés par côtés opposés ; M par la méthode q de Davenport ;
-      note = étoiles du catalogue (V ≤ 5) retrouvées sur une détection × part retrouvée.
-   3. Meilleure hypothèse affinée : appariements, M (méthode q), F (section dorée), plusieurs passes. */
+      prometteuse si ≥ 12 étoiles du catalogue (V ≤ 5) retrouvées sur une détection et n²/prévues ≥ 4.
+   3. Hypothèse prometteuse affinée : appariements, M (méthode q), F (section dorée), plusieurs passes ; acceptée si elle
+      dépasse nettement le hasard (z ≥ 8, cf. resoudreCiel), sinon écartée et la recherche continue. */
 const AST = {cat:null, tri:null};
 const _sub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
 const _det3 = (a, b, c) => a[0]*(b[1]*c[2]-b[2]*c[1]) - a[1]*(b[0]*c[2]-b[2]*c[0]) + a[2]*(b[0]*c[1]-b[1]*c[0]);
@@ -163,8 +164,24 @@ function resoudreCiel(img, det, Flimbe, limbe){
   const terre = m => limbe ? {x:m ? img.W - 1 - limbe.cx : limbe.cx, y:limbe.cy, r:limbe.r} : null;
   const sens = [det, det.map(p => ({x:img.W - 1 - p.x, y:p.y, eclat:p.eclat}))]
     .map((p, m) => ({pts:p, verif:grilleDet(p.slice(0, 400), tol), img:{W:img.W, H:img.H, terre:terre(m)}}));
-  let h = null, miroir = false, pts = det;
-  const net = () => h && h.n >= 12 && h.note >= 4;                     // hypothèse sans ambiguïté (au hasard : note < 1)
+  // hasard : probabilité qu'une étoile prédite tombe à moins de tol d'une détection quelconque (400 au plus, sur le ciel
+  // hors Terre). Dans la Voie lactée, des milliers de points : ~8 %, et une rotation fausse en « retrouve » 16 sur 89.
+  // z = (retrouvées − attendues au hasard)/√attendues : une vraie solution est à 10 – 40, une fausse à 3 – 4.
+  let ciel = 0;
+  for(let i=0;i<40;i++) for(let j=0;j<40;j++){ const x = (i + 0.5)*img.W/40, y = (j + 0.5)*img.H/40; if(!limbe || Math.hypot(x - limbe.cx, y - limbe.cy) > limbe.r) ciel++; }
+  const hasard = Math.min(0.5, Math.min(400, det.length)*Math.PI*tol*tol/Math.max(1, ciel/1600*img.W*img.H));
+  const signif = (n, m) => (n - m*hasard)/Math.sqrt(Math.max(1, m*hasard));
+  // Une hypothèse prometteuse (≥ 12 retrouvées, n²/prévues ≥ 4) est affinée (focale, rotation, appariements), puis
+  // jugée sur son z final : ≥ 8, c'est la solution ; sinon elle est écartée (et sa direction n'est plus réessayée).
+  const ecartees = [];
+  const verifier = (M, F, m) => {
+    const S = sens[m], r = affiner(M, F, S.img, S.pts.slice(0, 200));
+    const ap = apparier(r.M, r.F, S.img, S.verif, tol, 5.0), z = signif(ap.length, ap.prevues);
+    if(ap.length >= 8 && z >= 8) return Object.assign(r, {miroir:m === 1, pts:S.pts, z});
+    ecartees.push({m, b:M[2]});
+    return null;
+  };
+  let sol = null;
   // 1) grands triangles des 30 plus brillantes ; 2) si l'éclat ne classe pas bien les étoiles (photo retouchée,
   // toutes saturées) : petits triangles (≤ 8°) de 80 détections, catalogue jusqu'à V = 5,5.
   // Toutes les focales (à l'endroit et en miroir) avancent ENSEMBLE, triangle des k plus brillantes après triangle :
@@ -189,15 +206,17 @@ function resoudreCiel(img, det, Flimbe, limbe){
           // note = retrouvées × part retrouvée : un champ trop large (focale fausse) prédit des centaines d'étoiles,
           // il en retrouve beaucoup par hasard mais une faible part
           const M = rotationQ(cs, vs);
-          const ap = apparier(M, F, sens[m].img, sens[m].verif, tol, 5.0, true), n = ap.length, note = n*n/Math.max(1, ap.prevues);
-          if(!h || note > h.note){ h = {n, note, M, F}; miroir = m === 1; pts = sens[m].pts; }
-          if(net()) break recherche;
+          const ap = apparier(M, F, sens[m].img, sens[m].verif, tol, 5.0, true), n = ap.length;
+          if(n < 12 || n*n < 4*ap.prevues) continue;
+          if(ecartees.some(e => e.m === m && dot3(e.b, M[2]) > Math.cos(2*DEG))) continue;   // déjà écartée
+          sol = verifier(M, F, m);
+          if(sol) break recherche;
         }
       }
     }
   }
-  if(!h || h.n < 8 || h.note < 4) return null;
-  const det200 = pts.slice(0, 200), r = affiner(h.M, h.F, sens[miroir ? 1 : 0].img, det200);
+  if(!sol) return null;
+  const r = sol, miroir = sol.miroir, det200 = sol.pts.slice(0, 200);
   const fwd = r.M[2].map(x => -x), up = r.M[1];
   const est = [-fwd[1], fwd[0], 0], en = Math.hypot(est[0], est[1]); est[0] /= en; est[1] /= en;
   const nord = [fwd[1]*est[2] - fwd[2]*est[1], fwd[2]*est[0] - fwd[0]*est[2], fwd[0]*est[1] - fwd[1]*est[0]];

@@ -1,6 +1,6 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.2.0
+// Version 1.3.0
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -16,6 +16,10 @@
    date  : JJ.MM.AA ou JJ.MM.AAAA (format français ; séparateurs . / ou -), entre 2000 et 2035.
    heure : HH:MM, HH:MM:SS ou HH:MM:SS.s, temps universel (UT, comme l'affichage). Sans date : ignorée, avec un avis.
    montrer : orbite, reperes, trace, cone (séparés par des virgules) : cases cochées.
+   limbe : bord de l'atmosphère pour la prochaine photo de Check Photo, au lieu de la détection automatique : au moins
+           3 points x,y séparés par des points-virgules, en pixels de la photo d'origine (ex. limbe=10,960;910,741;
+           1630,711;2380,803), ou en fractions de sa largeur et de sa hauteur si toutes les valeurs sont ≤ 1. Un limbe
+           tracé à la main s'y écrit (limbe-manuel.js).
    Date + heure = un instant précis : la simulation démarre en pause. Les autres paramètres ne mettent pas en pause.
    L'ISS est placée à sa position RÉELLE à cet instant UTC (ephemerides.js) quand une source la donne ; sinon un avis
    prévient qu'elle est simulée.
@@ -95,6 +99,18 @@ function appliquerCamURL(){
   const v = c.split(',').map(Number);
   if(v.length !== 3 || !v.every(isFinite) || !(v[2] > 0)) return ['Caméra illisible : cam=' + c + '. Format attendu : cam=51.6,31.5,250 (longitude, latitude en degrés, distance).'];
   VUE_EXT.th = v[0]*DEG; VUE_EXT.ph = Math.max(-1.5, Math.min(1.5, v[1]*DEG)); VUE_EXT.r = v[2];
+  return [];
+}
+
+// Limbe donné dans l'URL (points de la photo d'origine), lu au démarrage ; appliqué à la photo chargée ensuite.
+const LIMBE_URL = {pts:null};
+function appliquerLimbeURL(){
+  const v = URL_P.get('limbe');
+  if(v === null) return [];
+  const pts = v.split(';').filter(t => t.trim()).map(t => t.split(',').map(x => parseFloat(x)));
+  if(pts.length < 3 || !pts.every(p => p.length === 2 && p.every(isFinite) && p[0] >= 0 && p[1] >= 0))
+    return ['Limbe illisible : limbe=' + v + '.', 'Format attendu : au moins 3 points x,y séparés par des points-virgules, en pixels de la photo (ex. limbe=10,960;910,741;1630,711).'];
+  LIMBE_URL.pts = pts;
   return [];
 }
 
@@ -191,7 +207,7 @@ function texteURL(){
   q.set('heure', p2(d.getUTCHours()) + ':' + p2(d.getUTCMinutes()) + ':' + p2(d.getUTCSeconds()) + (ds % 10 ? '.' + ds % 10 : ''));
   const m = Object.keys(CASES_URL).filter(k => ETAT.montrer[k]);
   if(m.length) q.set('montrer', m.join(','));
-  return '?' + q.toString().replace(/%3A/g, ':').replace(/%2C/g, ',');   // lisible : 22:21:03, 51.6,31.5,250
+  return '?' + q.toString().replace(/%3A/g, ':').replace(/%2C/g, ',').replace(/%3B/g, ';');   // lisible : 22:21:03, 51.6,31.5,250, 10,960;910,741
 }
 function majURL(ms, force = false){
   if(!force && ms - URL_SUIVI.quand < 500) return;

@@ -1,6 +1,6 @@
 // File: js/solveur/limbe-manuel.js
 // Desc: Limbe vérifié ou tracé à la main : question sous la photo, puis tracé (clics sur le bord de l'atmosphère) et nouvelle résolution.
-// Version 1.0.0
+// Version 1.1.0
 // Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.txt.
@@ -10,7 +10,9 @@
    suit-il le bord de l'atmosphère ? « Non, le tracer » ouvre la photo en grand (#traceLimbe) : un clic par point sur
    le bord (le haut de la bande colorée), 3 au moins, le cercle passe par eux (moindres carrés, kasa de limbe.js) et se
    dessine à chaque clic. « Valider » : ce limbe remplace l'autre, et tout est recalculé (ui-solveur.js, resoudrePhoto) :
-   Terre masquée, focale, étoiles, heure et dates. */
+   Terre masquée, focale, étoiles, heure et dates ; ses points vont dans l'URL (?limbe=, pixels de la photo d'origine).
+   Un ?limbe= déjà dans l'URL (url.js : tracé précédent, ou points donnés par un autre outil) remplace la détection
+   automatique pour la photo chargée. */
 const TRACE = {pts:[], k:1};
 
 function creerTraceLimbe(){
@@ -44,12 +46,13 @@ function ouvrirTraceLimbe(){
 }
 function fermerTraceLimbe(){ $('traceLimbe').hidden = true; }
 
-// Cercle par les points cliqués (null s'il y en a moins de 3 ou si la Terre serait minuscule).
-function cercleTrace(){
-  if(TRACE.pts.length < 3) return null;
-  const C = kasa(TRACE.pts), W = CHK.cv.width, H = CHK.cv.height;
+// Cercle par des points de la photo de travail (null s'il y en a moins de 3 ou si la Terre serait minuscule).
+function cercleDePoints(P){
+  if(P.length < 3) return null;
+  const C = kasa(P), W = CHK.cv.width, H = CHK.cv.height;
   return C && C.r > Math.min(W, H)/4 ? C : null;
 }
+const cercleTrace = () => cercleDePoints(TRACE.pts);
 
 function dessinerTrace(){
   const cv = $('traceCv'), cx = cv.getContext('2d'), t = Math.max(1, cv.width/800);
@@ -68,15 +71,14 @@ function dessinerTrace(){
   $('traceRetirer').disabled = !n;
 }
 
-/* Limbe à partir du cercle tracé, au format de detecterLimbe : cx, cy, r ; inliers = points du cercle sur l'arc
-   cliqué (de l'angle du premier à celui du dernier, 60 points, dans l'image), pour l'heure (instant.js) ; sens = côté
-   de la Terre (axe dominant du centre vu des points). */
-function validerTraceLimbe(){
-  const C = cercleTrace();
-  if(!C) return;
-  const W = CHK.cv.width, H = CHK.cv.height, P = TRACE.pts;
-  const a0 = Math.atan2(P[0].y - C.cy, P[0].x - C.cx);
-  const da = P.map(p => Math.atan2(Math.sin(Math.atan2(p.y - C.cy, p.x - C.cx) - a0), Math.cos(Math.atan2(p.y - C.cy, p.x - C.cx) - a0)));
+/* Limbe à partir de points du bord (photo de travail), au format de detecterLimbe : cx, cy, r ; inliers = points du
+   cercle sur l'arc couvert (du premier point au dernier en angle, 60 points, dans l'image), pour l'heure (instant.js) ;
+   sens = côté de la Terre (axe dominant du centre vu des points). null si le cercle est impossible. */
+function limbeDePoints(P){
+  const C = cercleDePoints(P);
+  if(!C) return null;
+  const W = CHK.cv.width, H = CHK.cv.height, ang = p => Math.atan2(p.y - C.cy, p.x - C.cx), a0 = ang(P[0]);
+  const da = P.map(p => Math.atan2(Math.sin(ang(p) - a0), Math.cos(ang(p) - a0)));
   const amin = a0 + Math.min(...da), amax = a0 + Math.max(...da), inliers = [];
   for(let i=0;i<60;i++){
     const a = amin + (amax - amin)*i/59, x = C.cx + C.r*Math.cos(a), y = C.cy + C.r*Math.sin(a);
@@ -84,7 +86,29 @@ function validerTraceLimbe(){
   }
   const mx = P.reduce((s, p) => s + p.x, 0)/P.length, my = P.reduce((s, p) => s + p.y, 0)/P.length;
   const dx = C.cx - mx, dy = C.cy - my;
-  const sens = Math.abs(dy) > Math.abs(dx) ? [0, Math.sign(dy)] : [Math.sign(dx), 0];
+  return Object.assign(C, {inliers, sens:Math.abs(dy) > Math.abs(dx) ? [0, Math.sign(dy)] : [Math.sign(dx), 0], note:0, manuel:true});
+}
+
+// ?limbe= (url.js) pour la photo qui vient d'être lue (W0 × H0 : taille d'origine) ; null s'il n'y en a pas.
+function limbeDeLURL(W0, H0){
+  if(!LIMBE_URL.pts) return null;
+  const frac = LIMBE_URL.pts.every(([x, y]) => x <= 1 && y <= 1), k = CHK.echelle;
+  const L = limbeDePoints(LIMBE_URL.pts.map(([x, y]) => frac ? {x:x*W0*k, y:y*H0*k} : {x:x*k, y:y*k}));
+  return L && Object.assign(L, {url:true});
+}
+
+// Les points tracés, en pixels de la photo d'origine, dans l'URL (copier-coller : le même limbe pour la même photo).
+function ecrireLimbeURL(P){
+  const q = new URLSearchParams(location.search), k = CHK.echelle;
+  q.set('limbe', P.map(p => Math.round(p.x/k) + ',' + Math.round(p.y/k)).join(';'));
+  LIMBE_URL.pts = P.map(p => [Math.round(p.x/k), Math.round(p.y/k)]);
+  history.replaceState(null, '', '?' + q.toString().replace(/%3A/g, ':').replace(/%2C/g, ',').replace(/%3B/g, ';'));
+}
+
+function validerTraceLimbe(){
+  const L = limbeDePoints(TRACE.pts);
+  if(!L) return;
+  ecrireLimbeURL(TRACE.pts);
   fermerTraceLimbe();
-  resoudrePhoto(Object.assign(C, {inliers, sens, note:0, manuel:true}));
+  resoudrePhoto(L);
 }

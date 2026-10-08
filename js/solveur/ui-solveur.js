@@ -1,6 +1,6 @@
 // File: js/solveur/ui-solveur.js
 // Desc: « Check Photo » : une photo prise depuis l'ISS (bouton ou glisser-déposer) → visée, focale, heure ; appliquées à la vue.
-// Version 1.4.0
+// Version 1.5.0
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -10,7 +10,7 @@
    appareil), sinon on part de la date affichée (le limbe affine l'heure à ±40 min près, instant.js). Dès que les étoiles
    sont reconnues, c'est appliqué : l'ISS à cet instant (pause), la caméra braquée, la focale, les paramètres dans l'URL.
    Tout s'affiche dans l'encart Photo (encart.js) ; corriger la date ou l'heure (saisie ou ◀ ▶ 1 s) recommence. */
-const CHK = {res:null, img:null, data:null, limbe:null, exif:null, cv:null, image:null, lignes:[], focalePosee:false, recherche:null};   // focalePosee : la focale de la photo a été donnée à la vue
+const CHK = {res:null, img:null, data:null, limbe:null, exif:null, cv:null, image:null, echelle:1, lignes:[], focalePosee:false, recherche:null};   // focalePosee : la focale de la photo a été donnée à la vue
 const LARGEUR_MAX = 2400;                                               // au-delà, l'image est réduite (vitesse)
 
 function creerSolveur(){
@@ -57,8 +57,8 @@ async function analyserPhoto(fichier){
   lignesSolveur(['Analyse de « ' + fichier.name + ' » : limbe, étoiles…']);
   await peindre();
   const img = cx.getImageData(0, 0, W, H);
-  Object.assign(CHK, {cv, image:img, exif});
-  await resoudrePhoto(detecterLimbe(img));
+  Object.assign(CHK, {cv, image:img, exif, echelle:k});
+  await resoudrePhoto(limbeDeLURL(bmp.width, bmp.height) || detecterLimbe(img));   // ?limbe= (url.js), sinon automatique
 }
 
 /* Étoiles et suite, pour un limbe donné : celui de la détection automatique, ou celui tracé à la main (limbe-manuel.js,
@@ -69,7 +69,7 @@ async function resoudrePhoto(limbe){
   $('solChamps').hidden = true; $('solDates').hidden = true; $('solListe').textContent = ''; $('limbeQ').hidden = true;
   const det = horsTerre(detecterEtoiles(img), limbe, H/100);
   marquerPhoto(cv, det, null, limbe);
-  lignesSolveur([(limbe ? (limbe.manuel ? 'Limbe tracé (trait bleu), ' : 'Limbe vu (trait bleu), ') : 'Pas de limbe, ') + det.length + ' points dans le ciel : reconnaissance des étoiles (jusqu\'à 10 s)…']);
+  lignesSolveur([(limbe ? (limbe.url ? 'Limbe de l\'URL (trait bleu), ' : limbe.manuel ? 'Limbe tracé (trait bleu), ' : 'Limbe vu (trait bleu), ') : 'Pas de limbe, ') + det.length + ' points dans le ciel : reconnaissance des étoiles (jusqu\'à 10 s)…']);
   await peindre();
   const Fl = limbe ? focaleParLimbe(limbe, W, H) : null;               // la courbure du limbe borne la focale
   const res = resoudreCiel({W, H}, det, Fl, limbe);
@@ -84,7 +84,7 @@ async function resoudrePhoto(limbe){
   const ra = res.centre.ra/15;
   CHK.lignes = [
     '✓ ' + res.appariees.length + ' étoiles reconnues (± ' + fr(res.rms, 1) + ' px)' + (res.miroir ? ', image en miroir' : ''),
-    'RA ' + Math.floor(ra) + ' h ' + fr((ra % 1)*60, 1) + ' min, Dec ' + fr(res.centre.dec, 2) + '° · ' + fr(res.F*36/W, 1) + ' mm' + (limbe ? (limbe.manuel ? ' · limbe tracé' : ' · limbe vu') : ''),
+    'RA ' + Math.floor(ra) + ' h ' + fr((ra % 1)*60, 1) + ' min, Dec ' + fr(res.centre.dec, 2) + '° · ' + fr(res.F*36/W, 1) + ' mm' + (limbe ? (limbe.url ? ' · limbe de l\'URL' : limbe.manuel ? ' · limbe tracé' : ' · limbe vu') : ''),
     exif.date ? 'EXIF : ' + texteDate(exif.date) + ' ' + texteHeure(exif.date) + ' UT' + (exif.focale ? ', ' + exif.focale + ' mm' : '')
               : limbe ? 'Pas de date dans l\'image : les étoiles ne la donnent pas. Recherche des instants où l\'ISS voyait ce limbe sous ces étoiles, de 2000 à aujourd\'hui (« Année » pour restreindre).'
                       : 'Pas de date dans l\'image ni de limbe : indique le jour et l\'heure UT.'

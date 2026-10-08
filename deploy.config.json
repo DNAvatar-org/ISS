@@ -104,6 +104,70 @@
       "dest": "pages/ISS/js/solveur/encart.js"
     },
     {
+      "src": "js/solveur/catalogue-data.js",
+      "dest": "pages/ISS/js/solveur/catalogue-data.js"
+    },
+    {
+      "src": "js/solveur/catalogue.js",
+      "dest": "pages/ISS/js/solveur/catalogue.js"
+    },
+    {
+      "src": "catalogue/aurore-bras-robotique-2021-08-07.jpg",
+      "dest": "pages/ISS/catalogue/aurore-bras-robotique-2021-08-07.jpg"
+    },
+    {
+      "src": "catalogue/vignettes/aurore-bras-robotique-2021-08-07.jpg",
+      "dest": "pages/ISS/catalogue/vignettes/aurore-bras-robotique-2021-08-07.jpg"
+    },
+    {
+      "src": "catalogue/eclair-pleiades.jpg",
+      "dest": "pages/ISS/catalogue/eclair-pleiades.jpg"
+    },
+    {
+      "src": "catalogue/vignettes/eclair-pleiades.jpg",
+      "dest": "pages/ISS/catalogue/vignettes/eclair-pleiades.jpg"
+    },
+    {
+      "src": "catalogue/europe-nuit-airglow-vert.jpg",
+      "dest": "pages/ISS/catalogue/europe-nuit-airglow-vert.jpg"
+    },
+    {
+      "src": "catalogue/vignettes/europe-nuit-airglow-vert.jpg",
+      "dest": "pages/ISS/catalogue/vignettes/europe-nuit-airglow-vert.jpg"
+    },
+    {
+      "src": "catalogue/iss042e037847.jpg",
+      "dest": "pages/ISS/catalogue/iss042e037847.jpg"
+    },
+    {
+      "src": "catalogue/vignettes/iss042e037847.jpg",
+      "dest": "pages/ISS/catalogue/vignettes/iss042e037847.jpg"
+    },
+    {
+      "src": "catalogue/italie-eclair-2021-09-09.jpg",
+      "dest": "pages/ISS/catalogue/italie-eclair-2021-09-09.jpg"
+    },
+    {
+      "src": "catalogue/vignettes/italie-eclair-2021-09-09.jpg",
+      "dest": "pages/ISS/catalogue/vignettes/italie-eclair-2021-09-09.jpg"
+    },
+    {
+      "src": "catalogue/orion-soyouz-europe.jpg",
+      "dest": "pages/ISS/catalogue/orion-soyouz-europe.jpg"
+    },
+    {
+      "src": "catalogue/vignettes/orion-soyouz-europe.jpg",
+      "dest": "pages/ISS/catalogue/vignettes/orion-soyouz-europe.jpg"
+    },
+    {
+      "src": "catalogue/voie-lactee-airglow-orange.jpg",
+      "dest": "pages/ISS/catalogue/voie-lactee-airglow-orange.jpg"
+    },
+    {
+      "src": "catalogue/vignettes/voie-lactee-airglow-orange.jpg",
+      "dest": "pages/ISS/catalogue/vignettes/voie-lactee-airglow-orange.jpg"
+    },
+    {
       "src": "js/solveur/limbe-manuel.js",
       "dest": "pages/ISS/js/solveur/limbe-manuel.js"
     },

@@ -1,6 +1,6 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.4.0
+// Version 1.5.0
 // Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -16,10 +16,11 @@
    date  : JJ.MM.AA ou JJ.MM.AAAA (format français ; séparateurs . / ou -), entre 2000 et 2035.
    heure : HH:MM, HH:MM:SS ou HH:MM:SS.s, temps universel (UT, comme l'affichage). Sans date : ignorée, avec un avis.
    montrer : orbite, reperes, trace, cone, geo (pays et coordonnées), séparés par des virgules : cases cochées.
+   photo : une photo du catalogue de Check Photo (nom du fichier sans .jpg, cf. catalogue-data.js), chargée au démarrage.
    limbe : bord de l'atmosphère pour la prochaine photo de Check Photo, au lieu de la détection automatique : au moins
            3 points x,y séparés par des points-virgules, en pixels de la photo d'origine (ex. limbe=10,960;910,741;
            1630,711;2380,803), ou en fractions de sa largeur et de sa hauteur si toutes les valeurs sont ≤ 1. Un limbe
-           tracé à la main s'y écrit (limbe-manuel.js).
+           tracé à la main s'y écrit (limbe-manuel.js). Il ne vaut que pour une photo : chargée la suivante, il est retiré.
    Date + heure = un instant précis : la simulation démarre en pause. Les autres paramètres ne mettent pas en pause.
    L'ISS est placée à sa position RÉELLE à cet instant UTC (ephemerides.js) quand une source la donne ; sinon un avis
    prévient qu'elle est simulée.
@@ -103,7 +104,7 @@ function appliquerCamURL(){
 }
 
 // Limbe donné dans l'URL (points de la photo d'origine), lu au démarrage ; appliqué à la photo chargée ensuite.
-const LIMBE_URL = {pts:null};
+const LIMBE_URL = {pts:null, utilise:false};                  // utilise : déjà appliqué à une photo (pas à la suivante)
 function appliquerLimbeURL(){
   const v = URL_P.get('limbe');
   if(v === null) return [];

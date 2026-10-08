@@ -1,6 +1,6 @@
 // File: js/geo.js
 // Desc: « Pays et coordonnées » : étiquettes en pancarte (océans, pays, villes), quadrillage lat/lon adapté au zoom, coordonnées du centre et du pointeur.
-// Version 1.0.0
+// Version 1.1.0
 // Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.txt.
@@ -81,6 +81,14 @@ function construireGrille(p, lat0, lon0){
   const g = GEO.grille.geometry;
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.computeBoundingSphere();
+}
+
+// Nom le plus proche d'un point : la ville à moins de 400 km (« Rome, 120 km »), sinon le pays ou la mer la plus proche.
+function lieuProche(lat, lon){
+  const dist = (la, lo) => Math.acos(Math.min(1, Math.sin(lat*DEG)*Math.sin(la*DEG) + Math.cos(lat*DEG)*Math.cos(la*DEG)*Math.cos((lon - lo)*DEG)))*6371;
+  const proche = l => l.reduce((b, [n, la, lo]) => { const d = dist(la, lo); return !b || d < b.d ? {n, d} : b; }, null);
+  const v = proche(GEO_VILLES);
+  return v.d < 400 ? v.n + ', ' + Math.round(v.d) + ' km' : proche([...GEO_PAYS, ...GEO_MERS]).n;
 }
 
 const fmtDeg = (x, d, pos, neg) => Math.abs(x).toFixed(d).replace('.', ',') + '° ' + (x >= 0 ? pos : neg);

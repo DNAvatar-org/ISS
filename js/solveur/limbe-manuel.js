@@ -1,6 +1,6 @@
 // File: js/solveur/limbe-manuel.js
 // Desc: Limbe vérifié ou tracé à la main : question sous la photo, puis tracé (clics sur le bord de l'atmosphère) et nouvelle résolution.
-// Version 1.1.0
+// Version 1.2.0
 // Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.txt.
@@ -89,19 +89,22 @@ function limbeDePoints(P){
   return Object.assign(C, {inliers, sens:Math.abs(dy) > Math.abs(dx) ? [0, Math.sign(dy)] : [Math.sign(dx), 0], note:0, manuel:true});
 }
 
-// ?limbe= (url.js) pour la photo qui vient d'être lue (W0 × H0 : taille d'origine) ; null s'il n'y en a pas.
-function limbeDeLURL(W0, H0){
-  if(!LIMBE_URL.pts) return null;
-  const frac = LIMBE_URL.pts.every(([x, y]) => x <= 1 && y <= 1), k = CHK.echelle;
-  const L = limbeDePoints(LIMBE_URL.pts.map(([x, y]) => frac ? {x:x*W0*k, y:y*H0*k} : {x:x*k, y:y*k}));
-  return L && Object.assign(L, {url:true});
+// Limbe tracé d'avance (?limbe= de l'URL, ou catalogue) pour la photo qui vient d'être lue (W0 × H0 : taille du fichier) :
+// points [[x, y], …] en pixels du fichier, ou en fractions si toutes les valeurs sont ≤ 1. source : 'url' ou 'catalogue'.
+function limbeDePointsOrigine(pts, W0, H0, source){
+  const frac = pts.every(([x, y]) => x <= 1 && y <= 1), k = CHK.echelle;
+  const L = limbeDePoints(pts.map(([x, y]) => frac ? {x:x*W0*k, y:y*H0*k} : {x:x*k, y:y*k}));
+  return L && Object.assign(L, {source});
 }
 
-// Les points tracés, en pixels de la photo d'origine, dans l'URL (copier-coller : le même limbe pour la même photo).
+// Les points tracés, en pixels de la photo d'origine, dans l'URL (copier-coller : le même limbe pour la même photo) ;
+// null : retirés. Ils valent pour la photo affichée (utilise), pas pour la suivante.
 function ecrireLimbeURL(P){
   const q = new URLSearchParams(location.search), k = CHK.echelle;
-  q.set('limbe', P.map(p => Math.round(p.x/k) + ',' + Math.round(p.y/k)).join(';'));
-  LIMBE_URL.pts = P.map(p => [Math.round(p.x/k), Math.round(p.y/k)]);
+  if(P){
+    LIMBE_URL.pts = P.map(p => [Math.round(p.x/k), Math.round(p.y/k)]); LIMBE_URL.utilise = true;
+    q.set('limbe', LIMBE_URL.pts.map(p => p.join(',')).join(';'));
+  }else q.delete('limbe');
   history.replaceState(null, '', '?' + q.toString().replace(/%3A/g, ':').replace(/%2C/g, ',').replace(/%3B/g, ';'));
 }
 

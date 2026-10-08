@@ -1,6 +1,6 @@
 // File: js/solveur/instant.js
 // Desc: Heure de la photo par le limbe : instant où la verticale de l'ISS est l'axe du cône de l'horizon photographié.
-// Version 1.1.0
+// Version 1.2.0
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -50,6 +50,18 @@ function heureParLimbe(res, img, limbe, unix0, demi = 2400){
   return Object.assign(best, {ecart:best.unix - unix0, sdDeg:best.sd/DEG});
 }
 
+// Point de la Terre au centre de la photo à l'instant unix (lat, lon en degrés), ou null si le centre est le ciel :
+// la visée (étoiles, res.M) depuis la position de l'ISS (TLE), jusqu'à la sphère terrestre.
+function pointVise(res, unix){
+  const e = etatSat('iss', unix);
+  if(!e) return null;
+  const f = mulMat(precession(unix), res.M[2].map(x => -x));          // visée, équateur de la date
+  const b = dot3(e.r, f), disc = b*b - (dot3(e.r, e.r) - 6371*6371);
+  if(disc < 0 || -b - Math.sqrt(disc) < 0) return null;
+  const k = -b - Math.sqrt(disc), p = e.r.map((x, i) => x + k*f[i]), G = gmst((unix - unixDeJour(0))/86400);
+  return {lat:Math.asin(p[2]/6371)/DEG, lon:((Math.atan2(p[1], p[0]) - G)/DEG % 360 + 540) % 360 - 180};
+}
+
 /* Dates possibles (sans EXIF). Le limbe donne, grâce aux étoiles, la direction de la verticale de l'ISS dans le ciel
    (axe du cône de l'horizon). L'ISS n'y passe que lorsque le plan de son orbite contient cette direction : environ deux
    fois tous les 60 jours (le plan tourne de ~5°/jour), à chaque orbite de ces jours-là. On parcourt l'historique des
@@ -83,8 +95,9 @@ function datesPossibles(res, img, limbe, unixDebut, unixFin, nuit = true){
     while(t0 - T >= jour - 43200) t0 -= T;
     for(let t = t0; t < jour + 43200; t += T){
       const m = heureParLimbe(res, img, limbe, Math.round(t), 600);
-      // de nuit, le bord vu est le haut de la bande d'airglow (80–120 km) ; de jour, le sol ou la brume (−20–150 km)
-      if(!m || m.sdDeg > tl.sd || m.alt < (nuit ? 80 : -20) - tl.alt || m.alt > (nuit ? 120 : 150) + tl.alt) continue;
+      // de nuit, le bord vu est la bande d'airglow : ~90 km en théorie, mais mesuré entre 45 et 80 km sur des photos réelles
+      // (bord visible plus bas que le haut de la bande, focale et distorsion) : 35–130 km ; de jour, le sol ou la brume (−20–150 km)
+      if(!m || m.sdDeg > tl.sd || m.alt < (nuit ? 35 : -20) - tl.alt || m.alt > (nuit ? 130 : 150) + tl.alt) continue;
       if(nuit){
         const es = etatSat('iss', m.unix), sol = ephemSoleil((m.unix - unixDeJour(0))/86400);
         const Sv = [Math.cos(sol.delta)*Math.cos(sol.alpha), Math.cos(sol.delta)*Math.sin(sol.alpha), Math.sin(sol.delta)];

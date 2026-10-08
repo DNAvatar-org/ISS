@@ -1,6 +1,6 @@
 // File: js/ui.js
 // Desc: Commandes : vues, jauge de vitesse (crans logarithmiques), date (donc β), position sur l'orbite, affichages, pose.
-// Version 2.1.2
+// Version 2.2.0
 // Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -203,6 +203,14 @@ function creerBoutonsSats(){
   }
 }
 
+// Aujourd'hui (bouton Auj., et au démarrage sans date dans l'URL) : date et heure réelles (UT) de l'appareil, en temps réel.
+function allerAujourdhui(){
+  const jour = (Date.now() - Date.UTC(2021, 0, 1))/86400000;
+  if(jour < DATES.min || jour >= DATES.max) return;                         // bornes 2000 – 2035 (dates.js)
+  ETAT.date0 = jour - ETAT.t/86400; majSoleilDate();
+  ETAT.vitesse = 1; ETAT.pause = false; majBoutons(); majDateUI();
+}
+
 function creerUI(){
   creerBoutonsSats();
   // une image affichée (capture ou photo) : tout clic sur un bouton, une case ou un menu ramène à la vue en direct
@@ -238,13 +246,7 @@ function creerUI(){
 
   // aujourd'hui : date et heure réelles (UT) lues sur l'horloge de l'appareil, en temps réel (×1). La phase de l'ISS
   // sur son orbite (t) ne change pas : seule la date, donc le Soleil et le plan de l'orbite, saute à maintenant.
-  $('bAuj').onclick = () => {
-    poseInterrompre();
-    const jour = (Date.now() - Date.UTC(2021, 0, 1))/86400000;
-    if(jour < DATES.min || jour >= DATES.max) return;                       // bornes 2000 – 2035 (dates.js)
-    ETAT.date0 = jour - ETAT.t/86400; majSoleilDate();
-    ETAT.vitesse = 1; ETAT.pause = false; majBoutons(); majDateUI();
-  };
+  $('bAuj').onclick = () => { poseInterrompre(); allerAujourdhui(); };
   // lever de Soleil : vue ISS braquée sur le Soleil juste avant la sortie de l'ombre, au ralenti
   $('bLever').onclick = () => {
     poseInterrompre();

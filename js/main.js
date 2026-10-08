@@ -1,6 +1,6 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
-// Version 1.0.5
+// Version 1.1.0
 // Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -120,9 +120,11 @@ function demarrer(){
   avisURL.push(...appliquerViseeURL());            // ?cap=&site= : visée libre (après vue=, prioritaire)
   avisURL.push(...appliquerFocaleURL());           // ?focale= (mm)
   avisURL.push(...appliquerDateURL());             // ?date=&heure= : date + heure → en pause
+  if(URL_P.get('date') === null) allerAujourdhui(); // sans date : aujourd'hui, maintenant, en temps réel
   avisURL.push(...appliquerCamURL());              // ?cam= : vue extérieure (après la date : Lune du jour)
   avisURL.push(...appliquerMontrerURL());          // ?montrer=orbite,reperes,trace,cone
   avisURL.push(...appliquerLimbeURL());            // ?limbe=x,y;x,y;… : limbe de la prochaine photo (Check Photo)
+  avisURL.push(...photoDeLURL());                  // ?photo= : une photo du catalogue (Check Photo)
   if(avisURL.length) avis(avisURL);
   addEventListener('resize', redimensionner); redimensionner();
   requestAnimationFrame(boucle);

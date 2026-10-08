@@ -1,7 +1,7 @@
 // File: js/terre.js
 // Desc: Terre jour/nuit (geoview.jpg + steamNight.jpg), atmosphère, trace de l'ISS au sol.
-// Version 2.0.0
-// Date: [October 07, 2026]
+// Version 2.0.1
+// Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -165,8 +165,15 @@ void main(){
 const ATMO_EXPO_NUIT = 1/25000;           // exposition de nuit (par rayleigh vu) ; au Soleil : × 0,02
 
 // Exposition de l'« appareil » : de nuit, la luminescence ; l'ISS au Soleil, le jour (cf. GLSL_ATMO_FS).
+// Caméra DANS la coque (ISS sous 390 km : ~340 km jusqu'en 2011) : on dessine sa face intérieure, sans test de
+// profondeur (le shader suit le rayon de vue lui-même, Terre comprise) ; dehors : la face extérieure, comme avant.
+const _ac = new THREE.Vector3();
 function majAtmo(){
-  TERRE.atmo.material.uniforms.uExpoNuit.value = ATMO_EXPO_NUIT*(ETAT.nuitISS ? 1 : 0.02);
+  const m = TERRE.atmo.material;
+  m.uniforms.uExpoNuit.value = ATMO_EXPO_NUIT*(ETAT.nuitISS ? 1 : 0.02);
+  const dedans = (ETAT.vue === 'iss' ? camIss : camExt).getWorldPosition(_ac).length() < CFG.R + 3.9;
+  const side = dedans ? THREE.BackSide : THREE.FrontSide;
+  if(m.side !== side){ m.side = side; m.depthTest = !dedans; m.needsUpdate = true; }
 }
 
 const TRACE_MAX = 4000, TRACE_PAS = 20;   // points, secondes simulées entre deux points
@@ -187,7 +194,7 @@ function creerTerre(tex){
       uniforms:{uJour:{value:tex.jour}, uNuit:{value:tex.nuit}, uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS}}));
   TERRE.axe.add(TERRE.globe);
 
-  // coque jusqu'à 390 km : couche OI 630 nm comprise (250 km ± 4σ) ; l'ISS (≈ 420 km) reste au-dessus
+  // coque jusqu'à 390 km : couche OI 630 nm comprise (250 km ± 4σ) ; l'ISS (340–420 km selon les années) peut être dedans (majAtmo)
   TERRE.atmo = new THREE.Mesh(new THREE.SphereGeometry(CFG.R + 3.9, 128, 64),
     new THREE.ShaderMaterial({vertexShader:GLSL_ATMO_VS, fragmentShader:GLSL_ATMO_FS,
       uniforms:{uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS,

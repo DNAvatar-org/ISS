@@ -1,6 +1,6 @@
 // File: js/solveur/ui-solveur.js
 // Desc: « Check Photo » : une photo prise depuis l'ISS (bouton ou glisser-déposer) → visée, focale, heure ; appliquées à la vue.
-// Version 1.5.0
+// Version 1.7.0
 // Date: [October 07, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -14,15 +14,16 @@ const CHK = {res:null, img:null, data:null, limbe:null, exif:null, cv:null, imag
 const LARGEUR_MAX = 2400;                                               // au-delà, l'image est réduite (vitesse)
 
 function creerSolveur(){
-  $('bCheck').onclick = () => $('fPhoto').click();
+  $('bCheck').onclick = ouvrirCatalogue;                               // catalogue ou ordinateur (catalogue.js)
+  creerCatalogue();
   creerTraceLimbe();                                                   // limbe vérifié ou tracé à la main
-  $('fPhoto').onchange = e => { if(e.target.files[0]) analyserPhoto(e.target.files[0]); e.target.value = ''; };
+  $('fPhoto').onchange = e => { if(e.target.files[0]){ ecrirePhotoURL(null); analyserPhoto(e.target.files[0]); } e.target.value = ''; };
   addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('depot'); });
   addEventListener('dragleave', e => { if(!e.relatedTarget) document.body.classList.remove('depot'); });
   addEventListener('drop', e => {
     e.preventDefault(); document.body.classList.remove('depot');
     const f = [...e.dataTransfer.files].find(x => x.type.startsWith('image/'));
-    if(f) analyserPhoto(f);
+    if(f){ ecrirePhotoURL(null); analyserPhoto(f); }
   });
   $('solMoins').onclick = () => decalerHeure(-1);
   $('solPlus').onclick = () => decalerHeure(+1);
@@ -44,7 +45,8 @@ function lignesSolveur(l){
 const peindre = () => new Promise(r => { requestAnimationFrame(() => setTimeout(r, 0)); setTimeout(r, 100); });
 
 // La photo s'affiche dès qu'elle est lue ; puis limbe et points (rapide, dessinés) ; puis la reconnaissance (jusqu'à 10 s).
-async function analyserPhoto(fichier){
+// opt (catalogue.js) : credit (affiché sous la photo), limbe ([[x, y], …] en pixels du fichier, tracé d'avance).
+async function analyserPhoto(fichier, opt = {}){
   CHK.recherche = null;                                                 // une recherche de dates en cours s'arrête
   $('encartPhoto').hidden = false; $('solChamps').hidden = true; $('solDates').hidden = true; $('solListe').textContent = '';
   lignesSolveur(['Lecture de « ' + fichier.name + ' »…']);
@@ -54,11 +56,17 @@ async function analyserPhoto(fichier){
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const cx = cv.getContext('2d'); cx.drawImage(bmp, 0, 0, W, H);
   afficherPhoto(cv);
+  $('encCredit').textContent = opt.credit ? 'Photo © ' + opt.credit : ''; $('encCredit').hidden = !opt.credit;
   lignesSolveur(['Analyse de « ' + fichier.name + ' » : limbe, étoiles…']);
   await peindre();
   const img = cx.getImageData(0, 0, W, H);
   Object.assign(CHK, {cv, image:img, exif, echelle:k});
-  await resoudrePhoto(limbeDeLURL(bmp.width, bmp.height) || detecterLimbe(img));   // ?limbe= (url.js), sinon automatique
+  // ?limbe= sert à UNE photo : la première chargée après l'ouverture de la page (ou celle pour qui il a été tracé)
+  if(LIMBE_URL.pts && LIMBE_URL.utilise){ LIMBE_URL.pts = null; LIMBE_URL.utilise = false; ecrireLimbeURL(null); }
+  const L = opt.limbe ? limbeDePointsOrigine(opt.limbe, bmp.width, bmp.height, 'catalogue')
+          : LIMBE_URL.pts ? limbeDePointsOrigine(LIMBE_URL.pts, bmp.width, bmp.height, 'url') : null;
+  if(LIMBE_URL.pts) LIMBE_URL.utilise = true;
+  await resoudrePhoto(L || detecterLimbe(img));                        // tracé d'avance (catalogue, ?limbe=), sinon automatique
 }
 
 /* Étoiles et suite, pour un limbe donné : celui de la détection automatique, ou celui tracé à la main (limbe-manuel.js,
@@ -69,7 +77,7 @@ async function resoudrePhoto(limbe){
   $('solChamps').hidden = true; $('solDates').hidden = true; $('solListe').textContent = ''; $('limbeQ').hidden = true;
   const det = horsTerre(detecterEtoiles(img), limbe, H/100);
   marquerPhoto(cv, det, null, limbe);
-  lignesSolveur([(limbe ? (limbe.url ? 'Limbe de l\'URL (trait bleu), ' : limbe.manuel ? 'Limbe tracé (trait bleu), ' : 'Limbe vu (trait bleu), ') : 'Pas de limbe, ') + det.length + ' points dans le ciel : reconnaissance des étoiles (jusqu\'à 10 s)…']);
+  lignesSolveur([(limbe ? (limbe.source === 'url' ? 'Limbe de l\'URL (trait bleu), ' : limbe.manuel ? 'Limbe tracé (trait bleu), ' : 'Limbe vu (trait bleu), ') : 'Pas de limbe, ') + det.length + ' points dans le ciel : reconnaissance des étoiles (jusqu\'à 10 s)…']);
   await peindre();
   const Fl = limbe ? focaleParLimbe(limbe, W, H) : null;               // la courbure du limbe borne la focale
   const res = resoudreCiel({W, H}, det, Fl, limbe);
@@ -84,7 +92,7 @@ async function resoudrePhoto(limbe){
   const ra = res.centre.ra/15;
   CHK.lignes = [
     '✓ ' + res.appariees.length + ' étoiles reconnues (± ' + fr(res.rms, 1) + ' px)' + (res.miroir ? ', image en miroir' : ''),
-    'RA ' + Math.floor(ra) + ' h ' + fr((ra % 1)*60, 1) + ' min, Dec ' + fr(res.centre.dec, 2) + '° · ' + fr(res.F*36/W, 1) + ' mm' + (limbe ? (limbe.url ? ' · limbe de l\'URL' : limbe.manuel ? ' · limbe tracé' : ' · limbe vu') : ''),
+    'RA ' + Math.floor(ra) + ' h ' + fr((ra % 1)*60, 1) + ' min, Dec ' + fr(res.centre.dec, 2) + '° · ' + fr(res.F*36/W, 1) + ' mm' + (limbe ? (limbe.source === 'url' ? ' · limbe de l\'URL' : limbe.manuel ? ' · limbe tracé' : ' · limbe vu') : ''),
     exif.date ? 'EXIF : ' + texteDate(exif.date) + ' ' + texteHeure(exif.date) + ' UT' + (exif.focale ? ', ' + exif.focale + ' mm' : '')
               : limbe ? 'Pas de date dans l\'image : les étoiles ne la donnent pas. Recherche des instants où l\'ISS voyait ce limbe sous ces étoiles, de 2000 à aujourd\'hui (« Année » pour restreindre).'
                       : 'Pas de date dans l\'image ni de limbe : indique le jour et l\'heure UT.'
@@ -102,9 +110,9 @@ async function resoudrePhoto(limbe){
 }
 
 // « Dates possibles » : instants où l'ISS, de nuit, voyait ce limbe sous ces étoiles — l'année indiquée, sinon de 2000 à
-// aujourd'hui, année par année (progression affichée ; une autre recherche ou une autre photo arrête celle-ci). Les 200
+// aujourd'hui, année par année (progression affichée ; une autre recherche ou une autre photo arrête celle-ci). Les 400
 // plus cohérents (dispersion du limbe) sont notés sur les lumières des villes (villes.js), listés dans l'ordre du temps
-// pendant la notation, puis par note décroissante ;
+// pendant la notation, puis par note décroissante ; chacun avec le lieu visé par le centre de la photo (pointVise) ;
 // le mieux noté est sélectionné (cadre rouge) et appliqué.
 async function chercherDates(){
   const v = $('solAn').value.trim(), an = /^\d{2}$/.test(v) ? 2000 + +v : /^\d{4}$/.test(v) ? +v : null;
@@ -119,9 +127,10 @@ async function chercherDates(){
     c.push(...datesPossibles(CHK.res, CHK.img, CHK.limbe, Date.UTC(a, 0, 1)/1000, Math.min(Date.UTC(a + 1, 0, 1), Date.now())/1000));
   }
   const n = c.length;
-  c = c.sort((x, y) => x.sdDeg - y.sdDeg).slice(0, 200).sort((x, y) => x.unix - y.unix);
+  c = c.sort((x, y) => x.sdDeg - y.sdDeg).slice(0, 400).sort((x, y) => x.unix - y.unix);
+  for(const m of c){ const g = pointVise(CHK.res, m.unix); m.lieu = g ? lieuProche(g.lat, g.lon) : null; }   // ce que vise la photo
   const periode = an ? ' en ' + an : ' de ' + a0 + ' à aujourd\'hui';
-  p.textContent = n ? n + ' instant' + (n > 1 ? 's' : '') + periode + (n > c.length ? ' (les ' + c.length + ' plus cohérents)' : '')
+  p.textContent = n ? n + ' instant' + (n > 1 ? 's' : '') + periode + (n > c.length ? ' (les ' + c.length + ' plus cohérents)' : '') + ' ; « vers » : ce que vise le centre de la photo'
                       + ' ; note = accord des lumières de villes avec la carte VIIRS de la NASA, de la meilleure à la moins bonne. La meilleure est appliquée ; clic sur une autre pour comparer (calque).'
                     : 'Aucun instant' + periode + ' : l\'ISS n\'a pas vu ce limbe sous ces étoiles de nuit (autre satellite, photo retouchée ou montage ?).';
   const pts = echantillonsTerre(CHK.data, CHK.img.W, CHK.img.H, CHK.limbe);
@@ -129,7 +138,7 @@ async function chercherDates(){
     l.querySelectorAll('button.sel').forEach(x => x.classList.remove('sel')); b.classList.add('sel');
     $('solDate').value = texteDate(m.unix); $('solHeure').value = texteHeure(m.unix); appliquerSolution(false);
   };
-  const libelle = m => texteDate(m.unix) + ' ' + texteHeure(m.unix) + ' UT · villes ' + (m.note === undefined ? '…' : m.note === null ? '—' : Math.round(m.note*100) + ' %');
+  const libelle = m => texteDate(m.unix) + ' ' + texteHeure(m.unix) + ' UT' + (m.lieu ? ' · vers ' + m.lieu : '') + ' · villes ' + (m.note === undefined ? '…' : m.note === null ? '—' : Math.round(m.note*100) + ' %');
   const boutons = c.map(m => {
     const b = document.createElement('button');
     b.textContent = libelle(m); b.onclick = () => choisir(m, b);
@@ -146,7 +155,7 @@ async function chercherDates(){
   const ordre = c.map((m, i) => i).sort((i, j) => (c[j].note ?? -9) - (c[i].note ?? -9));
   for(const i of ordre) l.appendChild(boutons[i]);
   const ib = ordre[0];
-  if(c[ib].note !== null) choisir(c[ib], boutons[ib]);
+  if(c.length && c[ib].note !== null) choisir(c[ib], boutons[ib]);   // aucun instant : rien à choisir
   l.scrollTop = 0; l.scrollIntoView({block:'nearest'});                // en haut : l'explication et la mieux notée
 }
 

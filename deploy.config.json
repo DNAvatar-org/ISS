@@ -148,6 +148,14 @@
       "dest": "pages/ISS/js/pose.js"
     },
     {
+      "src": "js/geo-data.js",
+      "dest": "pages/ISS/js/geo-data.js"
+    },
+    {
+      "src": "js/geo.js",
+      "dest": "pages/ISS/js/geo.js"
+    },
+    {
       "src": "js/reperes.js",
       "dest": "pages/ISS/js/reperes.js"
     },

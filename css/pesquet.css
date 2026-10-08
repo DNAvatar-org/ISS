@@ -378,3 +378,19 @@ body.zen #credits{display:none !important}
   /* zone de visée assez haute pour un joystick pleine largeur (cercle tangent aux bords : 100vw − marges 16 − remplissage 28 − bordure 2 − colonne 40) */
   #viseeIss{min-height:calc(min(100vw - 86px, 380px) - 55px - var(--zm, 0px))}
 }
+
+/* « Pays et coordonnées » (geo.js) : étiquettes en pancarte posées sur le globe, coordonnées en bas */
+#geoEtiquettes{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+#geoEtiquettes[hidden], #geoInfo[hidden], .geo[hidden]{display:none}
+.geo{position:absolute;left:0;top:0;white-space:nowrap;font:600 11.5px/15px system-ui,sans-serif;color:#fff;
+     padding:0 6px 0 12px;border-radius:4px;background:rgba(12,16,26,.62);text-shadow:0 1px 2px #000}
+.geo::before{content:'';position:absolute;left:2px;top:4.5px;width:6px;height:6px;border-radius:50%;background:#ffd36a;box-shadow:0 0 0 1px #000}
+.geo.pays.r1{font-size:13px;line-height:17px;letter-spacing:.04em;text-transform:uppercase}
+.geo.pays.r1::before{top:5.5px}
+.geo.ville{font-weight:500;font-size:11px;background:rgba(12,16,26,.45)}
+.geo.ville::before{background:#fff}
+.geo.mer{padding:0;background:none;font-style:italic;font-weight:500;color:#9fd4ff;font-size:12.5px}
+.geo.mer::before{display:none}
+#geoInfo{position:fixed;left:50%;bottom:calc(var(--haut-credits, 56px) + 8px);transform:translateX(-50%);z-index:2;pointer-events:none;
+         font:500 12px system-ui,sans-serif;color:#fff;background:rgba(12,16,26,.7);border-radius:8px;padding:4px 10px;white-space:nowrap}
+#lGeo{margin-top:6px}

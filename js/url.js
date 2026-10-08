@@ -1,7 +1,7 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.3.0
-// Date: [October 07, 2026]
+// Version 1.4.0
+// Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -15,7 +15,7 @@
    focale: focale en mm, équivalent 24×36 (ex. 58 ; « 58mm » accepté). Absent : celle de la vue choisie.
    date  : JJ.MM.AA ou JJ.MM.AAAA (format français ; séparateurs . / ou -), entre 2000 et 2035.
    heure : HH:MM, HH:MM:SS ou HH:MM:SS.s, temps universel (UT, comme l'affichage). Sans date : ignorée, avec un avis.
-   montrer : orbite, reperes, trace, cone (séparés par des virgules) : cases cochées.
+   montrer : orbite, reperes, trace, cone, geo (pays et coordonnées), séparés par des virgules : cases cochées.
    limbe : bord de l'atmosphère pour la prochaine photo de Check Photo, au lieu de la détection automatique : au moins
            3 points x,y séparés par des points-virgules, en pixels de la photo d'origine (ex. limbe=10,960;910,741;
            1630,711;2380,803), ou en fractions de sa largeur et de sa hauteur si toutes les valeurs sont ≤ 1. Un limbe
@@ -115,7 +115,7 @@ function appliquerLimbeURL(){
 }
 
 // Cases cochées : orbite, repères, trace au sol, cône.
-const CASES_URL = {orbite:'cOrbite', reperes:'cReperes', trace:'cTrace', cone:'cCone'};
+const CASES_URL = {orbite:'cOrbite', reperes:'cReperes', trace:'cTrace', cone:'cCone', geo:'cGeo'};
 function appliquerMontrerURL(){
   const v = URL_P.get('montrer');
   if(v === null) return [];

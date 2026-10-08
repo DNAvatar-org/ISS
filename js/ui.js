@@ -1,6 +1,6 @@
 // File: js/ui.js
 // Desc: Commandes : vues, jauge de vitesse (crans logarithmiques), date (donc β), position sur l'orbite, affichages, pose.
-// Version 2.1.1
+// Version 2.1.2
 // Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -327,6 +327,7 @@ function creerUI(){
   $('cReperes').onchange = e => { poseInterrompre(); ETAT.montrer.reperes = e.target.checked; };
   $('cTrace').onchange = e => { poseInterrompre(); ETAT.montrer.trace = e.target.checked; };
   $('cCone').onchange = e => { poseInterrompre(); ETAT.montrer.cone = e.target.checked; };
+  $('cGeo').onchange = e => { ETAT.montrer.geo = e.target.checked; };           // pays et coordonnées (geo.js)
 
   $('bZen').onclick = basculerZen;
   $('bCapture').onclick = capturer;

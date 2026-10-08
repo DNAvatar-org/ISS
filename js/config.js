@@ -1,7 +1,7 @@
 // File: js/config.js
 // Desc: Constantes physiques (échelle : 1 unité = 100 km) et état de la simulation (ETAT).
-// Version 1.0.0
-// Date: [October 05, 2026]
+// Version 1.0.1
+// Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -35,5 +35,5 @@ const ETAT = {
   S: new THREE.Vector3(1,0,0), beta: 0, thetaSol: 0,   // Soleil, calculés par calculerSoleil()
   M: new THREE.Vector3(0,0,1), Mdist: 3844, Mnord: new THREE.Vector3(0,1,0), vers: null, gmst: 0, rSol: 0.26656*DEG, nuitISS: false, ecl: 0, eclLune: {ombre:-1, penombre:-1}, lune: {illum:0, croissante:true},   // Lune idem
   vue: 'iss', preset: 'pole',   // au départ : dans l'ISS, visée « pôle » (la photo)
-  montrer: {orbite:false, reperes:false, trace:false, cone:false}
+  montrer: {orbite:false, reperes:false, trace:false, cone:false, geo:false}
 };

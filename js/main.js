@@ -1,7 +1,7 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
-// Version 1.0.4
-// Date: [October 07, 2026]
+// Version 1.0.5
+// Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -89,7 +89,7 @@ function boucle(ms){
     ETAT.t += (DATES.min - jourDate())*86400; ETAT.pause = true;
   }
   if(ms - TUILES.derniere > GIBS.periode){ TUILES.derniere = ms; majTuiles(); }
-  majBoutonRec(); majVisee(); majSelections(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms); majCalque(); majURL(ms);
+  majBoutonRec(); majVisee(); majSelections(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms); majCalque(); majGeo(); majURL(ms);
 }
 
 function demarrer(){
@@ -109,6 +109,7 @@ function demarrer(){
   OBS.groupe.add(camIss);
   creerCone();
   creerReperes();
+  creerGeo();                                       // pays et coordonnées (geo.js)
   preparerFond(); creerJoystick();
   creerUI();
   creerSolveur(); creerEncart();                   // « Check Photo » (js/solveur/)

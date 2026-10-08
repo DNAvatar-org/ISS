@@ -1,7 +1,7 @@
 // File: js/entrees.js
 // Desc: Souris, pavé tactile et écran tactile : orbite autour de la Terre, visée et focale de la caméra embarquée.
-// Version 1.1.1
-// Date: [October 06, 2026]
+// Version 1.1.2
+// Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -13,7 +13,7 @@
      de petits événements : un pas fixe par événement zoomait bien trop vite) ;
    – pincer sur le pavé tactile : ctrl+molette (Chrome, Firefox) ou gesture* (Safari) — sinon le navigateur zoome la page. */
 
-const surUI = e => e.target.closest('#panel, #hud, #bZen, #galerie, #pied, #credits, #lEcl, #encartPhoto');   // #lEcl : liste du menu Éclipses (hors encart)
+const surUI = e => e.target.closest('#panel, #hud, #bZen, #galerie, #pied, #credits, #lEcl, #encartPhoto, #traceLimbe');   // #lEcl : liste du menu Éclipses (hors encart)
 const DOIGTS = new Map();                        // pointeurs posés sur le canevas : id → {x, y}
 const TAP = {id:null, x:0, y:0, t:0, ok:false};  // toucher bref en cours
 let pince = 0;                                   // écart entre deux doigts à la trame précédente

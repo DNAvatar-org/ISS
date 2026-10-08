@@ -7,7 +7,7 @@
 <title>ISS — cercles d'étoiles et traînées de Terre</title>
 <meta name="description" content="Simulation 3D (Three.js) d'un passage de nuit de l'ISS : pourquoi les étoiles dessinent des cercles centrés sur le pôle orbital, et la Terre des traînées parallèles à l'horizon.">
 <link rel="icon" type="image/png" href="logo.png">
-<link rel="stylesheet" href="css/pesquet.css?v=20261008b">
+<link rel="stylesheet" href="css/pesquet.css?v=20261008e">
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -53,10 +53,20 @@
   <div id="galerie" hidden></div>
 </aside>
 
+<!-- tracé du limbe à la main (js/solveur/limbe-manuel.js) : la photo en grand, un clic par point sur le bord de l'atmosphère -->
+<div id="traceLimbe" hidden>
+  <div class="boite">
+    <p>Clique au moins 3 points sur le bord de l'atmosphère (le haut de la bande colorée), écartés le long de l'arc. Pointillés : le tracé automatique.</p>
+    <canvas id="traceCv"></canvas>
+    <div class="btns"><button type="button" id="traceRetirer">Retirer le dernier</button><button type="button" id="traceAnnuler">Annuler</button><button type="button" id="traceValider">Valider</button></div>
+  </div>
+</div>
+
 <!-- encart « Photo » (js/solveur/) : à droite, sous l'encart Temps — la photo analysée, le résultat, date/heure, ±1 s -->
 <aside id="encartPhoto" hidden>
   <div class="tete"><h2>Photo</h2><span><button type="button" id="encPlier" title="Replier (la photo et le calque restent)">−</button><button type="button" id="encFermer" title="Fermer (et retirer le calque)">✕</button></span></div>
   <div id="encVue" title="Clic : superposer la photo à la vue (re-clic : la retirer)"><canvas id="encCv"></canvas></div>
+  <div id="limbeQ" hidden><span id="limbeQTxt"></span> <button type="button" id="limbeOui">Oui</button> <button type="button" id="limbeNon">Non, le tracer</button></div>
   <div id="solTxt"></div>
   <div id="solChamps" hidden>
     <div class="ligne"><label for="solDate">Date</label><input id="solDate" placeholder="JJ.MM.AA" size="8"></div>
@@ -131,47 +141,48 @@
 <!-- ?v= : version des scripts et feuilles locaux. index.html n'est jamais en cache, mais js/ et css/ le sont 4 h :
      sans ce numéro, un téléphone garde l'ancien JS face à la nouvelle page (ex. « #sEcl absent »).
      À CHANGER à chaque publication qui touche js/ ou css/ (le même partout). -->
-<script src="js/erreurs.js?v=20261008b"></script>
+<script src="js/erreurs.js?v=20261008e"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="js/config.js?v=20261008b"></script>
-<script src="js/dates.js?v=20261008b"></script>
-<script src="js/cartes-data.js?v=20261008b"></script>
-<script src="js/dom.js?v=20261008b"></script>
-<script src="js/orbite.js?v=20261008b"></script>
-<script src="js/tle-data.js?v=20261008b"></script>
+<script src="js/config.js?v=20261008e"></script>
+<script src="js/dates.js?v=20261008e"></script>
+<script src="js/cartes-data.js?v=20261008e"></script>
+<script src="js/dom.js?v=20261008e"></script>
+<script src="js/orbite.js?v=20261008e"></script>
+<script src="js/tle-data.js?v=20261008e"></script>
 <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
-<script src="js/ephemerides.js?v=20261008b"></script>
-<script src="js/scene.js?v=20261008b"></script>
-<script src="js/etoiles-data.js?v=20261008b"></script>
-<script src="js/ciel.js?v=20261008b"></script>
-<script src="js/soleil.js?v=20261008b"></script>
-<script src="js/eblouissement.js?v=20261008b"></script>
-<script src="js/couronne.js?v=20261008b"></script>
-<script src="js/lune.js?v=20261008b"></script>
-<script src="js/terre.js?v=20261008b"></script>
-<script src="js/tuiles-rendu.js?v=20261008b"></script>
-<script src="js/tuiles.js?v=20261008b"></script>
-<script src="js/satellites.js?v=20261008b"></script>
-<script src="js/iss.js?v=20261008b"></script>
-<script src="js/hubble.js?v=20261008b"></script>
-<script src="js/iridium.js?v=20261008b"></script>
-<script src="js/reperes.js?v=20261008b"></script>
-<script src="js/cameras.js?v=20261008b"></script>
-<script src="js/cone.js?v=20261008b"></script>
-<script src="js/joystick-fond.js?v=20261008b"></script>
-<script src="js/joystick.js?v=20261008b"></script>
-<script src="js/pose.js?v=20261008b"></script>
-<script src="js/ui.js?v=20261008b"></script>
-<script src="js/entrees.js?v=20261008b"></script>
-<script src="js/solveur/exif.js?v=20261008b"></script>
-<script src="js/solveur/detection.js?v=20261008b"></script>
-<script src="js/solveur/astrometrie.js?v=20261008b"></script>
-<script src="js/url.js?v=20261008b"></script>
-<script src="js/solveur/limbe.js?v=20261008b"></script>
-<script src="js/solveur/instant.js?v=20261008b"></script>
-<script src="js/solveur/villes.js?v=20261008b"></script>
-<script src="js/solveur/encart.js?v=20261008b"></script>
-<script src="js/solveur/ui-solveur.js?v=20261008b"></script>
-<script src="js/main.js?v=20261008b"></script>
+<script src="js/ephemerides.js?v=20261008e"></script>
+<script src="js/scene.js?v=20261008e"></script>
+<script src="js/etoiles-data.js?v=20261008e"></script>
+<script src="js/ciel.js?v=20261008e"></script>
+<script src="js/soleil.js?v=20261008e"></script>
+<script src="js/eblouissement.js?v=20261008e"></script>
+<script src="js/couronne.js?v=20261008e"></script>
+<script src="js/lune.js?v=20261008e"></script>
+<script src="js/terre.js?v=20261008e"></script>
+<script src="js/tuiles-rendu.js?v=20261008e"></script>
+<script src="js/tuiles.js?v=20261008e"></script>
+<script src="js/satellites.js?v=20261008e"></script>
+<script src="js/iss.js?v=20261008e"></script>
+<script src="js/hubble.js?v=20261008e"></script>
+<script src="js/iridium.js?v=20261008e"></script>
+<script src="js/reperes.js?v=20261008e"></script>
+<script src="js/cameras.js?v=20261008e"></script>
+<script src="js/cone.js?v=20261008e"></script>
+<script src="js/joystick-fond.js?v=20261008e"></script>
+<script src="js/joystick.js?v=20261008e"></script>
+<script src="js/pose.js?v=20261008e"></script>
+<script src="js/ui.js?v=20261008e"></script>
+<script src="js/entrees.js?v=20261008e"></script>
+<script src="js/solveur/exif.js?v=20261008e"></script>
+<script src="js/solveur/detection.js?v=20261008e"></script>
+<script src="js/solveur/astrometrie.js?v=20261008e"></script>
+<script src="js/url.js?v=20261008e"></script>
+<script src="js/solveur/limbe.js?v=20261008e"></script>
+<script src="js/solveur/instant.js?v=20261008e"></script>
+<script src="js/solveur/villes.js?v=20261008e"></script>
+<script src="js/solveur/encart.js?v=20261008e"></script>
+<script src="js/solveur/limbe-manuel.js?v=20261008e"></script>
+<script src="js/solveur/ui-solveur.js?v=20261008e"></script>
+<script src="js/main.js?v=20261008e"></script>
 </body>
 </html>

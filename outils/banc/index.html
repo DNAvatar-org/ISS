@@ -1,0 +1,23 @@
+<!doctype html>
+<!-- File: outils/banc/index.html
+     Desc: Banc du limbe — détecteur de js/solveur/limbe.js contre des points de référence, photo par photo.
+     Servir le dossier site/ (photos/ est hors dépôt) : http://localhost:8001/Pesquet/outils/banc/
+     Version 1.0.0 · Date: [October 08, 2026] · Copyright 2026 DNAvatar.org - Arnaud Maignan -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banc du limbe</title>
+<link rel="stylesheet" href="banc.css">
+</head>
+<body>
+<h1>Banc du limbe</h1>
+<p>Écart (px) des points de référence (magenta) à la courbe trouvée (cyan) ; réussi si 90 % sont sous la tolérance. <button type="button" id="relancer">Relancer</button> <b id="bilan"></b></p>
+<table id="res"><thead><tr><th>Photo</th><th></th><th>médiane</th><th>90 %</th><th>max</th><th>tol</th><th>points · durée</th></tr></thead><tbody></tbody></table>
+<div id="vign"></div>
+<script src="../../js/solveur/limbe.js"></script>
+<script src="limbe-ref.js"></script>
+<script src="banc.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

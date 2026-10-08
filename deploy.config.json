@@ -104,6 +104,10 @@
       "dest": "pages/ISS/js/solveur/encart.js"
     },
     {
+      "src": "js/solveur/limbe-manuel.js",
+      "dest": "pages/ISS/js/solveur/limbe-manuel.js"
+    },
+    {
       "src": "js/satellites.js",
       "dest": "pages/ISS/js/satellites.js"
     },

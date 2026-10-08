@@ -1,0 +1,14 @@
+/* File: outils/banc/banc.css
+   Desc: Banc du limbe : tableau des écarts et vignettes.
+   Version 1.0.0
+   Date: [October 08, 2026]
+   Copyright 2026 DNAvatar.org - Arnaud Maignan */
+body{margin:16px;background:#0b0e14;color:#dde;font:13px system-ui,sans-serif}
+table{border-collapse:collapse;margin:8px 0}
+td,th{padding:3px 10px;border-bottom:1px solid #2a3040;text-align:right}
+td:first-child,th:first-child{text-align:left}
+.ok{color:#4f8}.ko{color:#f55}
+#vign{display:flex;flex-wrap:wrap;gap:10px}
+figure{margin:0;width:460px}
+figure canvas{width:100%;height:auto;display:block;border-radius:6px}
+figcaption{font-size:11px;color:#99a;margin-top:3px}

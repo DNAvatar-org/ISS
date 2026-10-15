@@ -1,7 +1,8 @@
 // File: js/joystick.js
 // Desc: Joystick de visée : une cible sur un disque (cap/site), cône vu de dessus, visées prédéfinies illustrées, molette = focale.
-// Version 1.2.0
-// Date: [October 06, 2026]
+// Version 1.2.1
+// - v1.2.1: ☀️ (orange-rouge) et 🌙 (gris) posés sur l'horizon, dans l'azimut de leur astre qu'ils suivent ; ils le visent.
+// Date: [October 15, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -18,12 +19,12 @@ const JOY_REPERES = [
   {nom:'nadir',   court:'',       titre:'Terre (nadir) : droit vers le bas, puis zoomer pour le détail', icone:'🌍'},
   {nom:'oblique', court:'Obl.',   titre:'Terre oblique : vers l\'avant et le bas, que de la Terre', icone:'↘️'},
   {nom:'avant',   court:'Avant',  titre:'Avant : vers l\'horizon, dans le sens du vol', icone:'➡️'},
-  {nom:'soleil',  court:'',       titre:'Soleil : la visée le suit', icone:'☀️'},
-  {nom:'lune',    court:'',       titre:'Lune : la visée la suit', icone:'🌙'}
+  {nom:'soleil',  court:'',       titre:'Coucher du Soleil : l\'horizon sous le Soleil, qu\'il suit (point orange)', icone:'☀️'},
+  {nom:'lune',    court:'',       titre:'Horizon de la Lune : l\'horizon sous la Lune, qu\'il suit (point gris)', icone:'🌙'}
 ];
 
 const REP_PHASE = {}; JOY_REPERES.forEach((rp, i) => REP_PHASE[rp.nom] = i*0.37);
-const _jd = new THREE.Vector3(), _jf = new THREE.Vector3(), _ju = new THREE.Vector3(), _jr = new THREE.Vector3(), _jp = new THREE.Vector3();
+const _jf = new THREE.Vector3(), _ju = new THREE.Vector3(), _jr = new THREE.Vector3(), _jp = new THREE.Vector3();
 
 // (ρ = angle depuis le nadir, ψ = cap) → pixel du disque ; centre = nadir, haut = sens du vol, gauche = +Y.
 function joyXY(rho, psi){
@@ -33,7 +34,7 @@ function joyXY(rho, psi){
 const joyDeCapSite = (cap, site) => joyXY(Math.PI/2 + site, cap);
 
 function reperePos(nom){
-  if(nom === 'soleil' || nom === 'lune'){ (nom === 'soleil' ? solISS : luneISS)(_jd); return joyDeCapSite(capDe(_jd), siteDe(_jd)); }
+  if(nom === 'soleil' || nom === 'lune'){ const v = viseeHorizon(nom); return joyDeCapSite(v.cap, v.site); }   // sur le trait bleu
   const v = viseePreset(nom);
   return joyDeCapSite(v.cap*DEG, v.site*DEG);
 }
@@ -92,7 +93,7 @@ function dessinerJoystick(ms){
       c.beginPath(); c.arc(x, y, 8, 0, 2*Math.PI); c.lineWidth = 2; c.strokeStyle = '#ffd24a'; c.stroke();
     }
     c.beginPath(); c.arc(x, y, actif ? 5 : surv ? 5.5 : 3.5, 0, 2*Math.PI);
-    c.fillStyle = rp.nom === 'soleil' ? '#ffd24a' : rp.nom === 'lune' ? '#d8dde6' : (actif ? '#ffffff' : 'rgba(255,255,255,.75)'); c.fill();
+    c.fillStyle = rp.nom === 'soleil' ? '#ff5a1e' : rp.nom === 'lune' ? '#9aa0aa' : (actif ? '#ffffff' : 'rgba(255,255,255,.75)'); c.fill();
     c.lineWidth = 1; c.strokeStyle = 'rgba(0,0,0,.7)'; c.stroke();
     if(rp.court){
       c.font = (actif ? '600 ' : '') + '9.5px sans-serif'; c.textAlign = 'left';

@@ -1,6 +1,8 @@
 // File: js/ui.js
 // Desc: Commandes : vues, jauge de vitesse (crans logarithmiques), date (donc β), position sur l'orbite, affichages, pose.
-// Version 2.4.0
+// Version 2.6.0
+// - v2.6.0: un clic sur le titre des fenêtres Temps et Point de vue les replie (le titre seul) ou les déplie.
+// - v2.5.0: changer de point de vue décoche toutes les cases d'affichage (la vue Terre ne les coche plus).
 // - v2.4.0: bouton ⓒ / − : crédits des images repliés par défaut, ouverts au clic.
 // Date: [October 15, 2026]
 // - v2.3.0: page embarquée — la page hôte bascule le zen par message { type: 'iss:zen', zen }.
@@ -27,7 +29,7 @@ function majJaugeVitesse(){
 function marquer(sel, test){
   document.querySelectorAll(sel).forEach(b => b.classList.toggle('on', test(b)));
 }
-const NOMS_VISEE = {pole:'Pôle', poleSol:'Pôle ☀', nadir:'Nadir', oblique:'Oblique', avant:'Avant', soleil:'Soleil', lune:'Lune'};
+const NOMS_VISEE = {pole:'Pôle', poleSol:'Pôle ☀', nadir:'Nadir', oblique:'Oblique', avant:'Avant', soleil:'Coucher ☀', lune:'Horizon ☾'};
 // Bouton de la vue embarquée : « satellite → visée » ; le joystick et la focale n'existent que dans la vue ISS.
 function majVisee(){
   const t = OBS.nom + ' → ' + (ETAT.preset ? NOMS_VISEE[ETAT.preset] : 'libre');
@@ -36,15 +38,17 @@ function majVisee(){
   for(const b of $('reperes').children) b.classList.toggle('on', b.dataset.preset === ETAT.preset);   // le repère choisi est allumé
 }
 
-// Cases « Affichage » : vue Terre seulement, toutes cochées ; ISS et Terre–Lune : toutes décochées et masquées.
+// Cases « Affichage » : vue Terre seulement (ISS et Terre–Lune : masquées). Toutes décochées à chaque changement de point
+// de vue ; on les coche à la main. Au chargement, ?montrer= (url.js) décide.
 let vuePrec = null;
 function majAffichage(v){
   $('affichageTerre').hidden = v !== 'ext';
   if(v === vuePrec) return;
+  const chargement = vuePrec === null;
   vuePrec = v;
-  const on = v === 'ext';
+  if(chargement) return;
   for(const [id, k] of [['cOrbite','orbite'], ['cReperes','reperes'], ['cTrace','trace'], ['cCone','cone']]){
-    $(id).checked = on; ETAT.montrer[k] = on;
+    $(id).checked = false; ETAT.montrer[k] = false;
   }
 }
 
@@ -220,6 +224,9 @@ function creerUI(){
     if(e.target.closest('#galerie')) return;
     if(e.target.closest('button, input, select, label')) fermerPhoto();
   }, true);
+  // Fenêtres Temps et Point de vue : un clic sur leur titre les replie (le titre seul reste) ou les déplie (css : .plie).
+  document.querySelector('#temps .tete-temps h2').onclick = () => $('hud').classList.toggle('plie');
+  document.querySelector('#panel .grp:first-child > .tete h2').onclick = () => $('panel').classList.toggle('plie');
   document.querySelectorAll('[data-vue]').forEach(b => b.onclick = () => {
     const v = b.dataset.vue;
     if(ETAT.vue === 'iss' || v === 'iss') poseEffacer();   // entrer ou sortir de la vue embarquée : on retire l'empilement ; Terre ↔ Terre–Lune garde les captures

@@ -24,6 +24,10 @@
       "dest": "pages/ISS/js/cameras.js"
     },
     {
+      "src": "js/horizon.js",
+      "dest": "pages/ISS/js/horizon.js"
+    },
+    {
       "src": "js/cartes-data.js",
       "dest": "pages/ISS/js/cartes-data.js"
     },
@@ -58,6 +62,10 @@
     {
       "src": "js/url.js",
       "dest": "pages/ISS/js/url.js"
+    },
+    {
+      "src": "js/hote.js",
+      "dest": "pages/ISS/js/hote.js"
     },
     {
       "src": "js/ephemerides.js",

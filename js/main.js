@@ -1,6 +1,9 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
-// Version 1.1.3
+// Version 1.1.6
+// - v1.1.6: en onglet, la Terre à l'écran est envoyée à la page hôte à chaque image (hote.js, 'iss:terre').
+// - v1.1.5: ?provenance= (url.js), appliquée en dernier (après la date, qui remet la vitesse à ×1).
+// - v1.1.4: horizons du Soleil et de la Lune (horizon.js) créés et suivis à chaque image.
 // Date: [October 15, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -52,7 +55,7 @@ function majScene(){
   REP.lune.visible = m.reperes && iss;
   SOL.groupe.visible = true;
 
-  majCamExt(); majCamIss(); majCone(); colorerSoleil();
+  majCamExt(); majCamIss(); majCone(); colorerSoleil(); majHorizons();
   // Soleil et voûte à l'infini : posés relativement à l'observateur, quelle que soit la vue (aucune parallaxe).
   // Le Soleil réel est 390 fois plus loin que la Lune ; dessiné à distance fixe du centre, il semblait sur son orbite.
   SOL.groupe.position.copy(ETAT.vue === 'iss' ? OBS.groupe.position : camExt.position).addScaledVector(ETAT.S, CFG.SUN_D);
@@ -89,7 +92,7 @@ function boucle(ms){
     ETAT.t += (DATES.min - jourDate())*86400; ETAT.pause = true;
   }
   if(TUILES_ACTIVES && ms - TUILES.derniere > GIBS.periode){ TUILES.derniere = ms; majTuiles(); }   // pas avec ?jour= (url.js)
-  majBoutonRec(); majVisee(); majSelections(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms); majCalque(); majGeo(); majURL(ms);
+  majBoutonRec(); majVisee(); majSelections(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms); majCalque(); majGeo(); majURL(ms); majHote();
 }
 
 function demarrer(){
@@ -107,6 +110,7 @@ function demarrer(){
   creerEblouissement(); creerCouronne();
   creerSats();
   OBS.groupe.add(camIss);
+  creerHorizons();                                  // horizons du Soleil et de la Lune sur le limbe (horizon.js)
   creerCone();
   creerReperes();
   creerGeo();                                       // pays et coordonnées (geo.js)
@@ -128,6 +132,7 @@ function demarrer(){
   avisURL.push(...appliquerAtmURL());              // ?atm= : lue au chargement (url.js), avis ici
   appliquerOngletURL();                            // ?onglet : dans l'onglet d'une page hôte (ni signature ni ⛶)
   appliquerZenURL();                               // ?zen : plein écran au démarrage (fenêtres et signature masquées)
+  avisURL.push(...appliquerProvenanceURL());       // ?provenance=CO2 : début du mode bilan radiatif
   if(avisURL.length) avis(avisURL);
   addEventListener('resize', redimensionner); redimensionner();
   requestAnimationFrame(boucle);

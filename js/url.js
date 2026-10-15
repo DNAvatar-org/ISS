@@ -1,6 +1,8 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.8.0
+// Version 1.9.0
+// - v1.9.0: ?provenance=CO2 — début du mode « bilan radiatif » (vitesse ×1000, fenêtres repliées, pas de Check Photo).
+// - v1.8.1: vue=soleil / vue=lune = l'horizon sous l'astre, sur le limbe (horizon.js).
 // - v1.8.0: ?atm=p:…,H:…,lum:… — atmosphère d'une autre Terre (pression, hauteur d'échelle, luminescence) ; p:0 = sans atmosphère.
 // - v1.7.0: ?onglet (page dans l'onglet d'une page hôte), ?jour= / ?nuit= (cartes de la Terre, ex. paléogéographie).
 // Date: [October 15, 2026]
@@ -8,7 +10,8 @@
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
 /* sat   : id ou nom d'un satellite (iss, hubble, iridium ; casse indifférente). Absent : ISS.
-   vue   : visée de la caméra embarquée : pole, antipole (pôle côté Soleil), soleil, obl (Terre oblique), lune, avant,
+   vue   : visée de la caméra embarquée : pole, antipole (pôle côté Soleil), soleil (son coucher : le limbe dans
+           l'azimut du Soleil, horizon.js), obl (Terre oblique), lune (l'horizon sous la Lune), avant,
            nadir (casse indifférente) ; ou vue extérieure : terre, terrelune. Absent : pole.
    decal : avec vue=soleil ou vue=lune, décalage de la visée en hauteur (degrés) : l'astre au-dessus ou au-dessous du centre.
    cam   : vue extérieure, position de la caméra : longitude, latitude (degrés), distance (unités de la scène), ex. 51.6,31.5,250.
@@ -32,6 +35,8 @@
            (épaisseur optique Rayleigh ∝ colonne d'air, air de composition actuelle), H : hauteur d'échelle [km], lum : luminescence
            nocturne (airglow) relative à aujourd'hui. Absent : la Terre d'aujourd'hui (p:1, H:8, lum:1). p:0 : pas d'atmosphère.
            Les couleurs ne se donnent pas : elles sortent de la diffusion Rayleigh (terre.js).
+   provenance : qui ouvre la page. provenance=CO2 (bilan radiatif, onglet ISS) : début d'un mode « bilan radiatif » —
+           vitesse ×1000, fenêtres Temps et Point de vue repliées (un clic sur leur titre les rouvre), pas de Check Photo.
    zen   : présent (sans valeur), démarre en plein écran : fenêtres, crédits et signature masqués, comme le bouton ⛶ ;
            un toucher bref ou le bouton les remet. Pour une page embarquée (iframe), où le vrai plein écran exige un geste.
    Date + heure = un instant précis : la simulation démarre en pause. Les autres paramètres ne mettent pas en pause.
@@ -150,6 +155,16 @@ function appliquerLimbeURL(){
 // ?onglet : page dans l'onglet d'une page hôte (body.onglet : signature et ⛶ masqués, css « PAGE EN ONGLET »).
 function appliquerOngletURL(){
   document.body.classList.toggle('onglet', URL_P.has('onglet'));
+}
+
+function appliquerProvenanceURL(){
+  const p = URL_P.get('provenance');
+  if(p === null) return [];
+  if(p !== 'CO2') return ['Provenance inconnue : « ' + p + ' ». Connue : CO2 (bilan radiatif).'];
+  ETAT.vitesse = 1000; ETAT.pause = false;          // après allerAujourdhui (main.js), qui remet ×1
+  $('hud').classList.add('plie'); $('panel').classList.add('plie');
+  $('bCheck').hidden = true;
+  return [];
 }
 
 function appliquerZenURL(){

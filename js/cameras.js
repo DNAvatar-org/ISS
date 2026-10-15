@@ -1,7 +1,8 @@
 // File: js/cameras.js
 // Desc: Deux caméras : orbitale autour de la Terre (vue éloignée) et embarquée dans l'ISS (visée cap / site).
-// Version 2.0.0
-// Date: [October 05, 2026]
+// Version 2.1.0
+// - v2.1.0: suivis « soleil » et « lune » = l'horizon sous l'astre (horizon.js) : son cap, le site du limbe.
+// Date: [October 15, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -14,7 +15,7 @@ const VUE_EXT = {th:0.9, ph:0.55, r:250, mode:'terre', cible:new THREE.Vector3()
    site = hauteur, 0 = horizon, −90° = nadir (la Terre), +90° = zénith.
    Direction visée d = (sin site, cos site·sin cap, −cos site·cos cap) ; le haut de l'image est toujours le zénith
    (horizon horizontal), sauf au nadir où c'est le sens du vol. */
-const VUE_ISS = {cap:0, site:-17*DEG, fov:60, suivi:null, decal:0};   // suivi = 'soleil' ou 'lune' : la visée suit l'astre
+const VUE_ISS = {cap:0, site:-17*DEG, fov:60, suivi:null, decal:0};   // suivi = 'soleil' ou 'lune' : l'horizon sous l'astre
 
 const ZENITH = new THREE.Vector3(1,0,0);
 
@@ -31,7 +32,7 @@ function viseePreset(nom){
   throw new Error('Visée inconnue : ' + nom);
 }
 
-const _qi = new THREE.Quaternion(), _sd = new THREE.Vector3();
+const _qi = new THREE.Quaternion();
 // Direction d'un astre (vecteur monde unitaire) dans le repère local de l'ISS.
 const localDe = (dirMonde, out) => out.copy(dirMonde).applyQuaternion(_qi.copy(OBS.groupe.quaternion).invert());
 const solISS  = out => localDe(SOL.dir, out);
@@ -90,10 +91,10 @@ function vueTerre(){
 }
 
 function majCamIss(){
-  if(VUE_ISS.suivi){
-    (VUE_ISS.suivi === 'soleil' ? solISS : luneISS)(_sd);
-    VUE_ISS.cap = capDe(_sd);
-    VUE_ISS.site = Math.max(-Math.PI/2, Math.min(Math.PI/2, siteDe(_sd) + VUE_ISS.decal));
+  if(VUE_ISS.suivi){                                    // pas l'astre lui-même : l'horizon sous lui, sur le limbe (horizon.js)
+    const v = viseeHorizon(VUE_ISS.suivi);
+    VUE_ISS.cap = v.cap;
+    VUE_ISS.site = Math.max(-Math.PI/2, Math.min(Math.PI/2, v.site + VUE_ISS.decal));
   }
   baseVisee(VUE_ISS.cap, VUE_ISS.site, _f, _u, _r);
   _m.makeBasis(_r, _u, _f.negate());                    // la caméra regarde −z

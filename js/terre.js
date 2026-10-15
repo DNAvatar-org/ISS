@@ -1,7 +1,8 @@
 // File: js/terre.js
 // Desc: Terre jour/nuit (geoview.jpg + steamNight.jpg), atmosphère, trace de l'ISS au sol.
-// Version 2.2.0
+// Version 2.2.1
 // Date: [October 15, 2026]
+// - v2.2.1: exposition de l'atmosphère (luminescence de nuit) en vue ISS seulement : la vue Terre ne suit plus le satellite.
 // - v2.2.0: cônes d'axe aux pôles (comme le globe de l'organigramme du bilan radiatif), vue Terre seulement.
 // - v2.1.0: atmosphère paramétrée (ATM, url.js ?atm=) : pression, hauteur d'échelle, luminescence ; coque à 10 H si plus haute.
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
@@ -174,7 +175,8 @@ const ATMO_EXPO_NUIT = 1/25000;           // exposition de nuit (par rayleigh vu
 const _ac = new THREE.Vector3();
 function majAtmo(){
   const m = TERRE.atmo.material;
-  m.uniforms.uExpoNuit.value = ATMO_EXPO_NUIT*(ETAT.nuitISS ? 1 : 0.02);
+  // l'appareil est dans le satellite (vue ISS) : exposé pour la nuit quand il y est ; vu de loin, toujours au Soleil
+  m.uniforms.uExpoNuit.value = ATMO_EXPO_NUIT*(ETAT.vue === 'iss' && ETAT.nuitISS ? 1 : 0.02);
   const dedans = (ETAT.vue === 'iss' ? camIss : camExt).getWorldPosition(_ac).length() < CFG.R + ATM_COQUE;
   const side = dedans ? THREE.BackSide : THREE.FrontSide;
   if(m.side !== side){ m.side = side; m.depthTest = !dedans; m.needsUpdate = true; }

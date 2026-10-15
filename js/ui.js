@@ -1,7 +1,7 @@
 // File: js/ui.js
 // Desc: Commandes : vues, jauge de vitesse (crans logarithmiques), date (donc β), position sur l'orbite, affichages, pose.
 // Version 2.6.0
-// - v2.6.0: un clic sur le titre des fenêtres Temps et Point de vue les replie (le titre seul) ou les déplie.
+// - v2.6.0: fenêtres Temps et Point de vue repliables : bouton − / + (ou clic sur le titre) ; repliées, le titre seul, sans cadre.
 // - v2.5.0: changer de point de vue décoche toutes les cases d'affichage (la vue Terre ne les coche plus).
 // - v2.4.0: bouton ⓒ / − : crédits des images repliés par défaut, ouverts au clic.
 // Date: [October 15, 2026]
@@ -224,9 +224,13 @@ function creerUI(){
     if(e.target.closest('#galerie')) return;
     if(e.target.closest('button, input, select, label')) fermerPhoto();
   }, true);
-  // Fenêtres Temps et Point de vue : un clic sur leur titre les replie (le titre seul reste) ou les déplie (css : .plie).
-  document.querySelector('#temps .tete-temps h2').onclick = () => $('hud').classList.toggle('plie');
-  document.querySelector('#panel .grp:first-child > .tete h2').onclick = () => $('panel').classList.toggle('plie');
+  // Fenêtres Temps et Point de vue : leur bouton − / + ou leur titre les replie (le titre seul, sans cadre) ou les déplie
+  // (css : .plie ; le signe du bouton suit la classe).
+  for(const [fen, titre, bouton] of [['hud', '#temps .tete-temps h2', 'bPlierTemps'], ['panel', '#panel .grp:first-child > .tete h2', 'bPlierVue']]){
+    const basculer = () => $(fen).classList.toggle('plie');
+    document.querySelector(titre).onclick = basculer;
+    $(bouton).onclick = basculer;
+  }
   document.querySelectorAll('[data-vue]').forEach(b => b.onclick = () => {
     const v = b.dataset.vue;
     if(ETAT.vue === 'iss' || v === 'iss') poseEffacer();   // entrer ou sortir de la vue embarquée : on retire l'empilement ; Terre ↔ Terre–Lune garde les captures

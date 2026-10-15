@@ -1,6 +1,6 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.9.0
+// Version 1.10.0
 // - v1.9.0: ?provenance=CO2 — début du mode « bilan radiatif » (vitesse ×1000, fenêtres repliées, pas de Check Photo).
 // - v1.8.1: vue=soleil / vue=lune = l'horizon sous l'astre, sur le limbe (horizon.js).
 // - v1.8.0: ?atm=p:…,H:…,lum:… — atmosphère d'une autre Terre (pression, hauteur d'échelle, luminescence) ; p:0 = sans atmosphère.
@@ -36,7 +36,11 @@
            nocturne (airglow) relative à aujourd'hui. Absent : la Terre d'aujourd'hui (p:1, H:8, lum:1). p:0 : pas d'atmosphère.
            Les couleurs ne se donnent pas : elles sortent de la diffusion Rayleigh (terre.js).
    provenance : qui ouvre la page. provenance=CO2 (bilan radiatif, onglet ISS) : début d'un mode « bilan radiatif » —
-           vitesse ×1000, fenêtres Temps et Point de vue repliées (un clic sur leur titre les rouvre), pas de Check Photo.
+           vitesse ×1000, Temps et Point de vue repliés (+ ou leur titre les rouvre), sans choix de satellite, Temps
+           sous le titre de la page hôte (message iss:marges { haut, gauche } en px de cette page ; gauche : place laissée à
+           gauche de la Terre, qui se décale vers la droite, hote.js), Point de vue sous Temps, pas de
+           Check Photo, vue Terre éclairée de biais (un bord de nuit). Repliées, les fenêtres n'ont que la largeur de leur
+           titre, + contre le bord droit.
    zen   : présent (sans valeur), démarre en plein écran : fenêtres, crédits et signature masqués, comme le bouton ⛶ ;
            un toucher bref ou le bouton les remet. Pour une page embarquée (iframe), où le vrai plein écran exige un geste.
    Date + heure = un instant précis : la simulation démarre en pause. Les autres paramètres ne mettent pas en pause.
@@ -164,8 +168,21 @@ function appliquerProvenanceURL(){
   ETAT.vitesse = 1000; ETAT.pause = false;          // après allerAujourdhui (main.js), qui remet ×1
   $('hud').classList.add('plie'); $('panel').classList.add('plie');
   $('bCheck').hidden = true;
+  vueEclaireeDeBiais();                            // le Soleil un peu derrière la Terre : un bord de nuit (cameras.js)
+  $('sats').hidden = true;                          // le satellite est choisi par la page hôte (?sat=)
+  // Temps sous le titre de la page hôte (message iss:marges), Point de vue sous Temps, à droite (à gauche, la page hôte pose
+  // son organigramme) : Point de vue suit le bas de Temps, replié ou déplié.
+  document.body.classList.add('provenance-co2');
+  new ResizeObserver(placerPointDeVue).observe($('hud'));
+  addEventListener('message', e => {
+    if(e.data.type !== 'iss:marges') return;
+    document.documentElement.style.setProperty('--marge-haut', e.data.haut + 'px');
+    placerPointDeVue();
+    HOTE.gauche = e.data.gauche; decalerTerre();     // la place de son organigramme, à gauche de la Terre (hote.js)
+  });
   return [];
 }
+function placerPointDeVue(){ $('panel').style.top = ($('hud').getBoundingClientRect().bottom + 8) + 'px'; }
 
 function appliquerZenURL(){
   if(!URL_P.has('zen')) return;

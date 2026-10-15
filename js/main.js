@@ -1,10 +1,11 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
-// Version 1.1.6
+// Version 1.1.9
+// - v1.1.8: hors vue ISS, la lumière du Soleil ne suit plus la nuit ni l'éclipse du satellite.
 // - v1.1.7: cônes d'axe de la Terre (terre.js) visibles en vue Terre seulement.
 // - v1.1.6: en onglet, la Terre à l'écran est envoyée à la page hôte à chaque image (hote.js, 'iss:terre').
 // - v1.1.5: ?provenance= (url.js), appliquée en dernier (après la date, qui remet la vitesse à ×1).
-// - v1.1.4: horizons du Soleil et de la Lune (horizon.js) créés et suivis à chaque image.
+// - v1.1.4: visées « soleil » / « lune » = horizon sous l'astre (horizon.js), repères du joystick seulement.
 // Date: [October 15, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -19,6 +20,7 @@ function redimensionner(){
   renderer.setSize(w, h);
   camExt.aspect = camIss.aspect = w/h;
   camExt.updateProjectionMatrix();
+  decalerTerre();                                  // cadrage décalé pour la page hôte (hote.js) ; 0 : centré
   poseDimensionner();
 }
 
@@ -36,7 +38,8 @@ function majScene(){
   ETAT.eclLune = eclipseLune();
   const nuit = enNuit(OBS.groupe.position);
   ETAT.nuitISS = nuit;
-  SOL.lumiere.intensity = nuit ? 0 : 2.5*(1 - ETAT.ecl);
+  const vueIss = ETAT.vue === 'iss';               // l'appareil est dans le satellite : sa nuit et ses éclipses ; sinon, au Soleil
+  SOL.lumiere.intensity = vueIss && nuit ? 0 : 2.5*(1 - (vueIss ? ETAT.ecl : 0));
   majAtmo();                                       // exposition : luminescence la nuit, invisible au Soleil
   if(ETAT.montrer.trace) majTrace(OBS.groupe.position, ETAT.t);
 
@@ -57,7 +60,7 @@ function majScene(){
   REP.lune.visible = m.reperes && iss;
   SOL.groupe.visible = true;
 
-  majCamExt(); majCamIss(); majCone(); colorerSoleil(); majHorizons();
+  majCamExt(); majCamIss(); majCone(); colorerSoleil();
   // Soleil et voûte à l'infini : posés relativement à l'observateur, quelle que soit la vue (aucune parallaxe).
   // Le Soleil réel est 390 fois plus loin que la Lune ; dessiné à distance fixe du centre, il semblait sur son orbite.
   SOL.groupe.position.copy(ETAT.vue === 'iss' ? OBS.groupe.position : camExt.position).addScaledVector(ETAT.S, CFG.SUN_D);
@@ -112,7 +115,6 @@ function demarrer(){
   creerEblouissement(); creerCouronne();
   creerSats();
   OBS.groupe.add(camIss);
-  creerHorizons();                                  // horizons du Soleil et de la Lune sur le limbe (horizon.js)
   creerCone();
   creerReperes();
   creerGeo();                                       // pays et coordonnées (geo.js)

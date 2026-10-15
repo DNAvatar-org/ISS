@@ -1,8 +1,10 @@
 /* File: css/pesquet.css
    Desc: Mise en page : panneau de réglages, HUD du chrono, canvas plein écran.
-   Version 1.3.0
+   Version 1.3.1
    Date: [October 15, 2026]
-   v1.3.0 : fenêtres Temps et Point de vue repliables (.plie, clic sur leur titre).
+   v1.3.1 : ?provenance=CO2 — Temps sous le titre de la page hôte, Point de vue sous Temps, à droite ; repliées, la
+            largeur du titre, + contre le bord droit.
+   v1.3.0 : fenêtres Temps et Point de vue repliables (.plie : bouton − / + ou titre), sans cadre une fois repliées.
    v1.2.0 : ⓒ (#bCredits, crédits repliés par défaut) ; page en onglet (body.onglet : ni signature ni ⛶).
    Copyright 2026 DNAvatar.org - Arnaud Maignan
    Licensed under Apache License 2.0 with Commons Clause. See LICENSE. */
@@ -421,7 +423,21 @@ body.zen #credits{display:none !important}
 #encCredit{font-size:10.5px;color:var(--dim);margin-top:3px}
 #encCredit[hidden]{display:none}
 
-/* Fenêtres repliées (clic sur leur titre, ui.js ; ?provenance=CO2 les ouvre repliées) : le titre seul */
+/* Fenêtres repliables (bouton − / + ou clic sur leur titre, ui.js ; ?provenance=CO2 les ouvre repliées) : repliées, le
+   titre et son bouton seuls, sans cadre (ni fond, ni bordure, ni flou) */
+.titre-plier{display:flex;align-items:center;gap:6px}
+.b-plier{width:20px;height:20px;padding:0;font-size:14px;line-height:1;border-radius:6px}
+.b-plier::after{content:'−'}
+.plie .b-plier::after{content:'+'}
 #temps .tete-temps h2,#panel .grp:first-child > .tete h2{cursor:pointer}
 #hud.plie > :not(#temps),#hud.plie #temps > :not(.tete-temps),#hud.plie .btns-tete{display:none !important}
 #panel.plie .grp:not(:first-child),#panel.plie .grp:first-child > :not(.tete){display:none !important}
+#hud.plie,#panel.plie{background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+
+/* ?provenance=CO2 (url.js) : Temps sous le titre de la page hôte (--marge-haut, message iss:marges ; 0 avant), Point de
+   vue sous Temps, à droite ; son haut suit le bas de Temps */
+:root{--marge-haut:0px}
+body.provenance-co2 #hud{top:calc(var(--marge-haut) + 12px)}
+body.provenance-co2 #panel{left:auto;right:12px}
+/* repliées : la largeur de leur titre seul, le + contre le bord droit de la page */
+body.provenance-co2 #hud.plie,body.provenance-co2 #panel.plie{width:auto;right:0;padding-right:0}

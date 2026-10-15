@@ -1,6 +1,7 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
 // Version 1.1.6
+// - v1.1.7: cônes d'axe de la Terre (terre.js) visibles en vue Terre seulement.
 // - v1.1.6: en onglet, la Terre à l'écran est envoyée à la page hôte à chaque image (hote.js, 'iss:terre').
 // - v1.1.5: ?provenance= (url.js), appliquée en dernier (après la date, qui remet la vitesse à ×1).
 // - v1.1.4: horizons du Soleil et de la Lune (horizon.js) créés et suivis à chaque image.
@@ -46,6 +47,7 @@ function majScene(){
     sat.anneau.visible = m.orbite;
   }
   TERRE.trace.visible = m.trace;
+  TERRE.cones.visible = ETAT.vue === 'ext' && VUE_EXT.mode === 'terre';   // cônes d'axe : vue Terre
   REP.lignes.forEach(l => l.visible = m.reperes && !iss);
   REP.pastilles.forEach(p => p.visible = m.reperes && iss);
   // taille apparente constante quel que soit le zoom (sinon, à 2° de champ, la pastille déborde de l'écran)

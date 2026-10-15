@@ -1,7 +1,8 @@
 // File: js/terre.js
 // Desc: Terre jour/nuit (geoview.jpg + steamNight.jpg), atmosphère, trace de l'ISS au sol.
-// Version 2.1.0
+// Version 2.2.0
 // Date: [October 15, 2026]
+// - v2.2.0: cônes d'axe aux pôles (comme le globe de l'organigramme du bilan radiatif), vue Terre seulement.
 // - v2.1.0: atmosphère paramétrée (ATM, url.js ?atm=) : pression, hauteur d'échelle, luminescence ; coque à 10 H si plus haute.
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -196,6 +197,19 @@ function creerTerre(tex){
     new THREE.ShaderMaterial({vertexShader:GLSL_TERRE_VS, fragmentShader:GLSL_TERRE_FS,
       uniforms:{uJour:{value:tex.jour}, uNuit:{value:tex.nuit}, uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS}}));
   TERRE.axe.add(TERRE.globe);
+
+  // Cônes d'axe, comme le globe de l'organigramme du bilan radiatif (CO2 organigramme.js) : pointe au pôle, base vers
+  // l'extérieur, cuivre. Enfants du globe : son +Y local est l'axe des pôles (orienterTerre). Vue Terre seulement (main.js).
+  const hauteur = CFG.R*0.12, base = CFG.R*0.03;
+  const matiere = new THREE.MeshStandardMaterial({color:0xb87333, metalness:0.22, roughness:0.72});
+  const sud = new THREE.Mesh(new THREE.ConeGeometry(base, hauteur, 16), matiere);
+  sud.position.y = -(CFG.R + hauteur/2);
+  const nord = new THREE.Mesh(new THREE.ConeGeometry(base, hauteur, 16), matiere);
+  nord.rotation.x = Math.PI;
+  nord.position.y = CFG.R + hauteur/2;
+  TERRE.cones = new THREE.Group();
+  TERRE.cones.add(sud, nord);
+  TERRE.globe.add(TERRE.cones);
 
   // coque jusqu'à 390 km : couche OI 630 nm comprise (250 km ± 4σ) ; l'ISS (340–420 km selon les années) peut être dedans (majAtmo) ;
   // plus haute si l'atmosphère de ?atm= dépasse 10 hauteurs d'échelle (ATM_COQUE, url.js)

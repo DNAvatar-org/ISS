@@ -1,7 +1,8 @@
 // File: js/terre.js
 // Desc: Terre jour/nuit (geoview.jpg + steamNight.jpg), atmosphère, trace de l'ISS au sol.
-// Version 2.0.1
-// Date: [October 08, 2026]
+// Version 2.1.0
+// Date: [October 15, 2026]
+// - v2.1.0: atmosphère paramétrée (ATM, url.js ?atm=) : pression, hauteur d'échelle, luminescence ; coque à 10 H si plus haute.
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -89,7 +90,8 @@ void main(){
    ramené à 0 (calcul fait une fois, valeurs ci-dessous). On obtient de lui-même, vu de côté : rouge-orangé (OH, Na)
    en bas, vert (OI) au-dessus, voile rouge très haut (OI 630).
    JOUR — diffusion Rayleigh, diffusion simple : densité ∝ exp(−h/H), H = 8 km ; épaisseur optique zénithale au niveau de
-   la mer 0,050 / 0,098 / 0,225 (650 / 550 / 450 nm) ; lumière du Soleil atténuée sur son trajet jusqu'au point (Chapman
+   la mer 0,050 / 0,098 / 0,225 (650 / 550 / 450 nm) — pour une autre Terre (?atm=, url.js) : × p (colonne d'air, même
+   composition), hauteur d'échelle H, luminescence × lum ; lumière du Soleil atténuée sur son trajet jusqu'au point (Chapman
    au-dessus de l'horizon, passage rasant sinon, ombre de la Terre) ; atténuation le long de la vue ; phase de Rayleigh.
    Le bleu du limbe, sa base blanche et le rougissement au terminateur en découlent. Luminance rapportée à celle du sol
    (réflectance lambertienne, en E/π) : phase normalisée sur 4π → facteur π/4π = 1/4.
@@ -97,7 +99,7 @@ void main(){
    exposé pour la Terre éclairée ne voit pas la luminescence (~10⁵ fois plus faible) : son exposition baisse (majAtmo). */
 const GLSL_ATMO_FS = `
 uniform vec3 uSun;
-uniform float uR, uExpoJour, uExpoNuit;
+uniform float uR, uExpoJour, uExpoNuit, uP, uH, uLum;
 ${GLSL_ECLIPSE}
 varying vec3 vN; varying vec3 vV; varying vec3 vW;
 // couche gaussienne : intégrale le long du rayon (rayleighs vus) ; k = 2 traversées (rayon libre) ou 1 (il touche la Terre)
@@ -135,11 +137,12 @@ void main(){
             + couche(p, 0.95, 0.040,  60.0, k)*vec3(0.183, 0.0, 2.335)     // O2 Herzberg/Chamberlain
             + couche(p, 0.97, 0.045, 250.0, k)*vec3(0.268, 1.332, 0.0)     // OI 557,7 nm
             + couche(p, 2.50, 0.350,  60.0, k)*vec3(1.482, 0.0, 0.0);      // OI 630,0 nm
+  glow *= uLum;                                                    // ?atm=lum: (1 = aujourd'hui)
 
   // --- jour : diffusion Rayleigh simple le long du rayon (côté caméra → fond)
-  const float H = 0.08;                                            // hauteur d'échelle : 8 km
-  vec3 beta = vec3(0.050, 0.098, 0.225)/H;                         // coefficient au niveau de la mer (par 100 km)
-  float top = uR + 0.8;                                            // au-delà de 80 km : négligeable
+  float H = uH;                                                    // hauteur d'échelle [100 km] (8 km aujourd'hui)
+  vec3 beta = vec3(0.050, 0.098, 0.225)*uP/H;                      // coefficient au niveau de la mer (par 100 km), × pression
+  float top = uR + 10.0*H;                                         // au-delà de 10 hauteurs d'échelle : négligeable
   vec3 diff = vec3(0.0);
   if(p < top){
     float u0 = sqrt(top*top - p*p), u1 = p < uR ? sqrt(uR*uR - p*p) : -u0, du = (u0 - u1)/48.0;
@@ -171,7 +174,7 @@ const _ac = new THREE.Vector3();
 function majAtmo(){
   const m = TERRE.atmo.material;
   m.uniforms.uExpoNuit.value = ATMO_EXPO_NUIT*(ETAT.nuitISS ? 1 : 0.02);
-  const dedans = (ETAT.vue === 'iss' ? camIss : camExt).getWorldPosition(_ac).length() < CFG.R + 3.9;
+  const dedans = (ETAT.vue === 'iss' ? camIss : camExt).getWorldPosition(_ac).length() < CFG.R + ATM_COQUE;
   const side = dedans ? THREE.BackSide : THREE.FrontSide;
   if(m.side !== side){ m.side = side; m.depthTest = !dedans; m.needsUpdate = true; }
 }
@@ -194,11 +197,13 @@ function creerTerre(tex){
       uniforms:{uJour:{value:tex.jour}, uNuit:{value:tex.nuit}, uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS}}));
   TERRE.axe.add(TERRE.globe);
 
-  // coque jusqu'à 390 km : couche OI 630 nm comprise (250 km ± 4σ) ; l'ISS (340–420 km selon les années) peut être dedans (majAtmo)
-  TERRE.atmo = new THREE.Mesh(new THREE.SphereGeometry(CFG.R + 3.9, 128, 64),
+  // coque jusqu'à 390 km : couche OI 630 nm comprise (250 km ± 4σ) ; l'ISS (340–420 km selon les années) peut être dedans (majAtmo) ;
+  // plus haute si l'atmosphère de ?atm= dépasse 10 hauteurs d'échelle (ATM_COQUE, url.js)
+  TERRE.atmo = new THREE.Mesh(new THREE.SphereGeometry(CFG.R + ATM_COQUE, 128, 64),
     new THREE.ShaderMaterial({vertexShader:GLSL_ATMO_VS, fragmentShader:GLSL_ATMO_FS,
       uniforms:{uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS,
-                uR:{value:CFG.R}, uExpoJour:{value:0.25}, uExpoNuit:{value:ATMO_EXPO_NUIT}},
+                uR:{value:CFG.R}, uExpoJour:{value:0.25}, uExpoNuit:{value:ATMO_EXPO_NUIT},
+                uP:{value:ATM.p}, uH:{value:ATM.H/100}, uLum:{value:ATM.lum}},
       transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
   scene.add(TERRE.atmo);
 

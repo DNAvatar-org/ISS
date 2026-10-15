@@ -1,6 +1,7 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.7.0
+// Version 1.8.0
+// - v1.8.0: ?atm=p:…,H:…,lum:… — atmosphère d'une autre Terre (pression, hauteur d'échelle, luminescence) ; p:0 = sans atmosphère.
 // - v1.7.0: ?onglet (page dans l'onglet d'une page hôte), ?jour= / ?nuit= (cartes de la Terre, ex. paléogéographie).
 // Date: [October 15, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
@@ -27,6 +28,10 @@
    jour  : URL de la carte de jour (équirectangulaire, même site ou CORS ouvert), ex. une paléogéographie ; nuit : celle de nuit.
            Une carte de jour sans carte de nuit = pas de lumières des villes. Avec jour=, pas de tuiles de détail au zoom (GIBS,
            Sentinel-2) : elles montrent la Terre d'aujourd'hui.
+   atm   : atmosphère, paires clé:valeur séparées par des virgules (ex. atm=p:0.97,H:8.4,lum:1) — p : pression de surface [atm]
+           (épaisseur optique Rayleigh ∝ colonne d'air, air de composition actuelle), H : hauteur d'échelle [km], lum : luminescence
+           nocturne (airglow) relative à aujourd'hui. Absent : la Terre d'aujourd'hui (p:1, H:8, lum:1). p:0 : pas d'atmosphère.
+           Les couleurs ne se donnent pas : elles sortent de la diffusion Rayleigh (terre.js).
    zen   : présent (sans valeur), démarre en plein écran : fenêtres, crédits et signature masqués, comme le bouton ⛶ ;
            un toucher bref ou le bouton les remet. Pour une page embarquée (iframe), où le vrai plein écran exige un geste.
    Date + heure = un instant précis : la simulation démarre en pause. Les autres paramètres ne mettent pas en pause.
@@ -41,6 +46,18 @@ const NUIT_NOIRE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAA
 const CARTE_JOUR = URL_P.has('jour') ? URL_P.get('jour') : CARTES.jour;
 const CARTE_NUIT = URL_P.has('nuit') ? URL_P.get('nuit') : URL_P.has('jour') ? NUIT_NOIRE : CARTES.nuit;
 const TUILES_ACTIVES = !URL_P.has('jour');         // tuiles de détail = Terre d'aujourd'hui
+// Atmosphère (terre.js, créée avant les autres paramètres : lue ici, au chargement) ; avis rendus par appliquerAtmURL.
+const ATM = {p:1, H:8, lum:1};
+const ATM_AVIS = [];
+if(URL_P.has('atm')){
+  for(const kv of URL_P.get('atm').split(',')){
+    const [k, v] = kv.split(':'), x = parseFloat(v);
+    if(!(k in ATM) || !(x >= 0) || (k === 'H' && !(x > 0))) ATM_AVIS.push('Atmosphère illisible : « ' + kv + ' » dans atm=' + URL_P.get('atm') + '. Format : atm=p:0.97,H:8.4,lum:1 (pression en atm, hauteur d\'échelle en km > 0, luminescence ≥ 0).');
+    else ATM[k] = x;
+  }
+}
+const ATM_COQUE = Math.max(3.9, ATM.H/10);         // rayon de la coque au-dessus du sol [100 km] : 390 km, ou 10 hauteurs d'échelle
+function appliquerAtmURL(){ return ATM_AVIS; }
 const FORMAT_DATE = 'date=JJ.MM.AA (ex. date=13.02.24 pour le 13 février 2024)';
 const FORMAT_HEURE = 'heure=HH:MM:SS en temps universel (ex. heure=04:29:51)';
 

@@ -1,7 +1,8 @@
 /* File: css/pesquet.css
    Desc: Mise en page : panneau de réglages, HUD du chrono, canvas plein écran.
-   Version 1.1.0
-   Date: [October 06, 2026]
+   Version 1.2.0
+   Date: [October 15, 2026]
+   v1.2.0 : ⓒ (#bCredits, crédits repliés par défaut) ; page en onglet (body.onglet : ni signature ni ⛶).
    Copyright 2026 DNAvatar.org - Arnaud Maignan
    Licensed under Apache License 2.0 with Commons Clause. See LICENSE. */
 
@@ -213,6 +214,14 @@ select option{background:#151a24}
 #bZen{position:fixed;right:12px;bottom:12px;z-index:6;width:34px;height:34px;padding:0;font-size:17px;line-height:1;
       border-radius:8px;background:rgba(13,17,26,.6);opacity:.55}
 #bZen:hover{opacity:1}
+/* crédits des images : repliés derrière ⓒ, à gauche de ⛶ ; au-dessus de l'encart des crédits ouvert (z-index), qu'il referme */
+#bCredits{position:fixed;right:52px;bottom:12px;z-index:6;width:34px;height:34px;padding:0;font-size:17px;line-height:1;
+          border-radius:8px;background:rgba(13,17,26,.6);opacity:.55}
+#bCredits:hover{opacity:1}
+body:not(.credits-ouverts) #credits{display:none !important}
+body.zen #bCredits{display:none}
+/* PAGE EN ONGLET (?onglet, url.js) : la page hôte porte le ⛶ (même place) ; pas de signature dans une page déjà signée */
+body.onglet #bZen, body.onglet #pied .signature{display:none !important}
 body.zen #panel, body.zen #hud, body.zen #galerie{display:none !important}
 
 /* Date et position sur l'orbite sur UNE jauge : deux curseurs superposés. Seuls les curseurs captent la souris

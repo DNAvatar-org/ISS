@@ -1,6 +1,6 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
-// Version 1.1.1
+// Version 1.1.2
 // Date: [October 15, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -88,7 +88,7 @@ function boucle(ms){
   }else if(jourDate() < DATES.min){
     ETAT.t += (DATES.min - jourDate())*86400; ETAT.pause = true;
   }
-  if(ms - TUILES.derniere > GIBS.periode){ TUILES.derniere = ms; majTuiles(); }
+  if(TUILES_ACTIVES && ms - TUILES.derniere > GIBS.periode){ TUILES.derniere = ms; majTuiles(); }   // pas avec ?jour= (url.js)
   majBoutonRec(); majVisee(); majSelections(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms); majCalque(); majGeo(); majURL(ms);
 }
 
@@ -125,6 +125,7 @@ function demarrer(){
   avisURL.push(...appliquerMontrerURL());          // ?montrer=orbite,reperes,trace,cone
   avisURL.push(...appliquerLimbeURL());            // ?limbe=x,y;x,y;… : limbe de la prochaine photo (Check Photo)
   avisURL.push(...photoDeLURL());                  // ?photo= : une photo du catalogue (Check Photo)
+  appliquerOngletURL();                            // ?onglet : dans l'onglet d'une page hôte (ni signature ni ⛶)
   appliquerZenURL();                               // ?zen : plein écran au démarrage (fenêtres et signature masquées)
   if(avisURL.length) avis(avisURL);
   addEventListener('resize', redimensionner); redimensionner();
@@ -140,6 +141,6 @@ mgr.onError = url => {
 };
 mgr.onLoad = demarrer;
 const chargeur = new THREE.TextureLoader(mgr);
-TEX.jour = chargeur.load(CARTES.jour);
-TEX.nuit = chargeur.load(CARTES.nuit);
+TEX.jour = chargeur.load(CARTE_JOUR);   // CARTE_JOUR / CARTE_NUIT : url.js (?jour= / ?nuit=)
+TEX.nuit = chargeur.load(CARTE_NUIT);
 TEX.lune = chargeur.load(CARTES.lune);

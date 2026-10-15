@@ -1,6 +1,7 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.6.0
+// Version 1.7.0
+// - v1.7.0: ?onglet (page dans l'onglet d'une page hôte), ?jour= / ?nuit= (cartes de la Terre, ex. paléogéographie).
 // Date: [October 15, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -21,6 +22,11 @@
            3 points x,y séparés par des points-virgules, en pixels de la photo d'origine (ex. limbe=10,960;910,741;
            1630,711;2380,803), ou en fractions de sa largeur et de sa hauteur si toutes les valeurs sont ≤ 1. Un limbe
            tracé à la main s'y écrit (limbe-manuel.js). Il ne vaut que pour une photo : chargée la suivante, il est retiré.
+   onglet: présent (sans valeur), la page est affichée dans l'onglet d'une page hôte (bilan radiatif) : ni signature, ni bouton
+           ⛶ — c'est la page hôte qui porte le sien, au même endroit, et pilote le zen par message (ui.js, 'iss:zen').
+   jour  : URL de la carte de jour (équirectangulaire, même site ou CORS ouvert), ex. une paléogéographie ; nuit : celle de nuit.
+           Une carte de jour sans carte de nuit = pas de lumières des villes. Avec jour=, pas de tuiles de détail au zoom (GIBS,
+           Sentinel-2) : elles montrent la Terre d'aujourd'hui.
    zen   : présent (sans valeur), démarre en plein écran : fenêtres, crédits et signature masqués, comme le bouton ⛶ ;
            un toucher bref ou le bouton les remet. Pour une page embarquée (iframe), où le vrai plein écran exige un geste.
    Date + heure = un instant précis : la simulation démarre en pause. Les autres paramètres ne mettent pas en pause.
@@ -30,6 +36,11 @@
    extérieure, instant au dixième de seconde, cases. Copier l'adresse et la recoller redonne la même vue, en pause à cet
    instant. */
 const URL_P = new URLSearchParams(location.search);
+const NUIT_NOIRE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==';
+// Cartes de la Terre (main.js) : celles de l'URL, sinon geoview / steamNight (cartes-data.js).
+const CARTE_JOUR = URL_P.has('jour') ? URL_P.get('jour') : CARTES.jour;
+const CARTE_NUIT = URL_P.has('nuit') ? URL_P.get('nuit') : URL_P.has('jour') ? NUIT_NOIRE : CARTES.nuit;
+const TUILES_ACTIVES = !URL_P.has('jour');         // tuiles de détail = Terre d'aujourd'hui
 const FORMAT_DATE = 'date=JJ.MM.AA (ex. date=13.02.24 pour le 13 février 2024)';
 const FORMAT_HEURE = 'heure=HH:MM:SS en temps universel (ex. heure=04:29:51)';
 
@@ -119,6 +130,11 @@ function appliquerLimbeURL(){
 
 // ?zen : démarrage en plein écran (body.zen, comme basculerZen de ui.js), sans l'API plein écran du navigateur, qui
 // exige un geste de l'utilisateur.
+// ?onglet : page dans l'onglet d'une page hôte (body.onglet : signature et ⛶ masqués, css « PAGE EN ONGLET »).
+function appliquerOngletURL(){
+  document.body.classList.toggle('onglet', URL_P.has('onglet'));
+}
+
 function appliquerZenURL(){
   if(!URL_P.has('zen')) return;
   document.body.classList.add('zen');

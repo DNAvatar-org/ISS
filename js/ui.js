@@ -1,6 +1,7 @@
 // File: js/ui.js
 // Desc: Commandes : vues, jauge de vitesse (crans logarithmiques), date (donc β), position sur l'orbite, affichages, pose.
-// Version 2.3.0
+// Version 2.4.0
+// - v2.4.0: bouton ⓒ / − : crédits des images repliés par défaut, ouverts au clic.
 // Date: [October 15, 2026]
 // - v2.3.0: page embarquée — la page hôte bascule le zen par message { type: 'iss:zen', zen }.
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
@@ -333,6 +334,7 @@ function creerUI(){
   $('cGeo').onchange = e => { ETAT.montrer.geo = e.target.checked; };           // pays et coordonnées (geo.js)
 
   $('bZen').onclick = basculerZen;
+  $('bCredits').onclick = basculerCredits;
   $('bCapture').onclick = capturer;
   bPose.onclick = () => { poseLancer(); majBoutons(); };
   $('bPoseSave').onclick = enregistrerImage;
@@ -369,6 +371,14 @@ function dessinerPhase(cv, illum, croissante){
   c.ellipse(x0, y0, Math.max(e, 0.01), r, 0, Math.PI/2, -Math.PI/2, (illum > 0.5) !== (s > 0));
   c.fill();
   c.strokeStyle = 'rgba(255,255,255,.25)'; c.lineWidth = 1; c.beginPath(); c.arc(x0, y0, r, 0, 2*Math.PI); c.stroke();
+}
+
+/* Crédits des images : repliés par défaut derrière ⓒ (toujours à l'écran, la mention reste à un clic), − pour les refermer. */
+function basculerCredits(){
+  const ouverts = document.body.classList.toggle('credits-ouverts');
+  $('bCredits').textContent = ouverts ? '−' : 'ⓒ';
+  $('bCredits').title = ouverts ? 'Fermer les crédits' : 'Crédits des images et licences';
+  placerCredits();
 }
 
 /* Un seul bouton : masque les fenêtres ET passe en plein écran (F11), ou revient. Échap (sortie du plein écran par le

@@ -1,7 +1,7 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.5.0
-// Date: [October 08, 2026]
+// Version 1.6.0
+// Date: [October 15, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -21,6 +21,8 @@
            3 points x,y séparés par des points-virgules, en pixels de la photo d'origine (ex. limbe=10,960;910,741;
            1630,711;2380,803), ou en fractions de sa largeur et de sa hauteur si toutes les valeurs sont ≤ 1. Un limbe
            tracé à la main s'y écrit (limbe-manuel.js). Il ne vaut que pour une photo : chargée la suivante, il est retiré.
+   zen   : présent (sans valeur), démarre en plein écran : fenêtres, crédits et signature masqués, comme le bouton ⛶ ;
+           un toucher bref ou le bouton les remet. Pour une page embarquée (iframe), où le vrai plein écran exige un geste.
    Date + heure = un instant précis : la simulation démarre en pause. Les autres paramètres ne mettent pas en pause.
    L'ISS est placée à sa position RÉELLE à cet instant UTC (ephemerides.js) quand une source la donne ; sinon un avis
    prévient qu'elle est simulée.
@@ -113,6 +115,14 @@ function appliquerLimbeURL(){
     return ['Limbe illisible : limbe=' + v + '.', 'Format attendu : au moins 3 points x,y séparés par des points-virgules, en pixels de la photo (ex. limbe=10,960;910,741;1630,711).'];
   LIMBE_URL.pts = pts;
   return [];
+}
+
+// ?zen : démarrage en plein écran (body.zen, comme basculerZen de ui.js), sans l'API plein écran du navigateur, qui
+// exige un geste de l'utilisateur.
+function appliquerZenURL(){
+  if(!URL_P.has('zen')) return;
+  document.body.classList.add('zen');
+  encartZen(true);
 }
 
 // Cases cochées : orbite, repères, trace au sol, cône.

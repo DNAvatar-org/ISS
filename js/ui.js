@@ -1,7 +1,8 @@
 // File: js/ui.js
 // Desc: Commandes : vues, jauge de vitesse (crans logarithmiques), date (donc β), position sur l'orbite, affichages, pose.
-// Version 2.2.0
-// Date: [October 08, 2026]
+// Version 2.3.0
+// Date: [October 15, 2026]
+// - v2.3.0: page embarquée — la page hôte bascule le zen par message { type: 'iss:zen', zen }.
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -379,7 +380,15 @@ function basculerZen(){
   if(zen && document.documentElement.requestFullscreen && !document.fullscreenElement)
     document.documentElement.requestFullscreen().catch(() => {});   // iPhone : pas d'API plein écran, les encarts se masquent seulement
   if(!zen && document.fullscreenElement) document.exitFullscreen();
+  parent.postMessage({type: 'iss:zenEtat', zen: zen}, '*');        // page embarquée : la page hôte suit l'état (seule : à soi-même, ignoré)
 }
+/* Page embarquée (iframe, ex. onglet ISS du bilan radiatif) : la page hôte pose le zen par message { type: 'iss:zen', zen },
+   sans l'API plein écran (qui exige un geste dans la page elle-même). */
+addEventListener('message', e => {
+  if(e.data.type !== 'iss:zen') return;
+  document.body.classList.toggle('zen', e.data.zen);
+  encartZen(e.data.zen);
+});
 document.addEventListener('fullscreenchange', () => {
   if(!document.fullscreenElement && document.body.classList.contains('zen')){ document.body.classList.remove('zen'); encartZen(false); }
 });

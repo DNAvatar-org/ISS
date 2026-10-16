@@ -212,6 +212,10 @@
       "dest": "pages/ISS/js/main.js"
     },
     {
+      "src": "js/points-hote.js",
+      "dest": "pages/ISS/js/points-hote.js"
+    },
+    {
       "src": "js/orbite.js",
       "dest": "pages/ISS/js/orbite.js"
     },

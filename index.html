@@ -31,7 +31,7 @@
 
 <aside id="hud">
   <section id="temps">
-    <div class="tete-temps"><span class="titre-plier"><h2>Temps</h2><button type="button" id="bPlierTemps" class="b-plier" title="Replier / déplier la fenêtre Temps"></button></span><span class="btns-tete">
+    <div class="tete-temps"><span class="titre-plier"><h2>Temps</h2><button type="button" id="bPlierTemps" class="b-plier"></button></span><span class="btns-tete">
       <button type="button" id="bAuj" title="Aujourd'hui : date et heure réelles (UT), vitesse ×1">Auj.</button>
       <button type="button" id="bCheck" title="Retrouver la visée, la focale et l'heure d'une photo prise depuis l'ISS, grâce à ses étoiles (on peut aussi la déposer sur la page)">Check Photo</button>
       <input type="file" id="fPhoto" accept="image/*" hidden></span></div>
@@ -99,7 +99,7 @@
 
 <aside id="panel">
   <section class="grp">
-    <div class="tete"><span class="titre-plier"><h2>Point de vue</h2><button type="button" id="bPlierVue" class="b-plier" title="Replier / déplier la fenêtre Point de vue"></button></span><div id="sats"></div></div>
+    <div class="tete"><span class="titre-plier"><h2>Point de vue</h2><button type="button" id="bPlierVue" class="b-plier"></button></span><div id="sats"></div></div>
     <div class="btns">
       <button data-vue="iss" id="bVueIss" class="on" title="Caméra embarquée ; la flèche indique la visée choisie">ISS → Pôle</button>
       <button data-vue="ext" title="Vue éloignée, centrée sur la Terre">Terre</button>
@@ -166,14 +166,15 @@
 <script src="js/tle-data.js?v=20261016b"></script>
 <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
 <script src="js/ephemerides.js?v=20261016b"></script>
-<script src="js/scene.js?v=20261016b"></script>
+<script src="js/scene.js?v=20261017b"></script>
 <script src="js/etoiles-data.js?v=20261016b"></script>
-<script src="js/ciel.js?v=20261016b"></script>
+<script src="js/ciel.js?v=20261016c"></script>
 <script src="js/soleil.js?v=20261016b"></script>
 <script src="js/eblouissement.js?v=20261016b"></script>
 <script src="js/couronne.js?v=20261016b"></script>
 <script src="js/lune.js?v=20261016b"></script>
 <script src="js/terre.js?v=20261016b"></script>
+<script src="js/atm-teinte.js?v=20261017a"></script>
 <script src="js/tuiles-rendu.js?v=20261016b"></script>
 <script src="js/tuiles.js?v=20261016b"></script>
 <script src="js/satellites.js?v=20261016b"></script>
@@ -204,7 +205,7 @@
 <script src="js/solveur/catalogue.js?v=20261016b"></script>
 <script src="js/solveur/limbe-manuel.js?v=20261016b"></script>
 <script src="js/solveur/ui-solveur.js?v=20261016b"></script>
-<script src="js/points-hote.js?v=20261016b"></script>
+<script src="js/points-hote.js?v=20261017b"></script>
 <script src="js/main.js?v=20261016b"></script>
 </body>
 </html>

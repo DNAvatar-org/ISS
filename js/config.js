@@ -1,6 +1,7 @@
 // File: js/config.js
 // Desc: Constantes physiques (échelle : 1 unité = 100 km) et état de la simulation (ETAT).
-// Version 1.0.1
+// Version 1.0.2
+// - v1.0.2: ETAT.zoomEnchaine (mode bilan radiatif : le zoom passe de la vue Terre à la caméra de l'ISS).
 // Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -35,5 +36,6 @@ const ETAT = {
   S: new THREE.Vector3(1,0,0), beta: 0, thetaSol: 0,   // Soleil, calculés par calculerSoleil()
   M: new THREE.Vector3(0,0,1), Mdist: 3844, Mnord: new THREE.Vector3(0,1,0), vers: null, gmst: 0, rSol: 0.26656*DEG, nuitISS: false, ecl: 0, eclLune: {ombre:-1, penombre:-1}, lune: {illum:0, croissante:true},   // Lune idem
   vue: 'iss', preset: 'pole',   // au départ : dans l'ISS, visée « pôle » (la photo)
-  montrer: {orbite:false, reperes:false, trace:false, cone:false, geo:false}
+  montrer: {orbite:false, reperes:false, trace:false, cone:false, geo:false},
+  zoomEnchaine: false       // ?provenance=CO2 : au plus proche de la vue Terre, la caméra de l'ISS ; au plus large de l'ISS, la vue Terre
 };

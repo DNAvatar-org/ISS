@@ -1,6 +1,12 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.10.0
+// Version 1.12.3
+// - v1.12.3: Temps contre la marge de la page hôte, Point de vue 10 px sous lui : repliés, le pas de la pile de titres de l'hôte.
+// - v1.12.2: Point de vue posé depuis la marge de la page hôte (Temps et lui glissent quand elle change).
+// - v1.12.1: iss:marges gauche = abscisse du centre de la Terre (hote.js xTerre).
+// - v1.12.0: ?pays=false ; ?provenance=CO2 : zoom enchaîné, satellites visibles dès que Point de vue est déplié ; montrer=reperes retiré.
+// - v1.11.0: ?notIR= — côté nuit lumineux (lave : la carte de jour à notIR % la nuit) ; cartes, atmosphère et notIR
+//   changeables par la page hôte sans rechargement (message iss:cartes, terre.js poserCartes).
 // - v1.9.0: ?provenance=CO2 — début du mode « bilan radiatif » (vitesse ×1000, fenêtres repliées, pas de Check Photo).
 // - v1.8.1: vue=soleil / vue=lune = l'horizon sous l'astre, sur le limbe (horizon.js).
 // - v1.8.0: ?atm=p:…,H:…,lum:… — atmosphère d'une autre Terre (pression, hauteur d'échelle, luminescence) ; p:0 = sans atmosphère.
@@ -20,7 +26,7 @@
    focale: focale en mm, équivalent 24×36 (ex. 58 ; « 58mm » accepté). Absent : celle de la vue choisie.
    date  : JJ.MM.AA ou JJ.MM.AAAA (format français ; séparateurs . / ou -), entre 2000 et 2035.
    heure : HH:MM, HH:MM:SS ou HH:MM:SS.s, temps universel (UT, comme l'affichage). Sans date : ignorée, avec un avis.
-   montrer : orbite, reperes, trace, cone, geo (pays et coordonnées), séparés par des virgules : cases cochées.
+   montrer : orbite, trace, cone, geo (pays et coordonnées), séparés par des virgules : cases cochées.
    photo : une photo du catalogue de Check Photo (nom du fichier sans .jpg, cf. catalogue-data.js), chargée au démarrage.
    limbe : bord de l'atmosphère pour la prochaine photo de Check Photo, au lieu de la détection automatique : au moins
            3 points x,y séparés par des points-virgules, en pixels de la photo d'origine (ex. limbe=10,960;910,741;
@@ -36,11 +42,13 @@
            nocturne (airglow) relative à aujourd'hui. Absent : la Terre d'aujourd'hui (p:1, H:8, lum:1). p:0 : pas d'atmosphère.
            Les couleurs ne se donnent pas : elles sortent de la diffusion Rayleigh (terre.js).
    provenance : qui ouvre la page. provenance=CO2 (bilan radiatif, onglet ISS) : début d'un mode « bilan radiatif » —
-           vitesse ×1000, Temps et Point de vue repliés (+ ou leur titre les rouvre), sans choix de satellite, Temps
+           vitesse ×1000, Temps et Point de vue repliés (+ ou leur titre les rouvre ; dépliée, Point de vue montre les
+           satellites), zoom enchaîné (vue Terre ↔ caméra de l'ISS sur l'horizon sous le Soleil), Temps
            sous le titre de la page hôte (message iss:marges { haut, gauche } en px de cette page ; gauche : place laissée à
            gauche de la Terre, qui se décale vers la droite, hote.js), Point de vue sous Temps, pas de
            Check Photo, vue Terre éclairée de biais (un bord de nuit). Repliées, les fenêtres n'ont que la largeur de leur
            titre, + contre le bord droit.
+   pays  : false (true par défaut) : pas de pays ni de case « Pays et coordonnées » (une Terre d'avant les frontières).
    zen   : présent (sans valeur), démarre en plein écran : fenêtres, crédits et signature masqués, comme le bouton ⛶ ;
            un toucher bref ou le bouton les remet. Pour une page embarquée (iframe), où le vrai plein écran exige un geste.
    Date + heure = un instant précis : la simulation démarre en pause. Les autres paramètres ne mettent pas en pause.
@@ -54,7 +62,7 @@ const NUIT_NOIRE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAA
 // Cartes de la Terre (main.js) : celles de l'URL, sinon geoview / steamNight (cartes-data.js).
 const CARTE_JOUR = URL_P.has('jour') ? URL_P.get('jour') : CARTES.jour;
 const CARTE_NUIT = URL_P.has('nuit') ? URL_P.get('nuit') : URL_P.has('jour') ? NUIT_NOIRE : CARTES.nuit;
-const TUILES_ACTIVES = !URL_P.has('jour');         // tuiles de détail = Terre d'aujourd'hui
+let TUILES_ACTIVES = !URL_P.has('jour');           // tuiles de détail = Terre d'aujourd'hui (iss:cartes peut le changer)
 // Atmosphère (terre.js, créée avant les autres paramètres : lue ici, au chargement) ; avis rendus par appliquerAtmURL.
 const ATM = {p:1, H:8, lum:1};
 const ATM_AVIS = [];
@@ -65,8 +73,24 @@ if(URL_P.has('atm')){
     else ATM[k] = x;
   }
 }
-const ATM_COQUE = Math.max(3.9, ATM.H/10);         // rayon de la coque au-dessus du sol [100 km] : 390 km, ou 10 hauteurs d'échelle
+let ATM_COQUE = Math.max(3.9, ATM.H/10);         // rayon de la coque au-dessus du sol [100 km] : 390 km, ou 10 hauteurs d'échelle
 function appliquerAtmURL(){ return ATM_AVIS; }
+// ?pays=false : pas de pays (Terre d'avant les frontières, ex. avant 1750) — la case « Pays et coordonnées » disparaît (geo.js).
+const PAYS_URL = URL_P.get('pays');
+function appliquerPaysURL(){
+  if(PAYS_URL === null) return [];
+  if(PAYS_URL !== 'true' && PAYS_URL !== 'false') return ['Pays illisible : pays=' + PAYS_URL + ' (true ou false).'];
+  poserPays(PAYS_URL === 'true');
+  return [];
+}
+// Côté nuit LUMINEUX [0–1] : une surface qui brille d'elle-même (lave de l'Hadéen) montre sa carte de jour la nuit, à notIR % ;
+// 0 par défaut (la nuit n'a que les lumières de la carte de nuit). Avis rendus avec ceux de ?atm=.
+let NOT_IR = 0;
+if(URL_P.has('notIR')){
+  const x = parseFloat(URL_P.get('notIR'));
+  if(x >= 0 && x <= 100) NOT_IR = x/100;
+  else ATM_AVIS.push('Côté nuit illisible : notIR=' + URL_P.get('notIR') + ' (pourcentage de 0 à 100, ex. notIR=70).');
+}
 const FORMAT_DATE = 'date=JJ.MM.AA (ex. date=13.02.24 pour le 13 février 2024)';
 const FORMAT_HEURE = 'heure=HH:MM:SS en temps universel (ex. heure=04:29:51)';
 
@@ -169,7 +193,7 @@ function appliquerProvenanceURL(){
   $('hud').classList.add('plie'); $('panel').classList.add('plie');
   $('bCheck').hidden = true;
   vueEclaireeDeBiais();                            // le Soleil un peu derrière la Terre : un bord de nuit (cameras.js)
-  $('sats').hidden = true;                          // le satellite est choisi par la page hôte (?sat=)
+  ETAT.zoomEnchaine = true;                         // le zoom passe de la vue Terre à la caméra de l'ISS et retour (entrees.js)
   // Temps sous le titre de la page hôte (message iss:marges), Point de vue sous Temps, à droite (à gauche, la page hôte pose
   // son organigramme) : Point de vue suit le bas de Temps, replié ou déplié.
   document.body.classList.add('provenance-co2');
@@ -177,12 +201,17 @@ function appliquerProvenanceURL(){
   addEventListener('message', e => {
     if(e.data.type !== 'iss:marges') return;
     document.documentElement.style.setProperty('--marge-haut', e.data.haut + 'px');
+    MARGE_HAUT = e.data.haut;
     placerPointDeVue();
-    HOTE.gauche = e.data.gauche; decalerTerre();     // la place de son organigramme, à gauche de la Terre (hote.js)
+    HOTE.xTerre = () => e.data.gauche; decalerTerre();   // la place de son organigramme, à gauche de la Terre (hote.js)
   });
   return [];
 }
-function placerPointDeVue(){ $('panel').style.top = ($('hud').getBoundingClientRect().bottom + 8) + 'px'; }
+/* Point de vue 10 px sous Temps : son haut d'arrivée (la marge de la page hôte, css provenance-co2) plus sa hauteur — pas
+   son bas mesuré, qui glisse encore (transition) quand la marge change. Repliés (titre de 20 px), un titre tous les 30 px,
+   le pas de la pile de l'hôte (CO2 fenetres.js PAS_TITRE). */
+let MARGE_HAUT = 0;
+function placerPointDeVue(){ $('panel').style.top = (MARGE_HAUT + $('hud').offsetHeight + 10) + 'px'; }
 
 function appliquerZenURL(){
   if(!URL_P.has('zen')) return;
@@ -191,7 +220,7 @@ function appliquerZenURL(){
 }
 
 // Cases cochées : orbite, repères, trace au sol, cône.
-const CASES_URL = {orbite:'cOrbite', reperes:'cReperes', trace:'cTrace', cone:'cCone', geo:'cGeo'};
+const CASES_URL = {orbite:'cOrbite', trace:'cTrace', cone:'cCone', geo:'cGeo'};
 function appliquerMontrerURL(){
   const v = URL_P.get('montrer');
   if(v === null) return [];

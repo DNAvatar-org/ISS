@@ -1,6 +1,8 @@
 // File: js/entrees.js
 // Desc: Souris, pavé tactile et écran tactile : orbite autour de la Terre, visée et focale de la caméra embarquée.
-// Version 1.1.2
+// Version 1.3.0
+// - v1.3.0: zoom enchaîné vers le large : vue Terre au plus loin → vue Terre–Lune ; et retour.
+// - v1.2.0: zoom enchaîné (ETAT.zoomEnchaine) : vue Terre au plus proche → caméra de l'ISS, horizon sous le Soleil ; et retour.
 // Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -19,11 +21,25 @@ const TAP = {id:null, x:0, y:0, t:0, ok:false};  // toucher bref en cours
 let pince = 0;                                   // écart entre deux doigts à la trame précédente
 
 // Zoom multiplicatif : f > 1 éloigne (vue Terre) ou élargit le champ (vue ISS).
+const R_EXT_MIN = CFG.R*1.2;                    // vue Terre au plus proche
+const R_EXT_MAX = 3000;                          // vue Terre au plus loin
+const R_LUNE_MIN = 1500;                         // vue Terre–Lune au plus proche
 function zoomer(f){
   poseInterrompre();
   if(ETAT.vue === 'ext'){
     const lune = VUE_EXT.mode === 'lune';       // en vue Terre–Lune on reste dans la voûte (rayon 9 000)
-    VUE_EXT.r = Math.max(lune ? 1500 : CFG.R*1.2, Math.min(lune ? 6000 : 3000, VUE_EXT.r*f));
+    // Zoom enchaîné (?provenance=CO2) : plus près que le plus proche de la vue Terre, la caméra de l'ISS, au champ le plus large,
+    // sur l'horizon sous le Soleil.
+    if(ETAT.zoomEnchaine && !lune && VUE_EXT.r*f < R_EXT_MIN){
+      poseEffacer(); ETAT.vue = 'iss'; choisirPreset('soleil'); VUE_ISS.fov = FOV_MAX; majBoutons(); return;
+    }
+    // Et vers le large : plus loin que le plus loin de la vue Terre, la vue Terre–Lune au plus proche ; et retour.
+    if(ETAT.zoomEnchaine && !lune && VUE_EXT.r*f > R_EXT_MAX){ poseEffacer(); vueTerreLune(); VUE_EXT.r = R_LUNE_MIN; majBoutons(); return; }
+    if(ETAT.zoomEnchaine && lune && VUE_EXT.r*f < R_LUNE_MIN){ poseEffacer(); VUE_EXT.mode = 'terre'; VUE_EXT.r = R_EXT_MAX; majBoutons(); return; }
+    VUE_EXT.r = Math.max(lune ? R_LUNE_MIN : R_EXT_MIN, Math.min(lune ? 6000 : R_EXT_MAX, VUE_EXT.r*f));
+  }
+  else if(ETAT.zoomEnchaine && VUE_ISS.fov*f > FOV_MAX){   // plus large que l'ISS : la vue Terre, au plus proche
+    poseEffacer(); vueTerre(); VUE_EXT.r = R_EXT_MIN; majBoutons();
   }
   else zoomerFocale(f);
 }

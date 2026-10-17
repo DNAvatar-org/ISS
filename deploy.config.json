@@ -266,6 +266,10 @@
     {
       "src": "js/ui.js",
       "dest": "pages/ISS/js/ui.js"
+    },
+    {
+      "src": "js/atm-teinte.js",
+      "dest": "pages/ISS/js/atm-teinte.js"
     }
   ]
 }

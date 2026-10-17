@@ -1,6 +1,7 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
-// Version 1.1.9
+// Version 1.1.10
+// - v1.1.10: ?pays= (appliquerPaysURL) ; niveau de zoom à chaque trame (majZoom).
 // - v1.1.8: hors vue ISS, la lumière du Soleil ne suit plus la nuit ni l'éclipse du satellite.
 // - v1.1.7: cônes d'axe de la Terre (terre.js) visibles en vue Terre seulement.
 // - v1.1.6: en onglet, la Terre à l'écran est envoyée à la page hôte à chaque image (hote.js, 'iss:terre').
@@ -20,7 +21,7 @@ function redimensionner(){
   renderer.setSize(w, h);
   camExt.aspect = camIss.aspect = w/h;
   camExt.updateProjectionMatrix();
-  decalerTerre();                                  // cadrage décalé pour la page hôte (hote.js) ; 0 : centré
+  decalerTerre();                                  // cadrage décalé pour la page hôte (hote.js) ; sinon centré
   poseDimensionner();
 }
 
@@ -97,7 +98,7 @@ function boucle(ms){
     ETAT.t += (DATES.min - jourDate())*86400; ETAT.pause = true;
   }
   if(TUILES_ACTIVES && ms - TUILES.derniere > GIBS.periode){ TUILES.derniere = ms; majTuiles(); }   // pas avec ?jour= (url.js)
-  majBoutonRec(); majVisee(); majSelections(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms); majCalque(); majGeo(); majURL(ms); majHote();
+  majBoutonRec(); majVisee(); majSelections(); majCurseurTheta(); majCurseurFocale(); majDateUI(); majJaugeVitesse(); dessinerJoystick(ms); majCalque(); majGeo(); majURL(ms); majHote(); majZoom();
 }
 
 function demarrer(){
@@ -135,6 +136,7 @@ function demarrer(){
   avisURL.push(...photoDeLURL());                  // ?photo= : une photo du catalogue (Check Photo)
   avisURL.push(...appliquerAtmURL());              // ?atm= : lue au chargement (url.js), avis ici
   appliquerOngletURL();                            // ?onglet : dans l'onglet d'une page hôte (ni signature ni ⛶)
+  avisURL.push(...appliquerPaysURL());             // ?pays=false : une Terre sans frontières (geo.js)
   appliquerZenURL();                               // ?zen : plein écran au démarrage (fenêtres et signature masquées)
   avisURL.push(...appliquerProvenanceURL());       // ?provenance=CO2 : début du mode bilan radiatif
   if(avisURL.length) avis(avisURL);

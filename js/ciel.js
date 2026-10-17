@@ -57,6 +57,7 @@ const teinteK = K => TEINTES[K > 20000 ? 0 : K > 10000 ? 1 : K > 7500 ? 2 : K > 
 
 function creerCiel(){
   CIEL.groupe = new THREE.Group();
+  CIEL.groupe.visible = !FOND_TRANSPARENT;          // ?fond=transparent (scene.js) : pas de ciel, le décor de l'hôte
   scene.add(CIEL.groupe);
   CIEL.equat = new THREE.Group();                  // repère J2000, orienté à chaque trame (majCiel)
   CIEL.groupe.add(CIEL.equat);

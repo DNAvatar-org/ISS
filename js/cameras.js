@@ -1,6 +1,6 @@
 // File: js/cameras.js
 // Desc: Deux caméras : orbitale autour de la Terre (vue éloignée) et embarquée dans l'ISS (visée cap / site).
-// Version 2.2.0
+// Version 2.3.0
 // - v2.2.0: vueEclaireeDeBiais (?provenance=CO2) : le Soleil à 75° de l'axe de visée, un bord de nuit visible.
 // - v2.1.0: suivis « soleil » et « lune » = l'horizon sous l'astre (horizon.js) : son cap, le site du limbe.
 // Date: [October 15, 2026]
@@ -87,14 +87,17 @@ function vueTerreLune(){
   VUE_EXT.th = Math.atan2(_o.x, _o.z); VUE_EXT.ph = Math.asin(_o.y);
 }
 /* Vue Terre éclairée de biais (?provenance=CO2) : la caméra extérieure placée pour que le Soleil (ETAT.S) soit à 75° de son
-   axe de visée — un peu derrière la Terre : environ 60 % du disque éclairé, un bord de nuit visible. La caméra reste à 20°
-   au-dessus du plan de l'orbite (pas de vue d'un pôle) ; son azimut est cherché au degré. La Terre reste libre à la souris. */
+   axe de visée — un peu derrière la Terre : environ 60 % du disque éclairé, un bord de nuit visible — et à GAUCHE de l'écran
+   (là où la page hôte pose son Soleil et son organigramme). La caméra reste à 20° au-dessus du plan de l'orbite (pas de vue
+   d'un pôle) ; son azimut est cherché au degré, parmi ceux qui ont le Soleil à gauche : S · droite < 0, la droite de la
+   caméra étant Y × z (z : direction de la caméra depuis la Terre). La Terre reste libre à la souris. */
 function vueEclaireeDeBiais(){
   const angle = 75*DEG, ph = 20*DEG, z = new THREE.Vector3();
   let ecartMin = Infinity;
   for(let th = 0; th < 360; th++){
     z.set(Math.cos(ph)*Math.sin(th*DEG), Math.sin(ph), Math.cos(ph)*Math.cos(th*DEG));
-    const ecart = Math.abs(Math.acos(ETAT.S.dot(z)) - angle);
+    const aGauche = ETAT.S.x*z.z - ETAT.S.z*z.x < 0;   // S · (Y × z)
+    const ecart = aGauche ? Math.abs(Math.acos(ETAT.S.dot(z)) - angle) : Infinity;
     if(ecart < ecartMin){ ecartMin = ecart; VUE_EXT.th = th*DEG; VUE_EXT.ph = ph; }
   }
 }

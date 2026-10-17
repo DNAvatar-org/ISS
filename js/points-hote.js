@@ -2,22 +2,45 @@
 // Desc: Points posés sur la Terre par la page hôte (message iss:points) — ex. les créatures de DNA Tamagoshi
 //       (site/creatures/tamagoshi, « recherche partenaire ») : un disque de couleur par point, de taille fixe à l'écran,
 //       enfant du globe (il tourne avec lui), caché par la Terre de l'autre côté ; son texte au survol ; survol et clic
-//       renvoyés à la page hôte (iss:pointSurvol, iss:pointClic) qui peut montrer davantage.
-// Version 1.1.0
+//       renvoyés à la page hôte (iss:pointSurvol, iss:pointClic) qui peut montrer davantage ; un anneau autour des points
+//       d'un groupe, à distance, s'il le demande ; une image à la place du disque, s'il la donne.
+// Version 1.3.0
+// - v1.3.0: image facultative par groupe (à la place du disque, teintée par la couleur de chaque point), dessinée comme
+//           les anneaux : sans test de profondeur, seulement du côté visible.
+// - v1.2.0: anneau facultatif par groupe (à distance du point : un vide entre les deux).
 // - v1.1.0: id des points ; survol et clic renvoyés à la page hôte ; texte facultatif.
 // Date: [October 16, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.txt.
 
-/* Message { type: 'iss:points', groupes: [{ taille, points: [{ id, lat, lon, couleur, texte }] }] } — remplace les précédents.
-   taille : diamètre en px CSS ; couleur : '#rrggbb' ; lat / lon en degrés ; texte (facultatif) : montré au survol
+/* Message { type: 'iss:points', groupes: [{ taille, anneau, image, points: [{ id, lat, lon, couleur, texte }] }] } — remplace
+   les précédents. taille : diamètre en px CSS ; anneau (facultatif) : true (couleur de chaque point) ou '#rrggbb' — un
+   cercle autour de chaque point du groupe, de diamètre ANNEAU × taille, séparé du point par un vide ; image (facultative) :
+   URL (data: comprise) d'une image dessinée à la place du disque, multipliée par la couleur de chaque point (une image
+   grise ou blanche prend la couleur du point) ;
+   couleur : '#rrggbb' ; lat / lon en degrés ; texte (facultatif) : montré au survol
    (#pointsInfo) ; id (facultatif) : renvoyé à la page hôte —
      { type: 'iss:pointSurvol', id, x, y } quand le point survolé change (id null : aucun ; x, y : pointeur en px CSS de
        cette page, dont l'iframe occupe l'écran de l'hôte),
      { type: 'iss:pointClic', id, lat, lon, x, y } au clic bref (sans glisser : glisser fait tourner la Terre).
    Un THREE.Points par groupe (une taille par groupe), posé juste au-dessus du sol (R × 1,003). Survol : le point visible
    le plus proche du pointeur, à moins de sa taille, dans la caméra qui dessine (ISS ou vue extérieure). */
-const PTS_HOTE = {objets:[], liste:[], info:null, disque:null};
+const PTS_HOTE = {objets:[], liste:[], info:null, disque:null, cercle:null, images:{}};
+/** Diamètre de l'anneau, en tailles de point */
+const ANNEAU = 2.4;
+
+/* Cercle blanc (texture des anneaux) : trait près du bord, centre vide — le vide sépare l'anneau du point. */
+function cerclePointsHote(){
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.strokeStyle = '#fff';
+  g.lineWidth = 5;
+  g.beginPath();
+  g.arc(32, 32, 27, 0, 2*Math.PI);
+  g.stroke();
+  return new THREE.CanvasTexture(c);
+}
 
 /* Disque blanc doux (texture des points) : les points sont des carrés sinon. */
 function disquePointsHote(){
@@ -30,11 +53,18 @@ function disquePointsHote(){
   return new THREE.CanvasTexture(c);
 }
 
+/* Texture d'une image de groupe, chargée une fois par URL (gardée : la page hôte renvoie les mêmes à chaque message) */
+function imagePointsHote(url){
+  if(PTS_HOTE.images[url] === undefined) PTS_HOTE.images[url] = new THREE.TextureLoader().load(url);
+  return PTS_HOTE.images[url];
+}
+
 function poserPointsHote(groupes){
-  PTS_HOTE.objets.forEach(o => { TERRE.globe.remove(o); o.geometry.dispose(); o.material.dispose(); });
+  PTS_HOTE.objets.forEach(o => { TERRE.globe.remove(o); o.geometry.dispose(); o.material.dispose(); });   // anneaux compris (textures gardées)
   PTS_HOTE.objets = [];
   PTS_HOTE.liste = [];
   if(PTS_HOTE.disque === null) PTS_HOTE.disque = disquePointsHote();
+  if(PTS_HOTE.cercle === null) PTS_HOTE.cercle = cerclePointsHote();
   const c = new THREE.Color();
   for(const gr of groupes){
     const n = gr.points.length, pos = new Float32Array(3*n), coul = new Float32Array(3*n), v = new THREE.Vector3();
@@ -43,6 +73,7 @@ function poserPointsHote(groupes){
       c.set(p.couleur).toArray(coul, 3*i);
       PTS_HOTE.liste.push({v:v.clone(), taille:gr.taille, texte:p.texte, id:p.id, lat:p.lat, lon:p.lon});
     });
+    if(gr.image){ poserImages(gr, pos, coul); continue; }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setAttribute('color', new THREE.BufferAttribute(coul, 3));
@@ -50,7 +81,59 @@ function poserPointsHote(groupes){
       vertexColors:true, map:PTS_HOTE.disque, transparent:true, alphaTest:0.3}));
     TERRE.globe.add(o);
     PTS_HOTE.objets.push(o);
+    if(gr.anneau) poserAnneaux(gr, pos, coul);
   }
+}
+
+/* Images d'un groupe : grandes, le sol bombé les rognait près du bord de la Terre — dessinées comme les anneaux (sans
+   test de profondeur, seulement du côté visible), sur les points et sous les anneaux. */
+function poserImages(gr, pos, coul){
+  const a = pointsFaceVisible(pos, coul, new THREE.PointsMaterial({size:gr.taille*renderer.getPixelRatio(),
+    sizeAttenuation:false, vertexColors:true, map:imagePointsHote(gr.image), transparent:true, alphaTest:0.1,
+    depthTest:false, depthWrite:false}));
+  a.renderOrder = 5;
+  TERRE.globe.add(a);
+  PTS_HOTE.objets.push(a);
+}
+
+/* Anneaux d'un groupe : sprite cercle ANNEAU fois plus grand, sans test de profondeur (le sol bombé entre le point et
+   l'œil le rognait), donc à chaque image seulement ceux du côté visible de la Terre (onBeforeRender : copiés en tête,
+   setDrawRange). */
+const _phC = new THREE.Vector3();
+function poserAnneaux(gr, pos, coul){
+  const uni = typeof gr.anneau === 'string';
+  const a = pointsFaceVisible(pos, coul, new THREE.PointsMaterial({size:gr.taille*ANNEAU*renderer.getPixelRatio(),
+    sizeAttenuation:false, vertexColors:!uni, color:uni ? gr.anneau : 0xffffff, map:PTS_HOTE.cercle, transparent:true,
+    alphaTest:0.3, depthTest:false, depthWrite:false}));
+  a.renderOrder = 10;
+  TERRE.globe.add(a);
+  PTS_HOTE.objets.push(a);
+}
+/* THREE.Points des positions pos (couleurs coul) dont, à chaque image, seuls ceux du côté visible de la Terre sont dessinés
+   (copiés en tête, setDrawRange) : pour un matériau sans test de profondeur. */
+function pointsFaceVisible(pos, coul, mat){
+  const n = pos.length/3;
+  const g = new THREE.BufferGeometry(), vp = new Float32Array(pos.length), vc = new Float32Array(coul.length);
+  g.setAttribute('position', new THREE.BufferAttribute(vp, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(vc, 3));
+  const a = new THREE.Points(g, mat);
+  a.frustumCulled = false;
+  a.onBeforeRender = (r, sc, cam) => {
+    cam.getWorldPosition(_phC);
+    TERRE.globe.worldToLocal(_phC);
+    let k = 0;
+    for(let i = 0; i < n; i++){
+      const x = pos[3*i], y = pos[3*i + 1], z = pos[3*i + 2];
+      if((_phC.x - x)*x + (_phC.y - y)*y + (_phC.z - z)*z <= 0) continue;   // de l'autre côté de la Terre
+      vp[3*k] = x; vp[3*k + 1] = y; vp[3*k + 2] = z;
+      vc[3*k] = coul[3*i]; vc[3*k + 1] = coul[3*i + 1]; vc[3*k + 2] = coul[3*i + 2];
+      k++;
+    }
+    g.attributes.position.needsUpdate = true;
+    g.attributes.color.needsUpdate = true;
+    g.setDrawRange(0, k);
+  };
+  return a;
 }
 
 /* Survol : projection de chaque point (repère du globe → monde → écran) ; caché si la Terre est entre lui et la caméra

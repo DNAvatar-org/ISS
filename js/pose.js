@@ -1,6 +1,7 @@
 // File: js/pose.js
 // Desc: Enregistrement de la nuit : une image de 30 s par tranche de 30 s (galerie) et leur empilement « plus clair ».
-// Version 1.1.1
+// Version 1.1.2
+// - v1.1.2: titre de la capture dans #titrePoseTexte (le niveau de zoom #oZoom partage le titre).
 // Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -166,7 +167,7 @@ function majBoutonRec(){
   const n = POSE.actif ? String(POSE.finies) : '';                         // nombre de photos terminées : pastille dans le coin (CSS)
   if(bPose.dataset.n !== n) bPose.dataset.n = n;
   const titre = pose ? 'Capture · pose 30 s' : 'Capture';
-  if($('titrePose').textContent !== titre) $('titrePose').textContent = titre;
+  if($('titrePoseTexte').textContent !== titre) $('titrePoseTexte').textContent = titre;   // le zoom (#oZoom) reste à côté
 }
 
 // Tout zoom ou clic dans la vue efface l'empilement (et arrête une prise) : SAVE avant pour le garder.

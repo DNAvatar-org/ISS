@@ -1,6 +1,7 @@
 // File: js/geo.js
 // Desc: « Pays et coordonnées » : étiquettes en pancarte (océans, pays, villes), quadrillage lat/lon adapté au zoom, coordonnées du centre et du pointeur.
-// Version 1.1.0
+// Version 1.2.0
+// - v1.2.0: poserPays — sans pays (Terre d'avant les frontières), la case disparaît et rien n'est dessiné.
 // Date: [October 08, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.txt.
@@ -137,4 +138,12 @@ function majGeo(){
     }
     if(vu !== e.vu){ e.d.hidden = !vu; e.vu = vu; }
   }
+}
+
+/* Pays oui / non (?pays=, message iss:cartes) : non = une Terre d'avant les frontières — la case « Pays et coordonnées »
+   disparaît, décochée, et plus rien n'est dessiné. */
+function poserPays(oui){
+  $('lGeo').hidden = !oui;
+  if(oui) return;
+  $('cGeo').checked = false; ETAT.montrer.geo = false;
 }

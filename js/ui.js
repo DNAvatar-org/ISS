@@ -1,6 +1,7 @@
 // File: js/ui.js
 // Desc: Commandes : vues, jauge de vitesse (crans logarithmiques), date (donc β), position sur l'orbite, affichages, pose.
-// Version 2.6.0
+// Version 2.7.0
+// - v2.7.0: case « Axes et pôles » retirée ; niveau de zoom à droite du titre Capture (majZoom) ; satellites visibles Point de vue déplié.
 // - v2.6.0: fenêtres Temps et Point de vue repliables : bouton − / + (ou clic sur le titre) ; repliées, le titre seul, sans cadre.
 // - v2.5.0: changer de point de vue décoche toutes les cases d'affichage (la vue Terre ne les coche plus).
 // - v2.4.0: bouton ⓒ / − : crédits des images repliés par défaut, ouverts au clic.
@@ -47,7 +48,7 @@ function majAffichage(v){
   const chargement = vuePrec === null;
   vuePrec = v;
   if(chargement) return;
-  for(const [id, k] of [['cOrbite','orbite'], ['cReperes','reperes'], ['cTrace','trace'], ['cCone','cone']]){
+  for(const [id, k] of [['cOrbite','orbite'], ['cTrace','trace'], ['cCone','cone']]){
     $(id).checked = false; ETAT.montrer[k] = false;
   }
 }
@@ -339,7 +340,6 @@ function creerUI(){
   };
 
   $('cOrbite').onchange = e => { poseInterrompre(); ETAT.montrer.orbite = e.target.checked; };
-  $('cReperes').onchange = e => { poseInterrompre(); ETAT.montrer.reperes = e.target.checked; };
   $('cTrace').onchange = e => { poseInterrompre(); ETAT.montrer.trace = e.target.checked; };
   $('cCone').onchange = e => { poseInterrompre(); ETAT.montrer.cone = e.target.checked; };
   $('cGeo').onchange = e => { ETAT.montrer.geo = e.target.checked; };           // pays et coordonnées (geo.js)
@@ -355,6 +355,17 @@ function creerUI(){
 }
 
 // La focale suit le champ (molette sur le disque ou dans la vue ISS) ; le cône se déduit du même champ.
+/* Niveau de zoom, continu d'une vue à l'autre : vue Terre (et Terre–Lune) = 250 / distance (×1 au départ) ; caméra de l'ISS =
+   celui du plus proche de la vue Terre (1,2 R) × champ maximal / champ — en mode bilan radiatif le zoom passe de l'un à
+   l'autre (entrees.js zoomer). */
+function niveauZoom(){
+  return ETAT.vue === 'ext' ? 250/VUE_EXT.r : 250/(CFG.R*1.2)*FOV_MAX/VUE_ISS.fov;
+}
+function majZoom(){
+  const z = niveauZoom();
+  $('oZoom').textContent = '×' + (z < 10 ? z.toFixed(1).replace('.', ',') : Math.round(z).toLocaleString('fr-FR'));
+}
+
 function majCurseurFocale(){
   $('oFoc').textContent = Math.round(focaleDepuisFov(VUE_ISS.fov)) + ' mm · ' + VUE_ISS.fov.toFixed(0) + '°';
 }

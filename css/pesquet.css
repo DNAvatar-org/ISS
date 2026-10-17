@@ -1,6 +1,11 @@
 /* File: css/pesquet.css
    Desc: Mise en page : panneau de réglages, HUD du chrono, canvas plein écran.
-   Version 1.3.1
+   Version 1.3.5
+   v1.3.5 : boutons − / + sans bulle ; repliées, ni trait sous Temps ni sous Point de vue ; ?provenance=CO2 — repliées, dans la pile de titres de l'hôte
+            (même bord droit, 16 px ; même pas, 30 px).
+   v1.3.4 : en onglet, pas de pied (signature ni lien GitHub : la page hôte les porte).
+   v1.3.3 : ?provenance=CO2 — Temps et Point de vue glissent quand la pile de fenêtres de l'hôte change.
+   v1.3.2 : niveau de zoom à droite du titre Capture (#oZoom) ; satellites masqués quand Point de vue est replié.
    Date: [October 15, 2026]
    v1.3.1 : ?provenance=CO2 — Temps sous le titre de la page hôte, Point de vue sous Temps, à droite ; repliées, la
             largeur du titre, + contre le bord droit.
@@ -224,7 +229,7 @@ select option{background:#151a24}
 body:not(.credits-ouverts) #credits{display:none !important}
 body.zen #bCredits{display:none}
 /* PAGE EN ONGLET (?onglet, url.js) : la page hôte porte le ⛶ (même place) ; pas de signature dans une page déjà signée */
-body.onglet #bZen, body.onglet #pied .signature{display:none !important}
+body.onglet #bZen, body.onglet #pied{display:none !important}   /* en onglet, le lien GitHub est dans le pied de la page hôte */
 body.zen #panel, body.zen #hud, body.zen #galerie{display:none !important}
 
 /* Date et position sur l'orbite sur UNE jauge : deux curseurs superposés. Seuls les curseurs captent la souris
@@ -431,13 +436,20 @@ body.zen #credits{display:none !important}
 .plie .b-plier::after{content:'+'}
 #temps .tete-temps h2,#panel .grp:first-child > .tete h2{cursor:pointer}
 #hud.plie > :not(#temps),#hud.plie #temps > :not(.tete-temps),#hud.plie .btns-tete{display:none !important}
-#panel.plie .grp:not(:first-child),#panel.plie .grp:first-child > :not(.tete){display:none !important}
+#panel.plie .grp:not(:first-child),#panel.plie .grp:first-child > :not(.tete),#panel.plie #sats{display:none !important}
 #hud.plie,#panel.plie{background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+#hud.plie #temps,#hud.plie .tete-temps,#panel.plie .grp{border-bottom:0;margin-bottom:0;padding-bottom:0}   /* ni trait ni marge sous le titre seul */
 
 /* ?provenance=CO2 (url.js) : Temps sous le titre de la page hôte (--marge-haut, message iss:marges ; 0 avant), Point de
    vue sous Temps, à droite ; son haut suit le bas de Temps */
 :root{--marge-haut:0px}
-body.provenance-co2 #hud{top:calc(var(--marge-haut) + 12px)}
+body.provenance-co2 #hud{top:var(--marge-haut)}
+body.provenance-co2 #hud,body.provenance-co2 #panel{transition:top .4s ease}   /* la pile des fenêtres de l'hôte bouge : elles glissent */
 body.provenance-co2 #panel{left:auto;right:12px}
-/* repliées : la largeur de leur titre seul, le + contre le bord droit de la page */
-body.provenance-co2 #hud.plie,body.provenance-co2 #panel.plie{width:auto;right:0;padding-right:0}
+/* repliées : la largeur de leur titre seul, dans la pile de titres de l'hôte — le + à 16 px du bord droit, comme les siens
+   (CO2 index-shell.css .fenetre-tete), un titre tous les 30 px (url.js placerPointDeVue) */
+body.provenance-co2 #hud.plie,body.provenance-co2 #panel.plie{width:auto;right:16px;padding:0}
+
+/* niveau de zoom (ui.js majZoom) à droite du titre Capture (petit écran : titre masqué, plus haut) */
+@media (min-width:761px) and (min-height:501px){ #titrePose{display:flex;justify-content:space-between;align-items:baseline} }
+#oZoom{font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim)}

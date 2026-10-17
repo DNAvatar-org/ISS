@@ -1,6 +1,7 @@
 // File: js/terre.js
 // Desc: Terre jour/nuit (geoview.jpg + steamNight.jpg), atmosphère, trace de l'ISS au sol.
-// Version 2.2.1
+// Version 2.3.0
+// - v2.3.0: côté nuit lumineux (uNotIR, ?notIR=) ; poserCartes — cartes, atmosphère, notIR changés sans rechargement.
 // Date: [October 15, 2026]
 // - v2.2.1: exposition de l'atmosphère (luminescence de nuit) en vue ISS seulement : la vue Terre ne suit plus le satellite.
 // - v2.2.0: cônes d'axe aux pôles (comme le globe de l'organigramme du bilan radiatif), vue Terre seulement.
@@ -40,7 +41,7 @@ void main(){
    – la brume du jour : l'air diffuse du bleu et éclaircit la Terre vue de l'espace, d'autant plus qu'on la voit
      en biais (épaisseur d'air traversée). Plus un liseré orange au terminateur. La nuit : lumières des villes. */
 const GLSL_TERRE_FS = `
-uniform sampler2D uJour, uNuit; uniform vec3 uSun;
+uniform sampler2D uJour, uNuit; uniform vec3 uSun; uniform float uNotIR;
 ${GLSL_ECLIPSE}
 varying vec2 vUv; varying vec3 vN; varying vec3 vW;
 void main(){
@@ -59,7 +60,7 @@ void main(){
   cJ += vec3(1.0, 0.95, 0.85) * eau * step(0.0, d) * (pow(sp, 300.0)*1.2 + pow(sp, 12.0)*0.18);
   float biais = 1.0 - max(dot(n, v), 0.0);
   cJ += vec3(0.30, 0.48, 0.85) * smoothstep(-0.05, 0.35, d) * (0.07 + 0.40*biais*biais);
-  vec3 cN = texture2D(uNuit, vUv).rgb * 1.5;
+  vec3 cN = texture2D(uNuit, vUv).rgb * 1.5 + tJ * uNotIR;    // lumières de la carte de nuit + surface qui brille (?notIR=)
   cJ *= lumiereSoleil(vW);                          // éclipse de Soleil : l'ombre de la Lune court sur la Terre
   vec3 c = mix(cN, cJ, jour);
   c += vec3(1.0, 0.45, 0.15) * exp(-pow(d/0.07, 2.0)) * 0.18;
@@ -197,7 +198,8 @@ function creerTerre(tex){
 
   TERRE.globe = new THREE.Mesh(new THREE.SphereGeometry(CFG.R, 128, 64),
     new THREE.ShaderMaterial({vertexShader:GLSL_TERRE_VS, fragmentShader:GLSL_TERRE_FS,
-      uniforms:{uJour:{value:tex.jour}, uNuit:{value:tex.nuit}, uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS}}));
+      uniforms:{uJour:{value:tex.jour}, uNuit:{value:tex.nuit}, uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS,
+                uNotIR:{value:NOT_IR}}}));
   TERRE.axe.add(TERRE.globe);
 
   // Cônes d'axe, comme le globe de l'organigramme du bilan radiatif (CO2 organigramme.js) : pointe au pôle, base vers
@@ -256,4 +258,27 @@ function orienterTerre(){
   const G = ETAT.gmst, c = Math.cos(G), s = Math.sin(G);
   ETAT.vers([c, s, 0], _gx); ETAT.vers([0, 0, 1], _gy); ETAT.vers([s, -c, 0], _gz);
   TERRE.globe.quaternion.setFromRotationMatrix(_gm.makeBasis(_gx, _gy, _gz));
+}
+
+/* Cartes, atmosphère et côté nuit lumineux posés par la page hôte (message iss:cartes, hote.js), sans recharger la page : la
+   vue, la date et le Soleil restent. m = { jour, nuit, atm: { p, H, lum }, notIR } ; jour = null : la Terre d'aujourd'hui
+   (cartes-data.js) avec ses tuiles de détail ; sinon la carte donnée, sans tuiles (elles montrent la Terre d'aujourd'hui), et
+   nuit = null : pas de lumières. Mêmes règles que les paramètres d'URL (url.js). */
+function poserCartes(m){
+  const u = TERRE.globe.material.uniforms;
+  const charger = (url, cle) => new THREE.TextureLoader().load(url, (t) => {
+    t.wrapS = THREE.RepeatWrapping; t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    u[cle].value.dispose(); u[cle].value = t;
+  });
+  charger(m.jour === null ? CARTES.jour : m.jour, 'uJour');
+  charger(m.jour === null ? CARTES.nuit : m.nuit === null ? NUIT_NOIRE : m.nuit, 'uNuit');
+  TUILES_ACTIVES = m.jour === null;
+  if(!TUILES_ACTIVES){ for(const t of TUILES.map.values()) retirerCarreau(t); TUILES.map.clear(); }
+  NOT_IR = m.notIR/100; u.uNotIR.value = NOT_IR;
+  Object.assign(ATM, m.atm);
+  const a = TERRE.atmo.material.uniforms;
+  a.uP.value = ATM.p; a.uH.value = ATM.H/100; a.uLum.value = ATM.lum;
+  const coque = Math.max(3.9, ATM.H/10);
+  TERRE.atmo.scale.setScalar((CFG.R + coque)/(CFG.R + ATM_COQUE)*TERRE.atmo.scale.x);
+  ATM_COQUE = coque;
 }

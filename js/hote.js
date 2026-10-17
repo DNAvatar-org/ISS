@@ -2,27 +2,53 @@
 // Desc: Page en onglet (?onglet) : la Terre à l'écran — centre et rayon apparent, en px CSS de la page — et l'angle du
 //       Soleil à l'écran, envoyés à la page hôte (message 'iss:terre') : elle pose son organigramme autour, son Soleil du
 //       côté du vrai, et le suit quand on tourne la caméra (bilan radiatif CO2, onglets_graphe.js). En retour, la place
-//       qu'elle demande à gauche de la Terre (iss:marges) : la Terre se décale vers la droite pour la laisser.
-// Version 1.1.0
+//       qu'elle demande à gauche de la Terre (iss:marges) : le centre de la Terre se pose là.
+// Version 1.5.0
+// - v1.5.0: iss:terre porte aussi le Soleil dessiné à l'écran (soleilEcran) et, en vue Terre–Lune, l'orbite de la Lune (orbite).
+// - v1.4.1: seule la vue Terre est décalée ; la caméra du satellite reste centrée sur sa visée.
+// - v1.4.0: la page hôte donne l'abscisse du centre de la Terre (iss:marges gauche), à gauche du milieu s'il le faut.
+// - v1.3.0: iss:terre porte la vue ('ext' / 'iss') : en caméra de l'ISS, l'hôte cache son organigramme.
+// - v1.2.0: message iss:cartes — la page hôte change cartes, atmosphère et côté nuit lumineux sans recharger (terre.js poserCartes).
 // Date: [October 15, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
-const HOTE = {cx:NaN, cy:NaN, r:NaN, soleil:NaN, gauche:0, centre:new THREE.Vector3(), oeil:new THREE.Vector3(), sol:new THREE.Vector3()};
+/* xTerre : abscisse du centre de la Terre à l'écran [px] — le milieu de l'image, ou la place que la page hôte demande à
+   gauche de la Terre (message iss:marges, url.js) : plus à gauche ou plus à droite que le milieu. */
+const HOTE = {cx:NaN, cy:NaN, r:NaN, soleil:NaN, vue:null, xTerre:() => canvas.clientWidth/2,
+              centre:new THREE.Vector3(), oeil:new THREE.Vector3(), sol:new THREE.Vector3()};
 
-/* Place demandée par la page hôte à gauche du centre de la Terre [px] (HOTE.gauche, message iss:marges) : le centre de
-   l'image passe à max(milieu, gauche) — quand la fenêtre est trop étroite, la Terre dépasse par la droite. Décalage du
-   cadrage des deux caméras (setViewOffset) : projections, visées et clics le suivent. */
+/* Vue Terre : centre de la Terre en HOTE.xTerre(), par décalage du cadrage (setViewOffset) ; projections, visées et clics le
+   suivent. La caméra du satellite n'est jamais décalée : ses visées (nadir, horizon…) restent au centre de l'image. */
 function decalerTerre(){
-  const w = canvas.clientWidth, h = canvas.clientHeight, dx = w/2 - Math.max(w/2, HOTE.gauche);
+  const w = canvas.clientWidth, h = canvas.clientHeight, dx = w/2 - HOTE.xTerre();
   camExt.setViewOffset(w, h, dx, 0, w, h);
-  camIss.setViewOffset(w, h, dx, 0, w, h);
 }
 
 /* Centre : projection de l'origine (la Terre) par la caméra qui dessine. Rayon apparent : demi-angle asin(R/d) sous lequel
    la caméra voit la Terre, rapporté au demi-champ vertical. Soleil : angle à l'écran [rad, y vers le bas] du point de la
-   Terre tourné vers lui — projection de R le long de ETAT.S, depuis le centre. Envoyé quand le centre ou le rayon bouge
-   d'un demi-pixel, ou l'angle d'un centième de radian. */
+   Terre tourné vers lui — projection de R le long de ETAT.S, depuis le centre. soleilEcran : le disque du Soleil tel qu'il
+   est dessiné, {x, y} [px], ou null hors de l'image ou caché par la Terre. orbite (vue Terre–Lune) : l'orbite de la Lune à
+   l'écran, deux demi-diamètres conjugués [px] depuis le centre — vers la Lune (a) et à 90° dans son plan (b) ; sinon null.
+   Envoyé quand l'un d'eux bouge d'un demi-pixel (l'angle d'un centième de radian). */
+const _he = new THREE.Vector3(), _hd = new THREE.Vector3(), _hp = new THREE.Vector3(), _hv = new THREE.Vector3();
+function ecranDe(v, cam, w, h){ _hp.copy(v).project(cam); return {x:(_hp.x + 1)/2*w, y:(1 - _hp.y)/2*h, z:_hp.z}; }
+function soleilAEcran(cam, w, h){
+  const p = ecranDe(SOL.groupe.position, cam, w, h);
+  if(p.z < -1 || p.z > 1 || p.x < 0 || p.x > w || p.y < 0 || p.y > h) return null;
+  cam.getWorldPosition(_he);
+  _hd.copy(SOL.groupe.position).sub(_he);
+  const l = _hd.length(); _hd.divideScalar(l);
+  const t = -_he.dot(_hd);                          // point de la visée le plus proche du centre de la Terre
+  if(t > 0 && t < l && _hv.copy(_he).addScaledVector(_hd, t).length() < CFG.R) return null;
+  return {x:p.x, y:p.y};
+}
+function orbiteAEcran(cam, w, h, cx, cy){
+  const a = ecranDe(_hv.copy(ETAT.M).multiplyScalar(CFG.LUNE_D), cam, w, h);
+  const b = ecranDe(_hv.crossVectors(ETAT.Mnord, ETAT.M).normalize().multiplyScalar(CFG.LUNE_D), cam, w, h);
+  return {ax:a.x - cx, ay:a.y - cy, bx:b.x - cx, by:b.y - cy};
+}
+let HOTE_DERNIER = '';
 function majHote(){
   if(!URL_P.has('onglet')) return;
   const cam = ETAT.vue === 'iss' ? camIss : camExt;
@@ -34,8 +60,23 @@ function majHote(){
   const r = Math.tan(demiAngle)/Math.tan(cam.fov*DEG/2)*h/2;
   HOTE.sol.copy(ETAT.S).multiplyScalar(CFG.R).project(cam);
   const soleil = Math.atan2((1 - HOTE.sol.y)/2*h - cy, (HOTE.sol.x + 1)/2*w - cx);
-  if(Math.abs(cx - HOTE.cx) < 0.5 && Math.abs(cy - HOTE.cy) < 0.5 && Math.abs(r - HOTE.r) < 0.5
-     && Math.abs(soleil - HOTE.soleil) < 0.01) return;
-  HOTE.cx = cx; HOTE.cy = cy; HOTE.r = r; HOTE.soleil = soleil;
-  window.parent.postMessage({type:'iss:terre', cx, cy, r, soleil}, '*');
+  const vue = ETAT.vue;                             // 'ext' (Terre vue de loin) ou 'iss' (caméra de l'ISS : l'hôte cache son organigramme)
+  const soleilEcran = soleilAEcran(cam, w, h);
+  const orbite = vue === 'ext' && VUE_EXT.mode === 'lune' ? orbiteAEcran(cam, w, h, cx, cy) : null;
+  // signature au demi-pixel (angle au centième) : rien n'est envoyé tant qu'elle ne change pas
+  const px = (v) => Math.round(2*v);
+  const sig = [px(cx), px(cy), px(r), Math.round(100*soleil), vue, JSON.stringify(soleilEcran && [px(soleilEcran.x), px(soleilEcran.y)]),
+               JSON.stringify(orbite && [px(orbite.ax), px(orbite.ay), px(orbite.bx), px(orbite.by)])].join(' ');
+  if(sig === HOTE_DERNIER) return;
+  HOTE_DERNIER = sig;
+  HOTE.cx = cx; HOTE.cy = cy; HOTE.r = r; HOTE.soleil = soleil; HOTE.vue = vue;
+  window.parent.postMessage({type:'iss:terre', cx, cy, r, soleil, vue, soleilEcran, orbite}, '*');
 }
+
+/* La page hôte change d'époque : nouvelles cartes, atmosphère, côté nuit lumineux, sans recharger la page (sa vue et son Soleil
+   restent, donc l'organigramme posé autour aussi). */
+addEventListener('message', e => {
+  if(e.data.type !== 'iss:cartes') return;
+  poserCartes(e.data);
+  poserPays(e.data.pays);                          // une Terre d'avant les frontières : pas de pays (geo.js)
+});

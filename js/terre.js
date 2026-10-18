@@ -1,8 +1,9 @@
 // File: js/terre.js
 // Desc: Terre jour/nuit (geoview.jpg + steamNight.jpg), atmosphère, trace de l'ISS au sol.
-// Version 2.3.0
+// Version 2.4.0
+// - v2.4.0: reflet du Soleil aussi sur l'eau sombre de Blue Marble (cartes GIBS par défaut).
 // - v2.3.0: côté nuit lumineux (uNotIR, ?notIR=) ; poserCartes — cartes, atmosphère, notIR changés sans rechargement.
-// Date: [October 15, 2026]
+// Date: [October 18, 2026]
 // - v2.2.1: exposition de l'atmosphère (luminescence de nuit) en vue ISS seulement : la vue Terre ne suit plus le satellite.
 // - v2.2.0: cônes d'axe aux pôles (comme le globe de l'organigramme du bilan radiatif), vue Terre seulement.
 // - v2.1.0: atmosphère paramétrée (ATM, url.js ?atm=) : pression, hauteur d'échelle, luminescence ; coque à 10 H si plus haute.
@@ -54,8 +55,10 @@ void main(){
 #endif
   vec3 tJ = texture2D(uJour, vUv).rgb;
   vec3 cJ = tJ * (0.10 + 1.30*pow(max(d, 0.0), 0.7));
-  // reflet du Soleil sur l'eau (l'eau se reconnaît à sa dominante bleue) : tache nette + halo large
-  float eau = smoothstep(0.04, 0.14, tJ.b - max(tJ.r, tJ.g));
+  // reflet du Soleil sur l'eau : tache nette + halo large. L'eau se reconnaît à sa dominante bleue (cartes claires,
+  // paléocartes ?jour=) ou, sur Blue Marble (carte par défaut), à son noir à peine bleuté (océans 2,5,20 ; lacs 0,6,6)
+  float eau = max(smoothstep(0.04, 0.14, tJ.b - max(tJ.r, tJ.g)),
+                  (1.0 - smoothstep(0.05, 0.10, max(tJ.r, tJ.g))) * step(tJ.r, tJ.b));
   float sp = max(dot(reflect(-uSun, n), v), 0.0);
   cJ += vec3(1.0, 0.95, 0.85) * eau * step(0.0, d) * (pow(sp, 300.0)*1.2 + pow(sp, 12.0)*0.18);
   float biais = 1.0 - max(dot(n, v), 0.0);

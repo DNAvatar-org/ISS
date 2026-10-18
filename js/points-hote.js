@@ -4,12 +4,13 @@
 //       enfant du globe (il tourne avec lui), caché par la Terre de l'autre côté ; son texte au survol ; survol et clic
 //       renvoyés à la page hôte (iss:pointSurvol, iss:pointClic) qui peut montrer davantage ; un anneau autour des points
 //       d'un groupe, à distance, s'il le demande ; une image à la place du disque, s'il la donne.
-// Version 1.3.0
+// Version 1.4.0
+// - v1.4.0: points au ras du sol affiché (R + 2,8 km au lieu de R × 1,003 = 19 km) : plus de parallaxe de près.
 // - v1.3.0: image facultative par groupe (à la place du disque, teintée par la couleur de chaque point), dessinée comme
 //           les anneaux : sans test de profondeur, seulement du côté visible.
 // - v1.2.0: anneau facultatif par groupe (à distance du point : un vide entre les deux).
 // - v1.1.0: id des points ; survol et clic renvoyés à la page hôte ; texte facultatif.
-// Date: [October 16, 2026]
+// Date: [October 19, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.txt.
 
@@ -25,6 +26,9 @@
      { type: 'iss:pointClic', id, lat, lon, x, y } au clic bref (sans glisser : glisser fait tourner la Terre).
    Un THREE.Points par groupe (une taille par groupe), posé juste au-dessus du sol (R × 1,003). Survol : le point visible
    le plus proche du pointeur, à moins de sa taille, dans la caméra qui dessine (ISS ou vue extérieure). */
+/** Rayon des points : au ras du sol affiché — juste au-dessus de la plus fine couche de tuiles (tuiles-rendu.js : R +
+    0,025 au niveau 14, 2,5 km). À R × 1,003 (19 km), de près ils flottaient et glissaient sur le sol (parallaxe). */
+const SOL_POINTS = CFG.R + 0.028;
 const PTS_HOTE = {objets:[], liste:[], info:null, disque:null, cercle:null, images:{}};
 /** Diamètre de l'anneau, en tailles de point */
 const ANNEAU = 2.4;
@@ -69,7 +73,7 @@ function poserPointsHote(groupes){
   for(const gr of groupes){
     const n = gr.points.length, pos = new Float32Array(3*n), coul = new Float32Array(3*n), v = new THREE.Vector3();
     gr.points.forEach((p, i) => {
-      vecGeo(p.lat, p.lon, CFG.R*1.003, v).toArray(pos, 3*i);
+      vecGeo(p.lat, p.lon, SOL_POINTS, v).toArray(pos, 3*i);
       c.set(p.couleur).toArray(coul, 3*i);
       PTS_HOTE.liste.push({v:v.clone(), taille:gr.taille, texte:p.texte, id:p.id, lat:p.lat, lon:p.lon});
     });

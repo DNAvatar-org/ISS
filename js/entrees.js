@@ -1,9 +1,13 @@
 // File: js/entrees.js
 // Desc: Souris, pavé tactile et écran tactile : orbite autour de la Terre, visée et focale de la caméra embarquée.
-// Version 1.3.0
+// Version 1.6.0
+// - v1.6.0: zoom de la vue Terre jusqu'à 8 km d'altitude (au lieu de 0,2 rayon terrestre).
+// - v1.5.0: zoom enchaîné : la caméra de l'ISS au-delà de ×1,8 (elle s'ouvre à ×5), la vue Terre–Lune en deçà de ×0,8
+//   (R_VERS_ISS, ZOOM_ENTREE_ISS, R_VERS_LUNE) ; R_LUNE_MAX.
+// - v1.4.0: glisser en vue Terre : rotation proportionnelle à l'altitude de la caméra (de près, beaucoup plus douce).
 // - v1.3.0: zoom enchaîné vers le large : vue Terre au plus loin → vue Terre–Lune ; et retour.
 // - v1.2.0: zoom enchaîné (ETAT.zoomEnchaine) : vue Terre au plus proche → caméra de l'ISS, horizon sous le Soleil ; et retour.
-// Date: [October 08, 2026]
+// Date: [October 19, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -21,25 +25,31 @@ const TAP = {id:null, x:0, y:0, t:0, ok:false};  // toucher bref en cours
 let pince = 0;                                   // écart entre deux doigts à la trame précédente
 
 // Zoom multiplicatif : f > 1 éloigne (vue Terre) ou élargit le champ (vue ISS).
-const R_EXT_MIN = CFG.R*1.2;                    // vue Terre au plus proche
+const R_EXT_MIN = CFG.R + 0.08;                  // vue Terre au plus proche : 8 km d'altitude (tuiles Sentinel-2, 10 m)
 const R_EXT_MAX = 3000;                          // vue Terre au plus loin
 const R_LUNE_MIN = 1500;                         // vue Terre–Lune au plus proche
+const R_LUNE_MAX = 6000;                         // vue Terre–Lune au plus loin
+// Zoom enchaîné (?provenance=CO2) : bascules aux niveaux de zoom ×1,8 et ×0,8 (ui.js niveauZoom : 250 / distance) ; la
+// caméra de l'ISS s'ouvre, au champ le plus large, à ×5
+const R_VERS_ISS = 250/1.8;                      // plus près : la caméra de l'ISS
+const ZOOM_ENTREE_ISS = 5;
+const R_VERS_LUNE = 250/0.8;                     // plus loin : la vue Terre–Lune
 function zoomer(f){
   poseInterrompre();
   if(ETAT.vue === 'ext'){
     const lune = VUE_EXT.mode === 'lune';       // en vue Terre–Lune on reste dans la voûte (rayon 9 000)
     // Zoom enchaîné (?provenance=CO2) : plus près que le plus proche de la vue Terre, la caméra de l'ISS, au champ le plus large,
     // sur l'horizon sous le Soleil.
-    if(ETAT.zoomEnchaine && !lune && VUE_EXT.r*f < R_EXT_MIN){
+    if(ETAT.zoomEnchaine && !lune && VUE_EXT.r*f < R_VERS_ISS){
       poseEffacer(); ETAT.vue = 'iss'; choisirPreset('soleil'); VUE_ISS.fov = FOV_MAX; majBoutons(); return;
     }
     // Et vers le large : plus loin que le plus loin de la vue Terre, la vue Terre–Lune au plus proche ; et retour.
-    if(ETAT.zoomEnchaine && !lune && VUE_EXT.r*f > R_EXT_MAX){ poseEffacer(); vueTerreLune(); VUE_EXT.r = R_LUNE_MIN; majBoutons(); return; }
-    if(ETAT.zoomEnchaine && lune && VUE_EXT.r*f < R_LUNE_MIN){ poseEffacer(); VUE_EXT.mode = 'terre'; VUE_EXT.r = R_EXT_MAX; majBoutons(); return; }
-    VUE_EXT.r = Math.max(lune ? R_LUNE_MIN : R_EXT_MIN, Math.min(lune ? 6000 : R_EXT_MAX, VUE_EXT.r*f));
+    if(ETAT.zoomEnchaine && !lune && VUE_EXT.r*f > R_VERS_LUNE){ poseEffacer(); vueTerreLune(); VUE_EXT.r = R_LUNE_MIN; majBoutons(); return; }
+    if(ETAT.zoomEnchaine && lune && VUE_EXT.r*f < R_LUNE_MIN){ poseEffacer(); VUE_EXT.mode = 'terre'; VUE_EXT.r = R_VERS_LUNE; majBoutons(); return; }
+    VUE_EXT.r = Math.max(lune ? R_LUNE_MIN : R_EXT_MIN, Math.min(lune ? R_LUNE_MAX : R_EXT_MAX, VUE_EXT.r*f));
   }
   else if(ETAT.zoomEnchaine && VUE_ISS.fov*f > FOV_MAX){   // plus large que l'ISS : la vue Terre, au plus proche
-    poseEffacer(); vueTerre(); VUE_EXT.r = R_EXT_MIN; majBoutons();
+    poseEffacer(); vueTerre(); VUE_EXT.r = R_VERS_ISS; majBoutons();
   }
   else zoomerFocale(f);
 }
@@ -72,8 +82,11 @@ addEventListener('pointermove', e => {
     return;
   }
   if(ETAT.vue === 'ext'){
-    VUE_EXT.th -= dx*0.006;
-    VUE_EXT.ph = Math.max(-1.5, Math.min(1.5, VUE_EXT.ph + dy*0.005));
+    // vue Terre : rotation proportionnelle à l'altitude de la caméra (r − R), le point saisi suit à peu près le doigt —
+    // inchangée à la distance par défaut (250), bien plus douce de près ; vue Terre–Lune : comme avant
+    const k = VUE_EXT.mode === 'lune' ? 1 : Math.max(0.01, (VUE_EXT.r - CFG.R)/(250 - CFG.R));
+    VUE_EXT.th -= dx*0.006*k;
+    VUE_EXT.ph = Math.max(-1.5, Math.min(1.5, VUE_EXT.ph + dy*0.005*k));
   }else{
     const k = VUE_ISS.fov*DEG/innerHeight;          // rad par pixel : le point saisi suit le doigt
     viser(VUE_ISS.cap + dx*k, VUE_ISS.site + dy*k);

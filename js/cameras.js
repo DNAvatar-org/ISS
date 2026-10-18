@@ -1,9 +1,11 @@
 // File: js/cameras.js
 // Desc: Deux caméras : orbitale autour de la Terre (vue éloignée) et embarquée dans l'ISS (visée cap / site).
-// Version 2.3.0
+// Version 2.5.0
+// - v2.5.0: plan proche de la vue Terre à la mesure de l'altitude (zoom jusqu'à 8 km).
+// - v2.4.0: vue Terre–Lune : la visée glisse avec le zoom, du milieu Terre–Lune (au plus large) à la Terre (au plus près).
 // - v2.2.0: vueEclaireeDeBiais (?provenance=CO2) : le Soleil à 75° de l'axe de visée, un bord de nuit visible.
 // - v2.1.0: suivis « soleil » et « lune » = l'horizon sous l'astre (horizon.js) : son cap, le site du limbe.
-// Date: [October 15, 2026]
+// Date: [October 19, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -70,12 +72,16 @@ function baseVisee(cap, site, f, u, r){
 
 function majCamExt(){
   const {th, ph, r, cible} = VUE_EXT;
-  if(VUE_EXT.mode === 'lune') cible.copy(ETAT.M).multiplyScalar(CFG.LUNE_D/2);   // milieu Terre–Lune
+  // vue Terre–Lune : visée sur l'axe Terre → Lune, à la fraction que donne le zoom — la Terre au plus près (R_LUNE_MIN), le
+  // milieu Terre–Lune au plus large (R_LUNE_MAX) : zoomer va vers la Terre (entrees.js)
+  if(VUE_EXT.mode === 'lune') cible.copy(ETAT.M).multiplyScalar(CFG.LUNE_D/2*(r - R_LUNE_MIN)/(R_LUNE_MAX - R_LUNE_MIN));
   else cible.set(0, 0, 0);
   camExt.position.set(r*Math.cos(ph)*Math.sin(th), r*Math.sin(ph), r*Math.cos(ph)*Math.cos(th)).add(cible);
   camExt.lookAt(cible);
   const fov = VUE_EXT.mode === 'lune' ? 50 : 40;
-  if(camExt.fov !== fov){ camExt.fov = fov; camExt.updateProjectionMatrix(); }
+  // plan proche à la mesure de l'altitude : de près (zoom jusqu'à 8 km), 0,5 unité (50 km) coupait le sol
+  const near = Math.max(0.002, Math.min(0.5, (r - CFG.R)*0.25));
+  if(camExt.fov !== fov || camExt.near !== near){ camExt.fov = fov; camExt.near = near; camExt.updateProjectionMatrix(); }
 }
 
 // Vue de profil de l'ensemble Terre–Lune (la Lune est à 60 rayons terrestres : invisible depuis la vue éloignée normale).

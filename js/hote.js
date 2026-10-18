@@ -3,7 +3,11 @@
 //       Soleil à l'écran, envoyés à la page hôte (message 'iss:terre') : elle pose son organigramme autour, son Soleil du
 //       côté du vrai, et le suit quand on tourne la caméra (bilan radiatif CO2, onglets_graphe.js). En retour, la place
 //       qu'elle demande à gauche de la Terre (iss:marges) : le centre de la Terre se pose là.
-// Version 1.9.0
+// Version 1.10.0
+// - v1.10.0: mode bilan radiatif (ETAT.zoomEnchaine) : un point d'horizon fixe à l'écran — le bord gauche de la Terre en vue
+//   Terre, l'horizon sous le Soleil dans la caméra de l'ISS — sur lequel on zoome ; iss:terre porte la Terre de référence
+//   (terreRef : au zoom ×1), autour de laquelle l'hôte pose son organigramme une fois pour toutes ; vitesse par vue (×1000
+//   vue Terre, ×10 caméra de l'ISS).
 // - v1.9.0: iss:viser : la vue reste accrochée au sol (aussi après un glisser), collée au lieu une fois arrivée ; colle.
 // - v1.8.0: caméra de l'ISS : iss:terre porte l'horizon de la haute atmosphère à l'écran, en cercle, et son point sous le
 //   Soleil (horizon { cx, cy, r, x, y }) — l'hôte en fait le cercle de son organigramme.
@@ -20,14 +24,25 @@
 
 /* xTerre : abscisse du centre de la Terre à l'écran [px] — le milieu de l'image, ou la place que la page hôte demande à
    gauche de la Terre (message iss:marges, url.js) : plus à gauche ou plus à droite que le milieu. */
-const HOTE = {cx:NaN, cy:NaN, r:NaN, soleil:NaN, vue:null, xTerre:() => canvas.clientWidth/2, yTerre:() => canvas.clientHeight/2,
+const HOTE = {cx:NaN, cy:NaN, r:NaN, soleil:NaN, vue:null, vueVitesse:null, xTerre:() => canvas.clientWidth/2, yTerre:() => canvas.clientHeight/2,
               centre:new THREE.Vector3(), oeil:new THREE.Vector3(), sol:new THREE.Vector3()};
 
 /* Vue Terre : centre de la Terre en HOTE.xTerre(), par décalage du cadrage (setViewOffset) ; projections, visées et clics le
    suivent. La caméra du satellite n'est jamais décalée : ses visées (nadir, horizon…) restent au centre de l'image. */
+/* Mode bilan radiatif (ETAT.zoomEnchaine, à chaque trame : majHote) : HOTE.xTerre() est le centre de la Terre au zoom ×1
+   (distance R_REF) ; le point d'horizon, à son rayon à gauche, ne bouge plus. Vue Terre : le bord gauche de la Terre y reste
+   (le centre s'éloigne à droite quand on zoome) ; caméra de l'ISS : sa visée, l'horizon sous le Soleil, y est posée — on
+   zoome sur lui. Vue Terre–Lune : le centre de la Terre en HOTE.xTerre(). */
+const R_REF = 250;                                 // distance de la vue Terre au zoom ×1
+const rayonEcran = (d, fov, h) => Math.tan(Math.asin(Math.min(1, CFG.R/d)))/Math.tan(fov*DEG/2)*h/2;   // rayon apparent [px]
+const pointHorizon = () => ({x:HOTE.xTerre() - rayonEcran(R_REF, FOV_VUE_TERRE, canvas.clientHeight), y:HOTE.yTerre()});
 function decalerTerre(){
-  const w = canvas.clientWidth, h = canvas.clientHeight, dx = w/2 - HOTE.xTerre(), dy = h/2 - HOTE.yTerre();
-  camExt.setViewOffset(w, h, dx, dy, w, h);
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if(!ETAT.zoomEnchaine){ camExt.setViewOffset(w, h, w/2 - HOTE.xTerre(), h/2 - HOTE.yTerre(), w, h); return; }
+  const p = pointHorizon();
+  const xc = VUE_EXT.mode === 'lune' ? HOTE.xTerre() : p.x + rayonEcran(VUE_EXT.r, FOV_VUE_TERRE, h);
+  camExt.setViewOffset(w, h, w/2 - xc, h/2 - p.y, w, h);
+  camIss.setViewOffset(w, h, w/2 - p.x, h/2 - p.y, w, h);
 }
 /* Message générique de la page hôte { type: 'iss:centre', x, y } : le centre de la Terre à l'écran, en fractions de la
    page (0..1) — la page reste en plein écran, la Terre se pose où l'hôte a de la place (ex. DNA Tamagoshi : à droite
@@ -119,6 +134,9 @@ let HOTE_DERNIER = '';
 function majHote(){
   suivreVisee();
   if(!URL_P.has('onglet')) return;
+  if(ETAT.zoomEnchaine) decalerTerre();            // le point d'horizon fixe suit le zoom
+  // mode bilan radiatif : à chaque changement de vue, sa vitesse — ×1000 vue Terre (et Terre–Lune), ×10 caméra de l'ISS
+  if(ETAT.zoomEnchaine && ETAT.vue !== HOTE.vueVitesse){ HOTE.vueVitesse = ETAT.vue; ETAT.vitesse = ETAT.vue === 'iss' ? 10 : 1000; }
   const cam = ETAT.vue === 'iss' ? camIss : camExt;
   const w = canvas.clientWidth, h = canvas.clientHeight;
   HOTE.centre.set(0, 0, 0).project(cam);
@@ -132,15 +150,18 @@ function majHote(){
   const soleilEcran = soleilAEcran(cam, w, h);
   const orbite = vue === 'ext' && VUE_EXT.mode === 'lune' ? orbiteAEcran(cam, w, h, cx, cy) : null;
   const horizon = vue === 'iss' ? horizonSoleilAEcran(cam, w, h) : null;
+  // la Terre au zoom ×1, sous le point d'horizon fixe : l'hôte y pose son organigramme, qui ne bouge plus avec le zoom
+  const terreRef = {cx:HOTE.xTerre(), cy:HOTE.yTerre(), r:rayonEcran(R_REF, FOV_VUE_TERRE, h)};
   // signature au demi-pixel (angle au centième) : rien n'est envoyé tant qu'elle ne change pas
   const px = (v) => Math.round(2*v);
   const sig = [px(cx), px(cy), px(r), Math.round(100*soleil), vue, JSON.stringify(soleilEcran && [px(soleilEcran.x), px(soleilEcran.y)]),
                JSON.stringify(orbite && [px(orbite.ax), px(orbite.ay), px(orbite.bx), px(orbite.by)]),
-               JSON.stringify(horizon && [px(horizon.cx), px(horizon.cy), px(horizon.r), px(horizon.x), px(horizon.y)])].join(' ');
+               JSON.stringify(horizon && [px(horizon.cx), px(horizon.cy), px(horizon.r), px(horizon.x), px(horizon.y)]),
+               px(terreRef.cx), px(terreRef.cy), px(terreRef.r)].join(' ');
   if(sig === HOTE_DERNIER) return;
   HOTE_DERNIER = sig;
   HOTE.cx = cx; HOTE.cy = cy; HOTE.r = r; HOTE.soleil = soleil; HOTE.vue = vue;
-  window.parent.postMessage({type:'iss:terre', cx, cy, r, soleil, vue, soleilEcran, orbite, horizon}, '*');
+  window.parent.postMessage({type:'iss:terre', cx, cy, r, soleil, vue, soleilEcran, orbite, horizon, terreRef}, '*');
 }
 
 /* La page hôte change d'époque : nouvelles cartes, atmosphère, côté nuit lumineux, sans recharger la page (sa vue et son Soleil

@@ -1,6 +1,7 @@
 /* File: css/pesquet.css
    Desc: Mise en page : panneau de réglages, HUD du chrono, canvas plein écran.
-   Version 1.4.0
+   Version 1.4.1
+   v1.4.1 : ?provenance=CO2 — Point de vue invisible.
    v1.4.0 : ?provenance=CO2 — Temps et Point de vue à gauche, sous les boutons de l'hôte, dépliés vers le bas, + devant le titre.
    v1.3.6 : ?provenance=CO2 — titres de Temps et Point de vue en 04B_03 italique, comme les fenêtres de l'hôte.
    v1.3.5 : boutons − / + sans bulle ; repliées, ni trait sous Temps ni sous Point de vue ; ?provenance=CO2 — repliées, dans la pile de titres de l'hôte
@@ -451,6 +452,8 @@ body.provenance-co2 #hud{top:var(--fenetres-haut);max-height:calc(100vh - var(--
    « Energies »), un titre tous les 30 px (url.js placerPointDeVue) */
 body.provenance-co2 #hud.plie,body.provenance-co2 #panel.plie{width:auto;padding:0}
 body.provenance-co2 .titre-plier{flex-direction:row-reverse}
+/* Point de vue invisible : le bilan radiatif se lit en vue Terre (zoom jusqu'au limbe), Temps reste seule */
+body.provenance-co2 #panel{display:none}
 /* par-dessus tout (la page hôte troue son organigramme à leur place, iss:fenetres) ; dépliées, un fond sombre opaque : lisibles
    sur la Terre et les étoiles */
 body.provenance-co2 #hud,body.provenance-co2 #panel{z-index:50}
@@ -463,3 +466,5 @@ body.provenance-co2 #temps .tete-temps h2,body.provenance-co2 #panel .grp:first-
 /* niveau de zoom (ui.js majZoom) à droite du titre Capture (petit écran : titre masqué, plus haut) */
 @media (min-width:761px) and (min-height:501px){ #titrePose{display:flex;justify-content:space-between;align-items:baseline} }
 #oZoom{font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim)}
+/* niveau de zoom et vue sur la ligne de titre de Temps (ui.js majZoom) : reste visible quand Temps est replié */
+.zoom-vue{margin-left:10px;font-size:11px;color:var(--dim);white-space:nowrap}

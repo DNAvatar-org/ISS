@@ -1,6 +1,8 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.13.0
+// Version 1.14.0
+// - v1.14.0: ?lumNuit= — lumières des villes la nuit, de 0 (éteintes) à 1.
+// - v1.13.1: ?provenance=CO2 — caméra de l'ISS tournée, la Terre à droite (ETAT.horizonVertical, cameras.js).
 // - v1.13.0: ?provenance=CO2 — vitesse ×100 ; Temps et Point de vue à gauche, sous Atmosphère de la page hôte, dépliés vers
 //   le bas (iss:marges fenetres { gauche, haut }) ; leurs rectangles à la page hôte (iss:fenetres), qui y troue son organigramme :
 //   elles passent par-dessus.
@@ -93,6 +95,14 @@ if(URL_P.has('notIR')){
   const x = parseFloat(URL_P.get('notIR'));
   if(x >= 0 && x <= 100) NOT_IR = x/100;
   else ATM_AVIS.push('Côté nuit illisible : notIR=' + URL_P.get('notIR') + ' (pourcentage de 0 à 100, ex. notIR=70).');
+}
+// Lumières des villes, la nuit [0–1] : ?lumNuit=0 les éteint (une page hôte dont les points comptent plus que les villes :
+// de près, les grandes villes saturent en taches blanches) ; 1 par défaut.
+let LUM_NUIT = 1;
+if(URL_P.has('lumNuit')){
+  const x = parseFloat(URL_P.get('lumNuit'));
+  if(x >= 0 && x <= 1) LUM_NUIT = x;
+  else ATM_AVIS.push('Lumières de nuit illisibles : lumNuit=' + URL_P.get('lumNuit') + ' (de 0 à 1, ex. lumNuit=0).');
 }
 const FORMAT_DATE = 'date=JJ.MM.AA (ex. date=13.02.24 pour le 13 février 2024)';
 const FORMAT_HEURE = 'heure=HH:MM:SS en temps universel (ex. heure=04:29:51)';
@@ -192,11 +202,14 @@ function appliquerProvenanceURL(){
   const p = URL_P.get('provenance');
   if(p === null) return [];
   if(p !== 'CO2') return ['Provenance inconnue : « ' + p + ' ». Connue : CO2 (bilan radiatif).'];
-  ETAT.vitesse = 100; ETAT.pause = false;           // après allerAujourdhui (main.js), qui remet ×1
+  ETAT.vitesse = 1000; ETAT.pause = false;          // après allerAujourdhui (main.js), qui remet ×1 ; puis selon la vue (hote.js)
   $('hud').classList.add('plie'); $('panel').classList.add('plie');
   $('bCheck').hidden = true;
   vueEclaireeDeBiais();                            // le Soleil un peu derrière la Terre : un bord de nuit (cameras.js)
   ETAT.zoomEnchaine = true;                         // le zoom passe de la vue Terre à la caméra de l'ISS et retour (entrees.js)
+  ETAT.horizonVertical = true;
+  // atmosphère grossie au dessin (terre.js) : vue de l'espace en zoomant jusqu'au limbe, la bande bleue se voit
+  ATM_AFFICHAGE.epaisseur = 4; ATM_AFFICHAGE.expo = 3;                      // caméra de l'ISS : la Terre à droite, le ciel et l'organigramme à gauche (cameras.js)
   // Temps puis Point de vue à gauche, sous les boutons de la page hôte (message iss:marges) : Temps à leur place, Point de
   // vue 10 px sous lui, replié ou déplié ; dépliés, ils s'ouvrent vers le bas.
   document.body.classList.add('provenance-co2');

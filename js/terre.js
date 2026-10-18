@@ -1,6 +1,9 @@
 // File: js/terre.js
 // Desc: Terre jour/nuit (geoview.jpg + steamNight.jpg), atmosphère, trace de l'ISS au sol.
-// Version 2.4.0
+// Version 2.6.0
+// - v2.6.0: lumières des villes réglables (uLumNuit, ?lumNuit=, partagé avec les tuiles) : 0 les éteint.
+// - v2.5.0: ATM_AFFICHAGE — atmosphère exagérée au dessin seulement (hauteur d'échelle, exposition de jour) ; 1 par défaut,
+//   ?provenance=CO2 la grossit (url.js) : vue de l'espace, la bande bleue du limbe se voit.
 // - v2.4.0: reflet du Soleil aussi sur l'eau sombre de Blue Marble (cartes GIBS par défaut).
 // - v2.3.0: côté nuit lumineux (uNotIR, ?notIR=) ; poserCartes — cartes, atmosphère, notIR changés sans rechargement.
 // Date: [October 18, 2026]
@@ -42,7 +45,7 @@ void main(){
    – la brume du jour : l'air diffuse du bleu et éclaircit la Terre vue de l'espace, d'autant plus qu'on la voit
      en biais (épaisseur d'air traversée). Plus un liseré orange au terminateur. La nuit : lumières des villes. */
 const GLSL_TERRE_FS = `
-uniform sampler2D uJour, uNuit; uniform vec3 uSun; uniform float uNotIR;
+uniform sampler2D uJour, uNuit; uniform vec3 uSun; uniform float uNotIR, uLumNuit;
 ${GLSL_ECLIPSE}
 varying vec2 vUv; varying vec3 vN; varying vec3 vW;
 void main(){
@@ -63,7 +66,7 @@ void main(){
   cJ += vec3(1.0, 0.95, 0.85) * eau * step(0.0, d) * (pow(sp, 300.0)*1.2 + pow(sp, 12.0)*0.18);
   float biais = 1.0 - max(dot(n, v), 0.0);
   cJ += vec3(0.30, 0.48, 0.85) * smoothstep(-0.05, 0.35, d) * (0.07 + 0.40*biais*biais);
-  vec3 cN = texture2D(uNuit, vUv).rgb * 1.5 + tJ * uNotIR;    // lumières de la carte de nuit + surface qui brille (?notIR=)
+  vec3 cN = texture2D(uNuit, vUv).rgb * 1.5 * uLumNuit + tJ * uNotIR;   // lumières des villes (?lumNuit=) + surface qui brille (?notIR=)
   cJ *= lumiereSoleil(vW);                          // éclipse de Soleil : l'ombre de la Lune court sur la Terre
   vec3 c = mix(cN, cJ, jour);
   c += vec3(1.0, 0.45, 0.15) * exp(-pow(d/0.07, 2.0)) * 0.18;
@@ -172,6 +175,10 @@ void main(){
 }`;
 
 const ATMO_EXPO_NUIT = 1/25000;           // exposition de nuit (par rayleigh vu) ; au Soleil : × 0,02
+const ATMO_EXPO_JOUR = 0.25;              // exposition de jour (diffusion Rayleigh)
+/* Exagération au DESSIN seulement (rien de physique) : hauteur d'échelle × epaisseur, à épaisseur optique égale (la bande du
+   limbe plus épaisse, mêmes couleurs) ; exposition de jour × expo. 1 : l'atmosphère vraie ; ?provenance=CO2 (url.js) grossit. */
+const ATM_AFFICHAGE = {epaisseur:1, expo:1};
 
 // Exposition de l'« appareil » : de nuit, la luminescence ; l'ISS au Soleil, le jour (cf. GLSL_ATMO_FS).
 // Caméra DANS la coque (ISS sous 390 km : ~340 km jusqu'en 2011) : on dessine sa face intérieure, sans test de
@@ -181,6 +188,8 @@ function majAtmo(){
   const m = TERRE.atmo.material;
   // l'appareil est dans le satellite (vue ISS) : exposé pour la nuit quand il y est ; vu de loin, toujours au Soleil
   m.uniforms.uExpoNuit.value = ATMO_EXPO_NUIT*(ETAT.vue === 'iss' && ETAT.nuitISS ? 1 : 0.02);
+  m.uniforms.uExpoJour.value = ATMO_EXPO_JOUR*ATM_AFFICHAGE.expo;
+  m.uniforms.uH.value = ATM.H/100*ATM_AFFICHAGE.epaisseur;
   const dedans = (ETAT.vue === 'iss' ? camIss : camExt).getWorldPosition(_ac).length() < CFG.R + ATM_COQUE;
   const side = dedans ? THREE.BackSide : THREE.FrontSide;
   if(m.side !== side){ m.side = side; m.depthTest = !dedans; m.needsUpdate = true; }
@@ -190,6 +199,7 @@ const TRACE_MAX = 4000, TRACE_PAS = 20;   // points, secondes simulées entre de
 
 function creerTerre(tex){
   TERRE.uSun = {value:new THREE.Vector3(1,0,0)};
+  TERRE.uLumNuit = {value:LUM_NUIT};               // partagé avec les tuiles de détail (tuiles-rendu.js)
   TERRE.uLune = {value:new THREE.Vector3(0,0,CFG.LUNE_D)};
   TERRE.uRL = {value:CFG.R_LUNE};
   TERRE.uRS = {value:ETAT.rSol};               // rayon apparent du Soleil (varie avec la date)
@@ -202,7 +212,7 @@ function creerTerre(tex){
   TERRE.globe = new THREE.Mesh(new THREE.SphereGeometry(CFG.R, 128, 64),
     new THREE.ShaderMaterial({vertexShader:GLSL_TERRE_VS, fragmentShader:GLSL_TERRE_FS,
       uniforms:{uJour:{value:tex.jour}, uNuit:{value:tex.nuit}, uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS,
-                uNotIR:{value:NOT_IR}}}));
+                uNotIR:{value:NOT_IR}, uLumNuit:TERRE.uLumNuit}}));
   TERRE.axe.add(TERRE.globe);
 
   // Cônes d'axe, comme le globe de l'organigramme du bilan radiatif (CO2 organigramme.js) : pointe au pôle, base vers
@@ -223,7 +233,7 @@ function creerTerre(tex){
   TERRE.atmo = new THREE.Mesh(new THREE.SphereGeometry(CFG.R + ATM_COQUE, 128, 64),
     new THREE.ShaderMaterial({vertexShader:GLSL_ATMO_VS, fragmentShader:GLSL_ATMO_FS,
       uniforms:{uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS,
-                uR:{value:CFG.R}, uExpoJour:{value:0.25}, uExpoNuit:{value:ATMO_EXPO_NUIT},
+                uR:{value:CFG.R}, uExpoJour:{value:ATMO_EXPO_JOUR}, uExpoNuit:{value:ATMO_EXPO_NUIT},
                 uP:{value:ATM.p}, uH:{value:ATM.H/100}, uLum:{value:ATM.lum}},
       transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
   scene.add(TERRE.atmo);
@@ -280,8 +290,8 @@ function poserCartes(m){
   NOT_IR = m.notIR/100; u.uNotIR.value = NOT_IR;
   Object.assign(ATM, m.atm);
   const a = TERRE.atmo.material.uniforms;
-  a.uP.value = ATM.p; a.uH.value = ATM.H/100; a.uLum.value = ATM.lum;
-  const coque = Math.max(3.9, ATM.H/10);
+  a.uP.value = ATM.p; a.uLum.value = ATM.lum;   // uH : à chaque trame, exagération comprise (majAtmo)
+  const coque = Math.max(3.9, ATM.H/10*ATM_AFFICHAGE.epaisseur);   // 10 hauteurs d'échelle dessinées
   TERRE.atmo.scale.setScalar((CFG.R + coque)/(CFG.R + ATM_COQUE)*TERRE.atmo.scale.x);
   ATM_COQUE = coque;
 }

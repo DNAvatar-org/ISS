@@ -1,6 +1,8 @@
 // File: js/ui.js
 // Desc: Commandes : vues, jauge de vitesse (crans logarithmiques), date (donc β), position sur l'orbite, affichages, pose.
-// Version 2.7.0
+// Version 2.8.0
+// - v2.8.0: niveau de zoom et nom de la vue aussi sur la ligne de titre de Temps (#oZoomVue), visible repliée ; compté en
+//   altitude (la vue Terre zoome en altitude jusqu'au limbe).
 // - v2.7.0: case « Axes et pôles » retirée ; niveau de zoom à droite du titre Capture (majZoom) ; satellites visibles Point de vue déplié.
 // - v2.6.0: fenêtres Temps et Point de vue repliables : bouton − / + (ou clic sur le titre) ; repliées, le titre seul, sans cadre.
 // - v2.5.0: changer de point de vue décoche toutes les cases d'affichage (la vue Terre ne les coche plus).
@@ -355,15 +357,19 @@ function creerUI(){
 }
 
 // La focale suit le champ (molette sur le disque ou dans la vue ISS) ; le cône se déduit du même champ.
-/* Niveau de zoom, continu d'une vue à l'autre : vue Terre (et Terre–Lune) = 250 / distance (×1 au départ) ; caméra de l'ISS =
-   celui du plus proche de la vue Terre (1,2 R) × champ maximal / champ — en mode bilan radiatif le zoom passe de l'un à
-   l'autre (entrees.js zoomer). */
+/* Niveau de zoom, compté en altitude : vue Terre (et Terre–Lune) = altitude de départ / altitude de la caméra (×1 au départ,
+   250 du centre ; la vue Terre zoome en altitude, jusqu'au limbe : entrees.js zoomer) ; caméra de l'ISS = celui de la vue
+   Terre à l'altitude de l'ISS, au même champ (FOV_VUE_TERRE) × champ de la vue Terre / champ. */
 function niveauZoom(){
-  return ETAT.vue === 'ext' ? 250/VUE_EXT.r : 250/(CFG.R*1.2)*FOV_MAX/VUE_ISS.fov;
+  return ETAT.vue === 'ext' ? (250 - CFG.R)/(VUE_EXT.r - CFG.R) : (250 - CFG.R)/(OBS.R - CFG.R)*FOV_VUE_TERRE/VUE_ISS.fov;
 }
 function majZoom(){
   const z = niveauZoom();
-  $('oZoom').textContent = '×' + (z < 10 ? z.toFixed(1).replace('.', ',') : Math.round(z).toLocaleString('fr-FR'));
+  const txt = '×' + (z < 10 ? z.toFixed(1).replace('.', ',') : Math.round(z).toLocaleString('fr-FR'));
+  $('oZoom').textContent = txt;
+  // ligne de titre de Temps, visible repliée : le niveau et la vue (où passer d'une vue à l'autre)
+  const vue = ETAT.vue === 'iss' ? 'ISS' : VUE_EXT.mode === 'lune' ? 'Terre–Lune' : 'Terre';
+  $('oZoomVue').textContent = txt + ' · ' + vue;
 }
 
 function majCurseurFocale(){

@@ -1,6 +1,7 @@
 // File: js/tuiles-rendu.js
 // Desc: Un carreau = une calotte de sphère (maillage lon/lat) texturée par une tuile (GIBS jour+nuit, ou Sentinel-2 jour).
-// Version 2.0.0
+// Version 2.1.0
+// - v2.1.0: carreaux : lumières des villes réglables (uLumNuit, terre.js) ; uNotIR déclaré (0).
 // Date: [October 05, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -46,7 +47,8 @@ function carreauMesh(src, z, row, col, texJour, texNuit){
   const mat = new THREE.ShaderMaterial({
     vertexShader:GLSL_TERRE_VS, fragmentShader:GLSL_TERRE_FS,
     defines: src === 'eox' ? {FIN:''} : {},
-    uniforms:{uJour:{value:texJour}, uNuit:{value:texNuit}, uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS},
+    uniforms:{uJour:{value:texJour}, uNuit:{value:texNuit}, uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS,
+      uNotIR:{value:0}, uLumNuit:TERRE.uLumNuit},
     polygonOffset:true, polygonOffsetFactor:-z, polygonOffsetUnits:-z});
   const rayon = CFG.R + 0.003*Math.min(z, 7) + 0.0006*Math.max(0, z - 7);
   const m = new THREE.Mesh(geometrieCarreau(src, z, row, col, rayon), mat);

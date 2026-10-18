@@ -1,6 +1,8 @@
 // File: js/cameras.js
 // Desc: Deux caméras : orbitale autour de la Terre (vue éloignée) et embarquée dans l'ISS (visée cap / site).
-// Version 2.5.0
+// Version 2.6.1
+// - v2.6.1: FOV_VUE_TERRE (champ de la vue Terre), lu aussi par hote.js.
+// - v2.6.0: ETAT.horizonVertical : caméra de l'ISS tournée d'un quart de tour, la Terre à droite de l'image.
 // - v2.5.0: plan proche de la vue Terre à la mesure de l'altitude (zoom jusqu'à 8 km).
 // - v2.4.0: vue Terre–Lune : la visée glisse avec le zoom, du milieu Terre–Lune (au plus large) à la Terre (au plus près).
 // - v2.2.0: vueEclaireeDeBiais (?provenance=CO2) : le Soleil à 75° de l'axe de visée, un bord de nuit visible.
@@ -78,7 +80,7 @@ function majCamExt(){
   else cible.set(0, 0, 0);
   camExt.position.set(r*Math.cos(ph)*Math.sin(th), r*Math.sin(ph), r*Math.cos(ph)*Math.cos(th)).add(cible);
   camExt.lookAt(cible);
-  const fov = VUE_EXT.mode === 'lune' ? 50 : 40;
+  const fov = VUE_EXT.mode === 'lune' ? 50 : FOV_VUE_TERRE;
   // plan proche à la mesure de l'altitude : de près (zoom jusqu'à 8 km), 0,5 unité (50 km) coupait le sol
   const near = Math.max(0.002, Math.min(0.5, (r - CFG.R)*0.25));
   if(camExt.fov !== fov || camExt.near !== near){ camExt.fov = fov; camExt.near = near; camExt.updateProjectionMatrix(); }
@@ -112,6 +114,7 @@ function vueTerre(){
   if(VUE_EXT.mode === 'lune'){ VUE_EXT.mode = 'terre'; VUE_EXT.r = 250; }
 }
 
+const FOV_VUE_TERRE = 40;                          // [°] champ vertical de la vue Terre (Terre–Lune : 50)
 function majCamIss(){
   if(VUE_ISS.suivi){                                    // pas l'astre lui-même : l'horizon sous lui, sur le limbe (horizon.js)
     const v = viseeHorizon(VUE_ISS.suivi);
@@ -119,7 +122,10 @@ function majCamIss(){
     VUE_ISS.site = Math.max(-Math.PI/2, Math.min(Math.PI/2, v.site + VUE_ISS.decal));
   }
   baseVisee(VUE_ISS.cap, VUE_ISS.site, _f, _u, _r);
-  _m.makeBasis(_r, _u, _f.negate());                    // la caméra regarde −z
+  // la caméra regarde −z ; horizon vertical : un quart de tour autour de la visée — la droite de l'image est le bas (la
+  // Terre), son haut l'ancienne droite
+  if(ETAT.horizonVertical) _m.makeBasis(_u.negate(), _r, _f.negate());
+  else _m.makeBasis(_r, _u, _f.negate());
   camIss.quaternion.setFromRotationMatrix(_m);
   camIss.fov = VUE_ISS.fov;
   camIss.updateProjectionMatrix();

@@ -1,6 +1,9 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.12.3
+// Version 1.13.0
+// - v1.13.0: ?provenance=CO2 — vitesse ×100 ; Temps et Point de vue à gauche, sous Atmosphère de la page hôte, dépliés vers
+//   le bas (iss:marges fenetres { gauche, haut }) ; leurs rectangles à la page hôte (iss:fenetres), qui y troue son organigramme :
+//   elles passent par-dessus.
 // - v1.12.3: Temps contre la marge de la page hôte, Point de vue 10 px sous lui : repliés, le pas de la pile de titres de l'hôte.
 // - v1.12.2: Point de vue posé depuis la marge de la page hôte (Temps et lui glissent quand elle change).
 // - v1.12.1: iss:marges gauche = abscisse du centre de la Terre (hote.js xTerre).
@@ -42,12 +45,12 @@
            nocturne (airglow) relative à aujourd'hui. Absent : la Terre d'aujourd'hui (p:1, H:8, lum:1). p:0 : pas d'atmosphère.
            Les couleurs ne se donnent pas : elles sortent de la diffusion Rayleigh (terre.js).
    provenance : qui ouvre la page. provenance=CO2 (bilan radiatif, onglet ISS) : début d'un mode « bilan radiatif » —
-           vitesse ×1000, Temps et Point de vue repliés (+ ou leur titre les rouvre ; dépliée, Point de vue montre les
-           satellites), zoom enchaîné (vue Terre ↔ caméra de l'ISS sur l'horizon sous le Soleil), Temps
-           sous le titre de la page hôte (message iss:marges { haut, gauche } en px de cette page ; gauche : place laissée à
-           gauche de la Terre, qui se décale vers la droite, hote.js), Point de vue sous Temps, pas de
-           Check Photo, vue Terre éclairée de biais (un bord de nuit). Repliées, les fenêtres n'ont que la largeur de leur
-           titre, + contre le bord droit.
+           vitesse ×100, Temps et Point de vue repliés (+ ou leur titre les rouvre ; dépliée, Point de vue montre les
+           satellites), zoom enchaîné (vue Terre ↔ caméra de l'ISS sur l'horizon sous le Soleil), Temps puis Point de vue
+           à gauche, sous les boutons de la page hôte (message iss:marges { gauche, fenetres: { gauche, haut } } en px
+           de cette page ; gauche : place laissée à gauche de la Terre, qui se décale vers la droite, hote.js ;
+           fenetres : leur bord gauche et le haut de Temps), pas de Check Photo, vue Terre éclairée de biais (un bord de
+           nuit). Repliées, les fenêtres n'ont que la largeur de leur titre, + devant lui.
    pays  : false (true par défaut) : pas de pays ni de case « Pays et coordonnées » (une Terre d'avant les frontières).
    zen   : présent (sans valeur), démarre en plein écran : fenêtres, crédits et signature masqués, comme le bouton ⛶ ;
            un toucher bref ou le bouton les remet. Pour une page embarquée (iframe), où le vrai plein écran exige un geste.
@@ -189,29 +192,40 @@ function appliquerProvenanceURL(){
   const p = URL_P.get('provenance');
   if(p === null) return [];
   if(p !== 'CO2') return ['Provenance inconnue : « ' + p + ' ». Connue : CO2 (bilan radiatif).'];
-  ETAT.vitesse = 1000; ETAT.pause = false;          // après allerAujourdhui (main.js), qui remet ×1
+  ETAT.vitesse = 100; ETAT.pause = false;           // après allerAujourdhui (main.js), qui remet ×1
   $('hud').classList.add('plie'); $('panel').classList.add('plie');
   $('bCheck').hidden = true;
   vueEclaireeDeBiais();                            // le Soleil un peu derrière la Terre : un bord de nuit (cameras.js)
   ETAT.zoomEnchaine = true;                         // le zoom passe de la vue Terre à la caméra de l'ISS et retour (entrees.js)
-  // Temps sous le titre de la page hôte (message iss:marges), Point de vue sous Temps, à droite (à gauche, la page hôte pose
-  // son organigramme) : Point de vue suit le bas de Temps, replié ou déplié.
+  // Temps puis Point de vue à gauche, sous les boutons de la page hôte (message iss:marges) : Temps à leur place, Point de
+  // vue 10 px sous lui, replié ou déplié ; dépliés, ils s'ouvrent vers le bas.
   document.body.classList.add('provenance-co2');
   new ResizeObserver(placerPointDeVue).observe($('hud'));
+  // leurs rectangles à la page hôte, qui troue son organigramme à leur place (par-dessus tout) : à chaque changement de
+  // taille, et à la fin de chaque glissement (transition de top)
+  const envoi = new ResizeObserver(envoyerFenetres);
+  ['hud', 'panel'].forEach(id => { envoi.observe($(id)); $(id).addEventListener('transitionend', envoyerFenetres); });
+  addEventListener('resize', envoyerFenetres);
   addEventListener('message', e => {
     if(e.data.type !== 'iss:marges') return;
-    document.documentElement.style.setProperty('--marge-haut', e.data.haut + 'px');
-    MARGE_HAUT = e.data.haut;
+    const s = document.documentElement.style;
+    s.setProperty('--fenetres-gauche', e.data.fenetres.gauche + 'px');
+    s.setProperty('--fenetres-haut', e.data.fenetres.haut + 'px');
+    FENETRES_HAUT = e.data.fenetres.haut;
     placerPointDeVue();
     HOTE.xTerre = () => e.data.gauche; decalerTerre();   // la place de son organigramme, à gauche de la Terre (hote.js)
   });
   return [];
 }
-/* Point de vue 10 px sous Temps : son haut d'arrivée (la marge de la page hôte, css provenance-co2) plus sa hauteur — pas
-   son bas mesuré, qui glisse encore (transition) quand la marge change. Repliés (titre de 20 px), un titre tous les 30 px,
-   le pas de la pile de l'hôte (CO2 fenetres.js PAS_TITRE). */
-let MARGE_HAUT = 0;
-function placerPointDeVue(){ $('panel').style.top = (MARGE_HAUT + $('hud').offsetHeight + 10) + 'px'; }
+/* Point de vue 10 px sous Temps : le haut de Temps (css provenance-co2) plus sa hauteur — pas son bas mesuré, qui glisse
+   encore (transition) quand la pile bouge. Repliés (titre de 20 px), un titre tous les 30 px, le pas des titres de l'hôte. */
+let FENETRES_HAUT = 0;
+function placerPointDeVue(){ $('panel').style.top = (FENETRES_HAUT + $('hud').offsetHeight + 10) + 'px'; }
+/* Rectangles de Temps et Point de vue (px de cette page) → page hôte (message iss:fenetres). */
+function envoyerFenetres(){
+  const rects = ['hud', 'panel'].map(id => { const r = $(id).getBoundingClientRect(); return {x:r.left, y:r.top, w:r.width, h:r.height}; });
+  parent.postMessage({type:'iss:fenetres', rects}, '*');
+}
 
 function appliquerZenURL(){
   if(!URL_P.has('zen')) return;

@@ -1,6 +1,8 @@
 /* File: css/pesquet.css
    Desc: Mise en page : panneau de réglages, HUD du chrono, canvas plein écran.
-   Version 1.3.5
+   Version 1.4.0
+   v1.4.0 : ?provenance=CO2 — Temps et Point de vue à gauche, sous les boutons de l'hôte, dépliés vers le bas, + devant le titre.
+   v1.3.6 : ?provenance=CO2 — titres de Temps et Point de vue en 04B_03 italique, comme les fenêtres de l'hôte.
    v1.3.5 : boutons − / + sans bulle ; repliées, ni trait sous Temps ni sous Point de vue ; ?provenance=CO2 — repliées, dans la pile de titres de l'hôte
             (même bord droit, 16 px ; même pas, 30 px).
    v1.3.4 : en onglet, pas de pied (signature ni lien GitHub : la page hôte les porte).
@@ -440,15 +442,23 @@ body.zen #credits{display:none !important}
 #hud.plie,#panel.plie{background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
 #hud.plie #temps,#hud.plie .tete-temps,#panel.plie .grp{border-bottom:0;margin-bottom:0;padding-bottom:0}   /* ni trait ni marge sous le titre seul */
 
-/* ?provenance=CO2 (url.js) : Temps sous le titre de la page hôte (--marge-haut, message iss:marges ; 0 avant), Point de
-   vue sous Temps, à droite ; son haut suit le bas de Temps */
-:root{--marge-haut:0px}
-body.provenance-co2 #hud{top:var(--marge-haut)}
-body.provenance-co2 #hud,body.provenance-co2 #panel{transition:top .4s ease}   /* la pile des fenêtres de l'hôte bouge : elles glissent */
-body.provenance-co2 #panel{left:auto;right:12px}
-/* repliées : la largeur de leur titre seul, dans la pile de titres de l'hôte — le + à 16 px du bord droit, comme les siens
-   (CO2 index-shell.css .fenetre-tete), un titre tous les 30 px (url.js placerPointDeVue) */
-body.provenance-co2 #hud.plie,body.provenance-co2 #panel.plie{width:auto;right:16px;padding:0}
+/* ?provenance=CO2 (url.js) : Temps puis Point de vue à gauche (--fenetres-gauche), sous les boutons de la page hôte
+   (--fenetres-haut, message iss:marges) ; Point de vue sous Temps (url.js placerPointDeVue) ; dépliés, vers le bas */
+:root{--fenetres-gauche:12px;--fenetres-haut:12px}
+body.provenance-co2 #hud,body.provenance-co2 #panel{bottom:auto;left:var(--fenetres-gauche);right:auto;transition:top .4s ease}
+body.provenance-co2 #hud{top:var(--fenetres-haut);max-height:calc(100vh - var(--fenetres-haut) - 12px)}   /* déplié, il défile plutôt que de sortir par le bas */
+/* repliées : la largeur de leur titre seul, le + devant lui comme les boutons de l'hôte (CO2 html/visu_radiatif.html
+   « Energies »), un titre tous les 30 px (url.js placerPointDeVue) */
+body.provenance-co2 #hud.plie,body.provenance-co2 #panel.plie{width:auto;padding:0}
+body.provenance-co2 .titre-plier{flex-direction:row-reverse}
+/* par-dessus tout (la page hôte troue son organigramme à leur place, iss:fenetres) ; dépliées, un fond sombre opaque : lisibles
+   sur la Terre et les étoiles */
+body.provenance-co2 #hud,body.provenance-co2 #panel{z-index:50}
+body.provenance-co2 #hud:not(.plie),body.provenance-co2 #panel:not(.plie){background:rgba(8,10,16,.94)}
+/* titres de Temps et Point de vue dans la police des titres de fenêtres de l'hôte (04B_03 italique, CO2 index-shell.css) ;
+   la police du site : /fonts en ligne, /dnavatar/fonts en local (serveur sur site/) */
+@font-face{font-family:'04B_03';src:url('/fonts/04B_03__.TTF') format('truetype'),url('/dnavatar/fonts/04B_03__.TTF') format('truetype')}
+body.provenance-co2 #temps .tete-temps h2,body.provenance-co2 #panel .grp:first-child > .tete h2{font:italic normal 12px/1.5 '04B_03',Tahoma,Verdana,sans-serif;letter-spacing:0;color:#9aa3b5}
 
 /* niveau de zoom (ui.js majZoom) à droite du titre Capture (petit écran : titre masqué, plus haut) */
 @media (min-width:761px) and (min-height:501px){ #titrePose{display:flex;justify-content:space-between;align-items:baseline} }

@@ -4,7 +4,12 @@
 //       enfant du globe (il tourne avec lui), caché par la Terre de l'autre côté ; son texte au survol ; survol et clic
 //       renvoyés à la page hôte (iss:pointSurvol, iss:pointClic) qui peut montrer davantage ; un anneau autour des points
 //       d'un groupe, à distance, s'il le demande ; une image à la place du disque, s'il la donne.
-// Version 1.9.1
+// Version 1.11.0
+// - v1.11.0: glisser (un bouton appuyé : la Terre tourne) coupe le survol — texte caché, iss:pointSurvol id null une fois ;
+//            il revient au premier mouvement bouton relâché.
+// - v1.10.0: plus de clignotement — les pyramides posées au même endroit (un couple) s'écartent d'une fraction de leur
+//            taille à l'écran (en spirale, à tout zoom) ; les cartons gardent leurs pieds sur leur point, avec un ordre
+//            de rendu fixe (renderOrder propre à chacun : le tri des sprites à égale distance changeait à chaque image).
 // - v1.9.1: carton neuf né à taille nulle, matrice refaite après sa taille (plus de flash géant d'une image).
 // - v1.9.0: zoomMin / zoomMax par groupe (px d'écran par km de sol au point) : dessiné et survolable seulement dans cette plage.
 // - v1.8.0: cartons orientés selon la verticale du lieu (pieds vers le centre de la Terre).
@@ -17,7 +22,7 @@
 //           les anneaux : sans test de profondeur, seulement du côté visible.
 // - v1.2.0: anneau facultatif par groupe (à distance du point : un vide entre les deux).
 // - v1.1.0: id des points ; survol et clic renvoyés à la page hôte ; texte facultatif.
-// Date: [October 19, 2026]
+// Date: [October 21, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.txt.
 
@@ -82,6 +87,7 @@ function poserPointsHote(groupes){
   });
   PTS_HOTE.objets = [];
   PTS_HOTE.liste = [];
+  PTS_HOTE.places = {};                             // « genre:lat,lon » → points déjà posés là (rangALaPlace)
   if(PTS_HOTE.disque === null) PTS_HOTE.disque = disquePointsHote();
   if(PTS_HOTE.cercle === null) PTS_HOTE.cercle = cerclePointsHote();
   const c = new THREE.Color();
@@ -97,6 +103,14 @@ function poserPointsHote(groupes){
     poserPyramides(gr, pos, coul);
     if(gr.anneau) poserAnneaux(gr, pos, coul);
   }
+}
+
+/** Combien de points de ce genre (pyramide, carton) sont déjà posés à cet endroit (au mètre près) : 0 pour le premier
+ *  — les suivants s'écartent (ils se confondaient : faces superposées qui clignotent) */
+function rangALaPlace(genre, lat, lon){
+  const cle = genre + ':' + lat.toFixed(5) + ',' + lon.toFixed(5), j = PTS_HOTE.places[cle] || 0;
+  PTS_HOTE.places[cle] = j + 1;
+  return j;
 }
 
 /* Taille à l'écran : unités de la scène par pixel à la distance d de la caméra qui dessine */
@@ -128,11 +142,20 @@ function geometriePyramide(){
 }
 function poserPyramides(gr, pos, coul){
   const n = pos.length/3, im = new THREE.InstancedMesh(geometriePyramide(), new THREE.MeshBasicMaterial({vertexColors:true}), n);
-  const quats = [], c = new THREE.Color();
+  const quats = [], ecarts = [], c = new THREE.Color();
   for(let i = 0; i < n; i++){
     _pyP.fromArray(pos, 3*i);
-    quats.push(new THREE.Quaternion().setFromUnitVectors(_pyU, _pyP.clone().normalize()));   // pointe vers le ciel
+    const up = _pyP.clone().normalize();
+    quats.push(new THREE.Quaternion().setFromUnitVectors(_pyU, up));   // pointe vers le ciel
     im.setColorAt(i, c.setRGB(coul[3*i], coul[3*i + 1], coul[3*i + 2]));
+    // déjà une pyramide ici : celle-ci s'écarte sur le sol, en spirale (angle d'or), de 0,75 √rang fois sa taille
+    const p = gr.points[i], j = rangALaPlace('py', p.lat, p.lon);
+    if(j === 0){ ecarts.push(null); continue; }
+    const t1 = new THREE.Vector3(0, 0, 1).cross(up);
+    if(t1.lengthSq() < 1e-8) t1.set(1, 0, 0);
+    t1.normalize();
+    const t2 = up.clone().cross(t1), a = j*2.39996;
+    ecarts.push(t1.multiplyScalar(Math.cos(a)).add(t2.multiplyScalar(Math.sin(a))).multiplyScalar(0.75*Math.sqrt(j)));
   }
   im.frustumCulled = false;
   im.onBeforeRender = (r, sc, cam) => {
@@ -141,6 +164,7 @@ function poserPyramides(gr, pos, coul){
       _pyP.fromArray(pos, 3*i);
       TERRE.globe.localToWorld(_pyS.copy(_pyP));
       const d = _pyS.distanceTo(_pyW), k = dansZoom(gr, cam, d) ? unitesParPixel(cam, d)*gr.taille : 0;   // hors zoom : rien
+      if(ecarts[i] !== null) _pyP.addScaledVector(ecarts[i], k);   // écartée de sa voisine, à l'échelle de l'écran
       _pyM.compose(_pyP, quats[i], _pyS.set(k*0.8, k, k*0.8));
       im.setMatrixAt(i, _pyM);
     }
@@ -161,10 +185,10 @@ function poserCartons(gr){
     // de la Terre (onBeforeRender), dessiné par-dessus le sol, pieds sur le point
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, sizeAttenuation:false, alphaTest:0.25, transparent:true,
       depthTest:false, depthWrite:false}));
-    sp.center.set(0.5, 0);                          // ancré par le pied
+    sp.center.set(0.5, 0);                          // ancré par le pied, sur son point (même à plusieurs au même endroit)
     sp.scale.set(0, 0, 1);                          // né invisible : sa taille vient au premier rendu (onBeforeRender)
     vecGeo(p.lat, p.lon, SOL_POINTS, sp.position);
-    sp.renderOrder = 6;
+    sp.renderOrder = 6 + PTS_HOTE.objets.length*1e-4;   // un ordre à lui : les sprites à égale distance ne s'échangent plus
     const pied = sp.position.clone();
     sp.onBeforeRender = (r, sc, cam) => {           // taille constante à l'écran : gr.taille px de haut
       const k = 2*Math.tan(cam.fov*DEG/2)/canvas.clientHeight*gr.taille, img = tex.image;
@@ -267,7 +291,7 @@ function pointSousPointeur(e){
 PTS_HOTE.survol = null;
 function survolerPointsHote(e){
   if(PTS_HOTE.liste.length === 0) return;
-  const best = pointSousPointeur(e);
+  const best = e.buttons !== 0 ? null : pointSousPointeur(e);               // un glisser fait tourner la Terre : pas de survol
   if(best !== PTS_HOTE.survol || (best !== null && best.id !== undefined))     // changé, ou l'hôte suit le pointeur
     parent.postMessage({type:'iss:pointSurvol', id:best === null ? null : best.id, x:e.clientX, y:e.clientY}, '*');
   PTS_HOTE.survol = best;

@@ -1,19 +1,29 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
-// Version 1.1.10
+// Version 1.1.11
+// - v1.1.11: ?veille=<ms> (une page hôte qui garde la Terre en décor : le tamagoshi) — sans geste ni message depuis
+//   VEILLE.repos, la Terre n'est redessinée que toutes les <ms> : le canevas garde sa dernière image, le processeur se
+//   repose ; un geste, un message de l'hôte, un redimensionnement la réveillent aussitôt.
 // - v1.1.10: ?pays= (appliquerPaysURL) ; niveau de zoom à chaque trame (majZoom).
 // - v1.1.8: hors vue ISS, la lumière du Soleil ne suit plus la nuit ni l'éclipse du satellite.
 // - v1.1.7: cônes d'axe de la Terre (terre.js) visibles en vue Terre seulement.
 // - v1.1.6: en onglet, la Terre à l'écran est envoyée à la page hôte à chaque image (hote.js, 'iss:terre').
 // - v1.1.5: ?provenance= (url.js), appliquée en dernier (après la date, qui remet la vitesse à ×1).
 // - v1.1.4: visées « soleil » / « lune » = horizon sous l'astre (horizon.js), repères du joystick seulement.
-// Date: [October 15, 2026]
+// Date: [October 22, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
 const TEX = {};
 const _pos = new THREE.Vector3();
 let dernier = 0;
+
+// La veille (?veille=<ms>) : periode entre deux images au repos (0 : pas de veille), repos (ms sans geste ni message avant
+// de s'endormir), geste et image : les derniers instants (ms)
+const VEILLE = { periode: URL_P.has('veille') ? Number(URL_P.get('veille')) : 0, repos: 4000, geste: 0, image: 0 };
+for(const t of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'touchstart', 'message', 'resize']){
+  addEventListener(t, () => { VEILLE.geste = performance.now(); }, {capture: true, passive: true});
+}
 
 function redimensionner(){
   const w = innerWidth, h = innerHeight;
@@ -78,7 +88,10 @@ function dessiner(){
 
 function boucle(ms){
   requestAnimationFrame(boucle);
-  const dtReel = Math.min(0.1, (ms - dernier)/1000); dernier = ms;
+  // en veille : l'image d'avant reste à l'écran
+  if(VEILLE.periode > 0 && !POSE.actif && ms - VEILLE.geste > VEILLE.repos && ms - VEILLE.image < VEILLE.periode) return;
+  VEILLE.image = ms;
+  const dtReel = Math.min(VEILLE.periode > 0 ? VEILLE.periode/1000 + 0.1 : 0.1, (ms - dernier)/1000); dernier = ms;
   majSoleilDate();
   const dtSim = ETAT.pause ? 0 : dtReel*ETAT.vitesse;
 

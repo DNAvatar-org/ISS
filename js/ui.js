@@ -95,7 +95,7 @@ function placerCredits(){
   const c = $('credits');
   document.documentElement.style.setProperty('--bas-hud', Math.round($('hud').getBoundingClientRect().bottom) + 'px');   // portrait : l'encart du bas s'arrête sous celui du haut
   c.style.bottom = '';                                             // retour à la CSS (bureau : déjà au-dessus du pied)
-  if(!matchMedia('(max-width:760px), (max-height:500px)').matches || getComputedStyle(c).display === 'none') return;   // (offsetParent vaut toujours null en position fixed)
+  if(!matchMedia('(max-width:760px), (max-height:500px)').matches || getComputedStyle(c).display === 'none' || document.body.classList.contains('onglet')) return;   // en onglet : place fixe (css)   // (offsetParent vaut toujours null en position fixed)
   const h = $('hud').getBoundingClientRect(), p = $('pied').getBoundingClientRect(), ch = c.getBoundingClientRect().height;
   const bas = innerHeight - p.top + 4;                             // juste au-dessus de la signature
   if(innerHeight - bas - ch >= h.bottom + 6) c.style.bottom = bas + 'px';
@@ -401,7 +401,7 @@ function dessinerPhase(cv, illum, croissante){
   c.strokeStyle = 'rgba(255,255,255,.25)'; c.lineWidth = 1; c.beginPath(); c.arc(x0, y0, r, 0, 2*Math.PI); c.stroke();
 }
 
-/* Crédits des images : repliés par défaut derrière ⓒ (toujours à l'écran, la mention reste à un clic), − pour les refermer. */
+/* Crédits des images : repliés par défaut derrière ⓒ (dépliés en onglet, url.js), − pour les refermer. */
 function basculerCredits(){
   const ouverts = document.body.classList.toggle('credits-ouverts');
   $('bCredits').textContent = ouverts ? '−' : 'ⓒ';

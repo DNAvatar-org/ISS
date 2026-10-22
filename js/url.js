@@ -1,6 +1,7 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.14.0
+// Version 1.15.0
+// - v1.15.0: ?provenance=CO2 — la liste des éclipses ouverte est trouée dans l'organigramme de l'hôte (iss:fenetres) : par-dessus tout.
 // - v1.14.0: ?lumNuit= — lumières des villes la nuit, de 0 (éteintes) à 1.
 // - v1.13.1: ?provenance=CO2 — caméra de l'ISS tournée, la Terre à droite (ETAT.horizonVertical, cameras.js).
 // - v1.13.0: ?provenance=CO2 — vitesse ×100 ; Temps et Point de vue à gauche, sous Atmosphère de la page hôte, dépliés vers
@@ -196,6 +197,7 @@ function appliquerLimbeURL(){
 // ?onglet : page dans l'onglet d'une page hôte (body.onglet : signature et ⛶ masqués, css « PAGE EN ONGLET »).
 function appliquerOngletURL(){
   document.body.classList.toggle('onglet', URL_P.has('onglet'));
+  if(URL_P.has('onglet')) basculerCredits();   // en onglet : crédits dépliés par défaut (3 lignes à gauche de ⓒ, css « PAGE EN ONGLET »)
 }
 
 function appliquerProvenanceURL(){
@@ -218,6 +220,7 @@ function appliquerProvenanceURL(){
   // taille, et à la fin de chaque glissement (transition de top)
   const envoi = new ResizeObserver(envoyerFenetres);
   ['hud', 'panel'].forEach(id => { envoi.observe($(id)); $(id).addEventListener('transitionend', envoyerFenetres); });
+  new MutationObserver(envoyerFenetres).observe($('lEcl'), {attributes: true, attributeFilter: ['hidden', 'style']});   // la liste des éclipses s'ouvre, se ferme, se place
   addEventListener('resize', envoyerFenetres);
   addEventListener('message', e => {
     if(e.data.type !== 'iss:marges') return;
@@ -234,9 +237,10 @@ function appliquerProvenanceURL(){
    encore (transition) quand la pile bouge. Repliés (titre de 20 px), un titre tous les 30 px, le pas des titres de l'hôte. */
 let FENETRES_HAUT = 0;
 function placerPointDeVue(){ $('panel').style.top = (FENETRES_HAUT + $('hud').offsetHeight + 10) + 'px'; }
-/* Rectangles de Temps et Point de vue (px de cette page) → page hôte (message iss:fenetres). */
+/* Rectangles de Temps, Point de vue et de la liste des éclipses (px de cette page ; fermée : vide) → page hôte (message
+   iss:fenetres). */
 function envoyerFenetres(){
-  const rects = ['hud', 'panel'].map(id => { const r = $(id).getBoundingClientRect(); return {x:r.left, y:r.top, w:r.width, h:r.height}; });
+  const rects = ['hud', 'panel', 'lEcl'].map(id => { const r = $(id).getBoundingClientRect(); return {x:r.left, y:r.top, w:r.width, h:r.height}; });
   parent.postMessage({type:'iss:fenetres', rects}, '*');
 }
 

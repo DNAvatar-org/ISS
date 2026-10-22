@@ -233,6 +233,11 @@ body:not(.credits-ouverts) #credits{display:none !important}
 body.zen #bCredits{display:none}
 /* PAGE EN ONGLET (?onglet, url.js) : la page hôte porte le ⛶ (même place) ; pas de signature dans une page déjà signée */
 body.onglet #bZen, body.onglet #pied{display:none !important}   /* en onglet, le lien GitHub est dans le pied de la page hôte */
+/* en onglet, crédits dépliés par défaut (url.js) : 3 lignes à gauche de ⓒ, le haut aligné sur ⓒ et ⛶ (12 + 34 px du bas), le bas
+   au ras de la page */
+body.onglet #credits{left:auto;top:auto;right:92px;bottom:2px;width:600px;max-width:calc(100% - 104px);height:44px;max-height:none;
+                     overflow:hidden;box-sizing:border-box;padding:3px 8px}
+body.onglet #credits .credit{font-size:10px!important;line-height:12px}
 body.zen #panel, body.zen #hud, body.zen #galerie{display:none !important}
 
 /* Date et position sur l'orbite sur UNE jauge : deux curseurs superposés. Seuls les curseurs captent la souris
@@ -290,8 +295,8 @@ body.zen #pied{display:none !important}
 #temps .btns{flex-wrap:nowrap;align-items:center}
 #bEcl{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:6px;text-align:left}
 #bEclTxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* liste du menu « Éclipses » (au niveau de la page, placée par ouvrirMenuEclipses) */
-.menu-liste{position:fixed;z-index:20;display:flex;flex-direction:column;overflow-y:auto;padding:4px;
+/* liste du menu « Éclipses » (au niveau de la page, placée par ouvrirMenuEclipses) : devant tout, Temps compris (z-index 50) */
+.menu-liste{position:fixed;z-index:100;display:flex;flex-direction:column;overflow-y:auto;padding:4px;
             background:#151a24;border:1px solid var(--stroke);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.55)}
 .menu-liste[hidden]{display:none}
 .menu-liste button{border:0;border-radius:6px;background:none;text-align:left;white-space:nowrap;font-size:12.5px;padding:6px 10px}

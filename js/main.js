@@ -1,6 +1,7 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
-// Version 1.1.11
+// Version 1.1.12
+// - v1.1.12: endormie par la page hôte (hote.js, iss:dormir), la boucle ne dessine plus : sa dernière image reste.
 // - v1.1.11: ?veille=<ms> (une page hôte qui garde la Terre en décor : le tamagoshi) — sans geste ni message depuis
 //   VEILLE.repos, la Terre n'est redessinée que toutes les <ms> : le canevas garde sa dernière image, le processeur se
 //   repose ; un geste, un message de l'hôte, un redimensionnement la réveillent aussitôt.
@@ -88,6 +89,7 @@ function dessiner(){
 
 function boucle(ms){
   requestAnimationFrame(boucle);
+  if(HOTE.dort) return;                            // endormie par la page hôte (hote.js) : sa dernière image reste
   // en veille : l'image d'avant reste à l'écran
   if(VEILLE.periode > 0 && !POSE.actif && ms - VEILLE.geste > VEILLE.repos && ms - VEILLE.image < VEILLE.periode) return;
   VEILLE.image = ms;

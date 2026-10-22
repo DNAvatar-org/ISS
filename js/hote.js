@@ -3,7 +3,10 @@
 //       Soleil à l'écran, envoyés à la page hôte (message 'iss:terre') : elle pose son organigramme autour, son Soleil du
 //       côté du vrai, et le suit quand on tourne la caméra (bilan radiatif CO2, onglets_graphe.js). En retour, la place
 //       qu'elle demande à gauche de la Terre (iss:marges) : le centre de la Terre se pose là.
-// Version 1.10.0
+// Version 1.11.0
+// - v1.11.0: message iss:dormir { oui } — la page hôte endort la Terre (la boucle ne dessine plus : le canevas garde sa
+//   dernière image, un grab) le temps de faire tourner sa propre 3D (le tamagoshi : sa créature animée) ; oui false la
+//   réveille.
 // - v1.10.0: mode bilan radiatif (ETAT.zoomEnchaine) : un point d'horizon fixe à l'écran — le bord gauche de la Terre en vue
 //   Terre, l'horizon sous le Soleil dans la caméra de l'ISS — sur lequel on zoome ; iss:terre porte la Terre de référence
 //   (terreRef : au zoom ×1), autour de laquelle l'hôte pose son organigramme une fois pour toutes ; vitesse par vue (×1000
@@ -18,14 +21,21 @@
 // - v1.4.0: la page hôte donne l'abscisse du centre de la Terre (iss:marges gauche), à gauche du milieu s'il le faut.
 // - v1.3.0: iss:terre porte la vue ('ext' / 'iss') : en caméra de l'ISS, l'hôte cache son organigramme.
 // - v1.2.0: message iss:cartes — la page hôte change cartes, atmosphère et côté nuit lumineux sans recharger (terre.js poserCartes).
-// Date: [October 19, 2026]
+// Date: [October 22, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
 /* xTerre : abscisse du centre de la Terre à l'écran [px] — le milieu de l'image, ou la place que la page hôte demande à
    gauche de la Terre (message iss:marges, url.js) : plus à gauche ou plus à droite que le milieu. */
 const HOTE = {cx:NaN, cy:NaN, r:NaN, soleil:NaN, vue:null, vueVitesse:null, xTerre:() => canvas.clientWidth/2, yTerre:() => canvas.clientHeight/2,
-              centre:new THREE.Vector3(), oeil:new THREE.Vector3(), sol:new THREE.Vector3()};
+              centre:new THREE.Vector3(), oeil:new THREE.Vector3(), sol:new THREE.Vector3(), dort:false};
+
+/* Message générique de la page hôte { type: 'iss:dormir', oui } : endormie, la boucle (main.js) ne dessine plus — le canevas
+   garde sa dernière image ; une seule 3D à la fois quand l'hôte anime la sienne. */
+addEventListener('message', e => {
+  if(!e.data || e.data.type !== 'iss:dormir') return;
+  HOTE.dort = !!e.data.oui;
+});
 
 /* Vue Terre : centre de la Terre en HOTE.xTerre(), par décalage du cadrage (setViewOffset) ; projections, visées et clics le
    suivent. La caméra du satellite n'est jamais décalée : ses visées (nadir, horizon…) restent au centre de l'image. */

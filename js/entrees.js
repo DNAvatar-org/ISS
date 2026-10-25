@@ -1,6 +1,8 @@
 // File: js/entrees.js
 // Desc: Souris, pavé tactile et écran tactile : orbite autour de la Terre, visée et focale de la caméra embarquée.
-// Version 1.7.0
+// Version 1.8.0
+// - v1.8.0: ?glisserGlobe — vue Terre : le glisser ne part que d'un appui sur le globe (pas du ciel autour), la main ne
+//   s'affiche qu'en le survolant ; pour une page hôte où la Terre est en plein écran sous son interface (le tamagoshi).
 // - v1.7.0: vue Terre — le zoom multiplie l'altitude (plus de saut à la butée), glisser lent jusqu'au plus près.
 // - v1.6.0: zoom de la vue Terre jusqu'à 8 km d'altitude (au lieu de 0,2 rayon terrestre).
 // - v1.5.0: zoom enchaîné : la vue Terre–Lune en deçà de ×0,8 (R_VERS_LUNE), et retour ; R_LUNE_MAX. Vers le sol, la vue
@@ -8,7 +10,7 @@
 // - v1.4.0: glisser en vue Terre : rotation proportionnelle à l'altitude de la caméra (de près, beaucoup plus douce).
 // - v1.3.0: zoom enchaîné vers le large : vue Terre au plus loin → vue Terre–Lune ; et retour.
 // - v1.2.0: zoom enchaîné (ETAT.zoomEnchaine) : vue Terre au plus proche → caméra de l'ISS, horizon sous le Soleil ; et retour.
-// Date: [October 19, 2026]
+// Date: [October 23, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -56,8 +58,17 @@ function facteurMolette(e){
 
 const ecartDoigts = () => { const [a, b] = [...DOIGTS.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
 
+// ?glisserGlobe : en vue Terre, le glisser ne part que du globe — le ciel autour reste à la page hôte (le tamagoshi : la
+// Terre en plein écran sous son interface, un appui à côté ne doit pas la faire tourner)
+const GLISSER_GLOBE = new URLSearchParams(location.search).has('glisserGlobe');
+const surGlobe = e => ETAT.vue !== 'ext' || pointTerre(camExt, e.clientX/innerWidth*2 - 1, 1 - e.clientY/innerHeight*2) !== null;
+if(GLISSER_GLOBE) addEventListener('pointermove', e => {
+  if(DOIGTS.size === 0) document.documentElement.style.cursor = !surUI(e) && ETAT.vue === 'ext' && surGlobe(e) ? 'grab' : '';
+});
+
 addEventListener('pointerdown', e => {
   if(surUI(e)) return;
+  if(GLISSER_GLOBE && !surGlobe(e)) return;
   poseInterrompre(); if(ETAT.vue !== 'iss') fermerPhoto();     // capture ouverte : on la referme
   DOIGTS.set(e.pointerId, {x:e.clientX, y:e.clientY});
   if(DOIGTS.size === 1) Object.assign(TAP, {id:e.pointerId, x:e.clientX, y:e.clientY, t:performance.now(), ok:e.pointerType === 'touch'});

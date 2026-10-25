@@ -1,6 +1,8 @@
 // File: js/entrees.js
 // Desc: Souris, pavé tactile et écran tactile : orbite autour de la Terre, visée et focale de la caméra embarquée.
-// Version 1.8.0
+// Version 1.9.0
+// - v1.9.0: ?vuesAuZoom — le niveau de zoom choisit la vue : Terre–Lune au large, Terre, caméra de l'ISS en deçà de son
+//   altitude, et retour à la vue Terre quand on élargit le champ de l'ISS au-delà de celui de la vue Terre.
 // - v1.8.0: ?glisserGlobe — vue Terre : le glisser ne part que d'un appui sur le globe (pas du ciel autour), la main ne
 //   s'affiche qu'en le survolant ; pour une page hôte où la Terre est en plein écran sous son interface (le tamagoshi).
 // - v1.7.0: vue Terre — le zoom multiplie l'altitude (plus de saut à la butée), glisser lent jusqu'au plus près.
@@ -32,21 +34,40 @@ const R_EXT_MIN = CFG.R + 0.08;                  // vue Terre au plus proche : 8
 const R_EXT_MAX = 3000;                          // vue Terre au plus loin
 const R_LUNE_MIN = 1500;                         // vue Terre–Lune au plus proche
 const R_LUNE_MAX = 6000;                         // vue Terre–Lune au plus loin
-// Zoom enchaîné (?provenance=CO2) : plus loin que ×0,8 (ui.js niveauZoom : altitude de départ / altitude), la vue Terre–Lune
+// Vues au zoom (?vuesAuZoom, ?provenance=CO2) : un seul niveau (ui.js niveauZoom : altitude de départ / altitude, continu d'une
+// vue à l'autre) choisit la vue. Plus loin que ×0,8 : la vue Terre–Lune. Plus près que l'altitude de l'ISS : sa caméra, horizon
+// sous le Soleil, au champ qui garde le niveau. Champ de l'ISS élargi au-delà de celui de la vue Terre : la vue Terre, à l'altitude
+// qui garde le niveau — une Terre vue de profil en parabole, c'est qu'on a trop reculé dans le satellite.
 const R_VERS_LUNE = CFG.R + (250 - CFG.R)/0.8;
 function zoomer(f){
   poseInterrompre();
   if(ETAT.vue === 'ext'){
     const lune = VUE_EXT.mode === 'lune';       // en vue Terre–Lune on reste dans la voûte (rayon 9 000)
-    // Zoom enchaîné (?provenance=CO2) : vers le large, la vue Terre–Lune au plus proche ; et retour.
-    if(ETAT.zoomEnchaine && !lune && VUE_EXT.r*f > R_VERS_LUNE){ poseEffacer(); vueTerreLune(); VUE_EXT.r = R_LUNE_MIN; majBoutons(); return; }
-    if(ETAT.zoomEnchaine && lune && VUE_EXT.r*f < R_LUNE_MIN){ poseEffacer(); VUE_EXT.mode = 'terre'; VUE_EXT.r = R_VERS_LUNE; majBoutons(); return; }
+    // Vues au zoom (?vuesAuZoom) : vers le large, la vue Terre–Lune au plus proche, et retour ; vers le sol, la caméra de l'ISS.
+    if(ETAT.vuesAuZoom && !lune && VUE_EXT.r*f > R_VERS_LUNE){ poseEffacer(); vueTerreLune(); VUE_EXT.r = R_LUNE_MIN; majBoutons(); return; }
+    if(ETAT.vuesAuZoom && lune && VUE_EXT.r*f < R_LUNE_MIN){ poseEffacer(); VUE_EXT.mode = 'terre'; VUE_EXT.r = R_VERS_LUNE; majBoutons(); return; }
+    if(ETAT.vuesAuZoom && !lune && (VUE_EXT.r - CFG.R)*f < OBS.R - CFG.R){ entrerDansIss((VUE_EXT.r - CFG.R)*f); return; }
     // vue Terre : le zoom multiplie l'altitude (r − R), pas la distance au centre — sinon, près du sol, un cran sautait de
     // centaines de km jusqu'à la butée (le zoom semblait bloqué)
     if(lune) VUE_EXT.r = Math.max(R_LUNE_MIN, Math.min(R_LUNE_MAX, VUE_EXT.r*f));
     else VUE_EXT.r = Math.max(R_EXT_MIN, Math.min(R_EXT_MAX, CFG.R + (VUE_EXT.r - CFG.R)*f));
   }
+  else if(ETAT.vuesAuZoom && VUE_ISS.fov*f > FOV_VUE_TERRE) sortirDeIss(VUE_ISS.fov*f/FOV_VUE_TERRE);
   else zoomerFocale(f);
+}
+/* Vues au zoom : dans le satellite, horizon sous le Soleil (comme « lever de Soleil »), au champ qui garde le niveau de zoom de
+   l'altitude alt atteinte (ui.js niveauZoom) ; et retour à la vue Terre, à l'altitude de l'ISS × k (k = champ / champ de la vue
+   Terre), telle qu'on l'avait laissée. */
+function entrerDansIss(alt){
+  poseEffacer();
+  ETAT.vue = 'iss'; choisirPreset('soleil'); VUE_ISS.decal = -10*DEG;
+  VUE_ISS.fov = Math.max(0.5, FOV_VUE_TERRE*alt/(OBS.R - CFG.R));
+  majBoutons();
+}
+function sortirDeIss(k){
+  poseEffacer();
+  vueTerre(); VUE_EXT.r = Math.min(R_VERS_LUNE, CFG.R + (OBS.R - CFG.R)*k);
+  majBoutons();
 }
 const zoomerFocale = f => { VUE_ISS.fov = Math.max(0.5, Math.min(FOV_MAX, VUE_ISS.fov*f)); };
 

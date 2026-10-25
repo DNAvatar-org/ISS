@@ -1,6 +1,7 @@
 // File: js/main.js
 // Desc: Point d'entrée : chargement des textures (seul asynchrone), puis boucle de rendu.
-// Version 1.1.12
+// Version 1.1.13
+// - v1.1.13: ?vuesAuZoom (url.js appliquerVuesAuZoomURL), après provenance=CO2.
 // - v1.1.12: endormie par la page hôte (hote.js, iss:dormir), la boucle ne dessine plus : sa dernière image reste.
 // - v1.1.11: ?veille=<ms> (une page hôte qui garde la Terre en décor : le tamagoshi) — sans geste ni message depuis
 //   VEILLE.repos, la Terre n'est redessinée que toutes les <ms> : le canevas garde sa dernière image, le processeur se
@@ -154,6 +155,7 @@ function demarrer(){
   avisURL.push(...appliquerPaysURL());             // ?pays=false : une Terre sans frontières (geo.js)
   appliquerZenURL();                               // ?zen : plein écran au démarrage (fenêtres et signature masquées)
   avisURL.push(...appliquerProvenanceURL());       // ?provenance=CO2 : début du mode bilan radiatif
+  avisURL.push(...appliquerVuesAuZoomURL());       // ?vuesAuZoom : le zoom choisit la vue (après provenance=CO2, qui l'active)
   if(avisURL.length) avis(avisURL);
   addEventListener('resize', redimensionner); redimensionner();
   requestAnimationFrame(boucle);

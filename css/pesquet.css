@@ -1,6 +1,7 @@
 /* File: css/pesquet.css
    Desc: Mise en page : panneau de réglages, HUD du chrono, canvas plein écran.
-   Version 1.4.1
+   Version 1.5.0
+   v1.5.0 : en onglet, ⓒ seul dans le coin bas droit (plus de ⛶ de l'hôte) ; titres au lissage de l'hôte.
    v1.4.1 : ?provenance=CO2 — Point de vue invisible.
    v1.4.0 : ?provenance=CO2 — Temps et Point de vue à gauche, sous les boutons de l'hôte, dépliés vers le bas, + devant le titre.
    v1.3.6 : ?provenance=CO2 — titres de Temps et Point de vue en 04B_03 italique, comme les fenêtres de l'hôte.
@@ -232,10 +233,11 @@ select option{background:#151a24}
 body:not(.credits-ouverts) #credits{display:none !important}
 body.zen #bCredits{display:none}
 /* PAGE EN ONGLET (?onglet, url.js) : la page hôte porte le ⛶ (même place) ; pas de signature dans une page déjà signée */
-body.onglet #bZen, body.onglet #pied{display:none !important}   /* en onglet, le lien GitHub est dans le pied de la page hôte */
-/* en onglet, crédits dépliés par défaut (url.js) : 3 lignes à gauche de ⓒ, le haut aligné sur ⓒ et ⛶ (12 + 34 px du bas), le bas
+body.onglet #bZen, body.onglet #pied{display:none !important}
+body.onglet #bCredits{right:12px}   /* en onglet, plus de ⛶ dans ce coin (le plein écran de l'hôte est en bas) : ⓒ seul */   /* en onglet, le lien GitHub est dans le pied de la page hôte */
+/* en onglet, crédits dépliés par défaut (url.js) : 3 lignes à gauche de ⓒ, seul dans le coin, le haut aligné sur ⓒ et ⛶ (12 + 34 px du bas), le bas
    au ras de la page */
-body.onglet #credits{left:auto;top:auto;right:92px;bottom:2px;width:600px;max-width:calc(100% - 104px);height:44px;max-height:none;
+body.onglet #credits{left:auto;top:auto;right:52px;bottom:2px;width:600px;max-width:calc(100% - 104px);height:44px;max-height:none;
                      overflow:hidden;box-sizing:border-box;padding:3px 8px}
 body.onglet #credits .credit{font-size:10px!important;line-height:12px}
 body.zen #panel, body.zen #hud, body.zen #galerie{display:none !important}
@@ -466,7 +468,8 @@ body.provenance-co2 #hud:not(.plie),body.provenance-co2 #panel:not(.plie){backgr
 /* titres de Temps et Point de vue dans la police des titres de fenêtres de l'hôte (04B_03 italique, CO2 index-shell.css) ;
    la police du site : /fonts en ligne, /dnavatar/fonts en local (serveur sur site/) */
 @font-face{font-family:'04B_03';src:url('/fonts/04B_03__.TTF') format('truetype'),url('/dnavatar/fonts/04B_03__.TTF') format('truetype')}
-body.provenance-co2 #temps .tete-temps h2,body.provenance-co2 #panel .grp:first-child > .tete h2{font:italic normal 12px/1.5 '04B_03',Tahoma,Verdana,sans-serif;letter-spacing:0;color:#9aa3b5}
+body.provenance-co2 #temps .tete-temps h2,body.provenance-co2 #panel .grp:first-child > .tete h2{font:italic normal 12px/1.5 '04B_03',Tahoma,Verdana,sans-serif;letter-spacing:0;color:#9aa3b5;
+  -webkit-font-smoothing:auto}   /* le lissage de la page (antialiased) amincit la police de l'hôte : TEMPS au poids d'ENERGIES et d'ATMOSPHERE */
 
 /* niveau de zoom (ui.js majZoom) à droite du titre Capture (petit écran : titre masqué, plus haut) */
 @media (min-width:761px) and (min-height:501px){ #titrePose{display:flex;justify-content:space-between;align-items:baseline} }

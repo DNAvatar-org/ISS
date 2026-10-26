@@ -1,6 +1,7 @@
 // File: js/entrees.js
 // Desc: Souris, pavé tactile et écran tactile : orbite autour de la Terre, visée et focale de la caméra embarquée.
-// Version 1.9.0
+// Version 1.9.1
+// - v1.9.1: vues au zoom — la vue Terre–Lune en deçà de ×0,2 (au lieu de ×0,8) : la vue Terre se dézoome 5 fois plus loin que le départ.
 // - v1.9.0: ?vuesAuZoom — le niveau de zoom choisit la vue : Terre–Lune au large, Terre, caméra de l'ISS en deçà de son
 //   altitude, et retour à la vue Terre quand on élargit le champ de l'ISS au-delà de celui de la vue Terre.
 // - v1.8.0: ?glisserGlobe — vue Terre : le glisser ne part que d'un appui sur le globe (pas du ciel autour), la main ne
@@ -35,10 +36,10 @@ const R_EXT_MAX = 3000;                          // vue Terre au plus loin
 const R_LUNE_MIN = 1500;                         // vue Terre–Lune au plus proche
 const R_LUNE_MAX = 6000;                         // vue Terre–Lune au plus loin
 // Vues au zoom (?vuesAuZoom, ?provenance=CO2) : un seul niveau (ui.js niveauZoom : altitude de départ / altitude, continu d'une
-// vue à l'autre) choisit la vue. Plus loin que ×0,8 : la vue Terre–Lune. Plus près que l'altitude de l'ISS : sa caméra, horizon
+// vue à l'autre) choisit la vue. Plus loin que ×0,2 : la vue Terre–Lune. Plus près que l'altitude de l'ISS : sa caméra, horizon
 // sous le Soleil, au champ qui garde le niveau. Champ de l'ISS élargi au-delà de celui de la vue Terre : la vue Terre, à l'altitude
 // qui garde le niveau — une Terre vue de profil en parabole, c'est qu'on a trop reculé dans le satellite.
-const R_VERS_LUNE = CFG.R + (250 - CFG.R)/0.8;
+const R_VERS_LUNE = CFG.R + (250 - CFG.R)/0.2;   // ×0,2 : 5 fois l'altitude de départ (~93 000 km)
 function zoomer(f){
   poseInterrompre();
   if(ETAT.vue === 'ext'){

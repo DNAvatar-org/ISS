@@ -55,7 +55,7 @@
            de cette page ; gauche : place laissée à gauche de la Terre, qui se décale vers la droite, hote.js ;
            fenetres : leur bord gauche et le haut de Temps), pas de Check Photo, vue Terre éclairée de biais (un bord de
            nuit). Repliées, les fenêtres n'ont que la largeur de leur titre, + devant lui.
-   vuesAuZoom : présent (ou 1) : le niveau de zoom choisit la vue — Terre–Lune au large (en deçà de ×0,8), Terre, caméra de l'ISS
+   vuesAuZoom : présent (ou 1) : le niveau de zoom choisit la vue — Terre–Lune au large (en deçà de ×0,2), Terre, caméra de l'ISS
            plus près que son altitude (horizon sous le Soleil), et retour à la vue Terre quand on élargit le champ de l'ISS
            au-delà de celui de la vue Terre. 0 : chaque vue garde son zoom, on en change par les boutons. Actif par défaut
            avec provenance=CO2.

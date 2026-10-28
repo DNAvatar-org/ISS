@@ -1,6 +1,6 @@
 // File: js/eblouissement.js
 // Desc: Éblouissement du Soleil : diffusion dans l'objectif, image floutée de la partie VISIBLE du disque solaire.
-// Version 1.0.1
+// Version 1.1.0 : limbe de la Terre ramené à l'écran (disque rond) — l'éblouissement ne passe plus sur la Terre hors de l'axe optique
 // Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -102,7 +102,26 @@ function majEblouissement(cam){
   const dp = P.length(); _eT.copy(P).negate().divideScalar(dp); const rt = Math.asin(Math.min(1, CFG.R/dp));
   const sepM = angleEntre(S, _eM), sepT = angleEntre(S, _eT);
   const fLune  = 1 - aireLentille(rs, rm, sepM)/(Math.PI*rs*rs);
-  const fTerre = 1 - aireLentille(rs, rt, sepT)/(Math.PI*rs*rs);
+
+  // base du panneau : axes droite / haut de la caméra, rendus perpendiculaires au Soleil
+  const e = cam.matrixWorld.elements;
+  _eR.set(e[0], e[1], e[2]); _eR.addScaledVector(S, -S.dot(_eR));
+  if(_eR.lengthSq() < 1e-8) _eR.crossVectors(S, _eU.set(e[4], e[5], e[6]));
+  _eR.normalize(); _eU.crossVectors(_eR, S);
+  // Le Soleil est dessiné rond (disque plat, soleil.js) : une longueur du panneau vaut son rayon TANGENTIEL à l'écran. Hors de l'axe
+  // optique (angle θ entre le Soleil et la visée), l'image étire le sens radial de 1/cos θ de plus : la Terre, qui se trouve dans ce
+  // sens, est donc plus loin du centre du Soleil, à l'écran, que ne le dit l'angle (×1/cos θ). Le limbe est une droite dans le plan
+  // du panneau ; sa direction t (vers la Terre) et sa distance td [rs] sont ramenées à l'écran par l'inverse de l'étirement
+  // I − (1 − cos θ)·r̂r̂ᵀ, avec r̂ = direction radiale (1 − cos θ = sin²θ/(1 + cos θ) : pas de singularité sur l'axe).
+  const fr = -(e[8]*_eR.x + e[9]*_eR.y + e[10]*_eR.z), fu = -(e[8]*_eU.x + e[9]*_eU.y + e[10]*_eU.z);   // visée projetée sur le panneau
+  const cosT = Math.max(0, -(e[8]*S.x + e[9]*S.y + e[10]*S.z));
+  const tl = Math.hypot(_eT.dot(_eR), _eT.dot(_eU)) || 1, tx0 = _eT.dot(_eR)/tl, ty0 = _eT.dot(_eU)/tl;
+  const k = (tx0*fr + ty0*fu)/(1 + cosT);
+  const px = tx0 - k*fr, py = ty0 - k*fu, pl = Math.hypot(px, py);
+  const tx = px/pl, ty = py/pl, td = (sepT - rt)/rs/pl;
+  // part du disque rond au-delà de la droite (distance signée d du centre : > 0 côté ciel) : segment circulaire
+  const d = Math.max(-1, Math.min(1, td));
+  const fTerre = (Math.acos(-d) + d*Math.sqrt(1 - d*d))/Math.PI;
   const part = fLune*fTerre;                                 // les deux à la fois : rare, produit approché
   ECL.mesh.visible = part > 0;
   // le voile large (aile) sur le disque lunaire s'atténue quand l'éclipse avance : plein hors éclipse, ~35 % à l'approche de la
@@ -115,14 +134,8 @@ function majEblouissement(cam){
     return fLune;
   }
 
-  // base du panneau : axes droite / haut de la caméra, rendus perpendiculaires au Soleil
-  const e = cam.matrixWorld.elements;
-  _eR.set(e[0], e[1], e[2]); _eR.addScaledVector(S, -S.dot(_eR));
-  if(_eR.lengthSq() < 1e-8) _eR.crossVectors(S, _eU.set(e[4], e[5], e[6]));
-  _eR.normalize(); _eU.crossVectors(_eR, S);
-  // dans ce plan (en rs) : la Lune est un disque, le limbe terrestre (≈ 70° de rayon) une droite
+  // dans ce plan (en rs) : la Lune est un disque, le limbe terrestre (≈ 70° de rayon) une droite (tx, ty, td ci-dessus)
   const kM = 1/(_eM.dot(S)*trs), mx = _eM.dot(_eR)*kM, my = _eM.dot(_eU)*kM, mr2 = (rm/rs)**2;
-  const tl = Math.hypot(_eT.dot(_eR), _eT.dot(_eU)) || 1, tx = _eT.dot(_eR)/tl, ty = _eT.dot(_eU)/tl, td = (sepT - rt)/rs;
 
   for(const c of ECL.cellules){ c.x = c.y = c.w = 0; }
   let somme = 0;

@@ -98,8 +98,10 @@ addEventListener('message', e => {
   Object.assign(VISEE_HOTE, {lat:e.data.lat, lon:e.data.lon, th:VUE_EXT.th, ph:VUE_EXT.ph, actif:true, arrive:!!e.data.colle});
 });
 function suivreVisee(){
+  if(ETAT.noISS_mode) majBoutonSol();
   if(!VISEE_HOTE.actif || ETAT.vue !== 'ext' || VUE_EXT.mode !== 'terre') return;
   if(VUE_EXT.th !== VISEE_HOTE.th || VUE_EXT.ph !== VISEE_HOTE.ph){
+    if(ETAT.noISS_mode){ lacherLeSol(); majBoutonSol(); return; }   // un glissé rend la caméra fixe dans le ciel
     // glissé à la main : le lieu visé devient le point du sol sous la caméra — la vue reste accrochée au sol, la
     // rotation de la Terre ne l'emporte plus (de près, elle filait de quelques km par seconde)
     _vh.set(Math.cos(VUE_EXT.ph)*Math.sin(VUE_EXT.th), Math.sin(VUE_EXT.ph), Math.cos(VUE_EXT.ph)*Math.cos(VUE_EXT.th));
@@ -113,6 +115,71 @@ function suivreVisee(){
   if(VISEE_HOTE.arrive || Math.abs(dth) + Math.abs(ph - VUE_EXT.ph) < 1e-3){ VISEE_HOTE.arrive = true; VUE_EXT.th = th; VUE_EXT.ph = ph; }
   else { VUE_EXT.th += dth*0.08; VUE_EXT.ph += (ph - VUE_EXT.ph)*0.08; }
   VISEE_HOTE.th = VUE_EXT.th; VISEE_HOTE.ph = VUE_EXT.ph;
+}
+
+/* noISS_mode : la caméra est fixe dans le ciel (la Terre tourne dessous) ou accrochée au sol d'un lieu (VISEE_HOTE : le Soleil
+   tourne autour de la Terre, à 15°/h). Bouton 🔒 : bascule ; un glissé sur la Terre la rend fixe (suivreVisee). */
+const pointSousLaCamera = () => {
+  _vh.set(Math.cos(VUE_EXT.ph)*Math.sin(VUE_EXT.th), Math.sin(VUE_EXT.ph), Math.cos(VUE_EXT.ph)*Math.cos(VUE_EXT.th));
+  return geoDeLocal(TERRE.globe.worldToLocal(_vh));
+};
+const accrocherAuSol = g => Object.assign(VISEE_HOTE, {lat:g.lat, lon:g.lon, th:VUE_EXT.th, ph:VUE_EXT.ph, actif:true, arrive:true});
+const lacherLeSol = () => { VISEE_HOTE.actif = false; ETAT.hautCamera = 0; };
+const majBoutonSol = () => $('bCamSol').classList.toggle('on', VISEE_HOTE.actif);
+function basculerCameraSol(){
+  if(VISEE_HOTE.actif) lacherLeSol(); else accrocherAuSol(pointSousLaCamera());
+  majBoutonSol();
+}
+/* Lever (lever = true) ou coucher de Soleil : la caméra s'accroche à un lieu de même longitude que celui sous elle, et l'heure saute
+   — à la minute près, dans les 12 h autour de l'heure actuelle — à celle où le disque du Soleil touche le BORD APPARENT de la Terre,
+   tel que le zoom le montre : de la caméra (distance r), le bord est à asin(R/r) de l'axe Terre ; le Soleil, à l'infini, y est caché
+   derrière la Terre quand il est à plus de 180° − asin(R/r) de la direction de la caméra (≈ 165° de loin, 90° tout près du sol).
+   Lever : il est juste caché (son bord touche le limbe) et en sort ; coucher : il est juste visible et va se cacher. De loin, un lieu
+   trop loin de l'équateur du Soleil ne le voit jamais passer derrière le bord : la latitude du lieu est donc cherchée, la plus proche
+   de l'actuelle. À GAUCHE de l'image si le sens de rotation le permet (la Terre tournant vers l'est, le Soleil se lève à gauche quand
+   le pôle Sud est en haut), sinon du côté où il le fait. Le haut de la caméra devient l'axe de la Terre (±, choisi avec le côté), la latitude
+   du lieu est choisie pour que le contact se fasse à mi-hauteur de l'image (bord gauche, pas bord haut) : le Soleil, à l'infini, court alors
+   en ligne quasi HORIZONTALE (sa hauteur ne varie que de sa déclinaison et de son recul derrière la Terre). Un glissé ou 🔒 rend la caméra à son haut d'origine. */
+const VITESSE_AUBE = 10;                           // ×10 : le Soleil franchit le limbe en quelques secondes
+const PENALITE_DROITE = 5, PENALITE_LATITUDE = 0.001, POIDS_HAUTEUR = 1;   // préférence pour la gauche, pour l'équateur (à égalité), pour le contact à mi-hauteur
+function aubeAuSol(lever){
+  if(VUE_EXT.mode === 'lune') vueTerre();
+  const g = pointSousLaCamera(), t0 = ETAT.t, N = 1441;
+  const M = [], S = [], rSol = [];                 // la Terre (matrice) et le Soleil à chaque minute de t0 − 12 h à t0 + 12 h
+  for(let i = 0; i <= N; i++){
+    ETAT.t = t0 + (i - 720)*60; calculerSoleil(jourDate()); orienterTerre();
+    TERRE.globe.updateWorldMatrix(true, false);
+    M.push(TERRE.globe.matrixWorld.clone()); S.push(ETAT.S.clone()); rSol.push(ETAT.rSol);
+  }
+  const limbe = Math.PI - Math.asin(CFG.R/VUE_EXT.r);
+  const lieu = new THREE.Vector3(), z = new THREE.Vector3(), u = new THREE.Vector3(), axe = new THREE.Vector3(0, 1, 0).transformDirection(M[0]);
+  const angle = new Array(N + 1), gauche = {1: new Array(N + 1), '-1': new Array(N + 1)};
+  let meilleur = {cout: Infinity};
+  for(let lat = -89; lat <= 89; lat++){
+    vecGeo(lat, g.lon, 1, lieu);
+    for(let i = 0; i <= N; i++){
+      z.copy(lieu).applyMatrix4(M[i]).normalize();
+      angle[i] = Math.acos(S[i].dot(z));
+      // la droite de la caméra est haut × z (haut = ± axe de la Terre) : le Soleil est à gauche si S · (haut × z) < 0
+      const x = axe.y*z.z - axe.z*z.y, y = axe.z*z.x - axe.x*z.z, w = axe.x*z.y - axe.y*z.x, sd = S[i].x*x + S[i].y*y + S[i].z*w;
+      gauche[1][i] = sd < 0; gauche[-1][i] = sd > 0;
+    }
+    for(const haut of [1, -1]) for(let i = 0; i < N; i++){
+      if((angle[i + 1] < angle[i]) !== lever) continue;      // le Soleil sort (angle qui diminue) pour un lever, entre pour un coucher
+      const ecart = Math.abs(angle[i] - (limbe + (lever ? 1 : -1)*rSol[i]))*180/Math.PI;
+      if(ecart > 5) continue;                                // loin du contact : inutile d'aller plus loin
+      // hauteur du Soleil à l'écran au contact (angle sous lequel la caméra le voit au-dessus du centre de la Terre) : 0 = sur le
+      // diamètre horizontal, c'est-à-dire exactement sur le bord GAUCHE (ou droit) de la Terre, pas sur son bord haut ou bas
+      z.copy(lieu).applyMatrix4(M[i]).normalize();
+      u.copy(axe).multiplyScalar(haut); u.addScaledVector(z, -u.dot(z)).normalize();
+      const y = Math.abs(Math.atan2(S[i].dot(u), -S[i].dot(z)))*180/Math.PI;
+      const cout = ecart + y*POIDS_HAUTEUR + Math.abs(lat)*PENALITE_LATITUDE + (gauche[haut][i] ? 0 : PENALITE_DROITE) + Math.abs(i - 720)*1e-7;
+      if(cout < meilleur.cout) meilleur = {cout, lat, i, haut};
+    }
+  }
+  ETAT.t = t0 + (meilleur.i - 720)*60; majSoleilDate(); orienterTerre();
+  ETAT.vitesse = VITESSE_AUBE; ETAT.pause = false; ETAT.hautCamera = meilleur.haut;
+  accrocherAuSol({lat:meilleur.lat, lon:g.lon}); majBoutonSol(); majBoutons();
 }
 
 /* Caméra de l'ISS : l'horizon de la haute atmosphère (HORIZON_ALT au-dessus du sol, le haut de la bande d'airglow qu'ajuste

@@ -3,7 +3,7 @@
 // Version 2.6.0
 // - v2.6.0: lumières des villes réglables (uLumNuit, ?lumNuit=, partagé avec les tuiles) : 0 les éteint.
 // - v2.5.0: ATM_AFFICHAGE — atmosphère exagérée au dessin seulement (hauteur d'échelle, exposition de jour) ; 1 par défaut,
-//   ?provenance=CO2 la grossit (url.js) : vue de l'espace, la bande bleue du limbe se voit.
+//   (drapeaux de l'hôte, url.js) la grossit (url.js) : vue de l'espace, la bande bleue du limbe se voit.
 // - v2.4.0: reflet du Soleil aussi sur l'eau sombre de Blue Marble (cartes GIBS par défaut).
 // - v2.3.0: côté nuit lumineux (uNotIR, ?notIR=) ; poserCartes — cartes, atmosphère, notIR changés sans rechargement.
 // Date: [October 18, 2026]
@@ -177,7 +177,7 @@ void main(){
 const ATMO_EXPO_NUIT = 1/25000;           // exposition de nuit (par rayleigh vu) ; au Soleil : × 0,02
 const ATMO_EXPO_JOUR = 0.25;              // exposition de jour (diffusion Rayleigh)
 /* Exagération au DESSIN seulement (rien de physique) : hauteur d'échelle × epaisseur, à épaisseur optique égale (la bande du
-   limbe plus épaisse, mêmes couleurs) ; exposition de jour × expo. 1 : l'atmosphère vraie ; ?provenance=CO2 (url.js) grossit. */
+   limbe plus épaisse, mêmes couleurs) ; exposition de jour × expo. 1 : l'atmosphère vraie ; (drapeau atmGrossie, url.js) grossit. */
 const ATM_AFFICHAGE = {epaisseur:1, expo:1};
 
 // Exposition de l'« appareil » : de nuit, la luminescence ; l'ISS au Soleil, le jour (cf. GLSL_ATMO_FS).

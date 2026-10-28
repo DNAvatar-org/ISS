@@ -1,6 +1,6 @@
 // File: js/soleil.js
 // Desc: Soleil : disque et lumière directionnelle (direction fixe dans le repère inertiel).
-// Version 1.1.0
+// Version 1.2.0 : disque plat face à la caméra (plus d'ellipse hors de l'axe optique)
 // Date: [October 06, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
@@ -10,7 +10,9 @@ const SOL = {dir:new THREE.Vector3(1,0,0)};
 function creerSoleil(){
   SOL.groupe = new THREE.Group();
   const rayon = CFG.SUN_D*Math.tan(CFG.SUN_ANG);
-  SOL.disque = new THREE.Mesh(new THREE.SphereGeometry(rayon, 24, 16),
+  // disque PLAT, parallèle à l'image (SOL.disque.quaternion suit la caméra, main.js) : une sphère, vue loin de l'axe optique, serait
+  // étirée en ellipse (×1/cos θ : ×3 à 70°, au bord de la Terre vue de près) — le Soleil est rond dans toutes les directions
+  SOL.disque = new THREE.Mesh(new THREE.CircleGeometry(rayon, 48),
     new THREE.MeshBasicMaterial({color:0xfff3c4}));
   SOL.groupe.add(SOL.disque);
 

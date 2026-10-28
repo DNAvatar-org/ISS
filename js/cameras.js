@@ -5,7 +5,7 @@
 // - v2.6.0: ETAT.horizonVertical : caméra de l'ISS tournée d'un quart de tour, la Terre à droite de l'image.
 // - v2.5.0: plan proche de la vue Terre à la mesure de l'altitude (zoom jusqu'à 8 km).
 // - v2.4.0: vue Terre–Lune : la visée glisse avec le zoom, du milieu Terre–Lune (au plus large) à la Terre (au plus près).
-// - v2.2.0: vueEclaireeDeBiais (?provenance=CO2) : le Soleil à 75° de l'axe de visée, un bord de nuit visible.
+// - v2.2.0: vueEclaireeDeBiais ((drapeaux de l'hôte, url.js)) : le Soleil à 75° de l'axe de visée, un bord de nuit visible.
 // - v2.1.0: suivis « soleil » et « lune » = l'horizon sous l'astre (horizon.js) : son cap, le site du limbe.
 // Date: [October 19, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
@@ -79,6 +79,8 @@ function majCamExt(){
   if(VUE_EXT.mode === 'lune') cible.copy(ETAT.M).multiplyScalar(CFG.LUNE_D/2*(r - R_LUNE_MIN)/(R_LUNE_MAX - R_LUNE_MIN));
   else cible.set(0, 0, 0);
   camExt.position.set(r*Math.cos(ph)*Math.sin(th), r*Math.sin(ph), r*Math.cos(ph)*Math.cos(th)).add(cible);
+  if(ETAT.hautCamera === 0) camExt.up.set(0, 1, 0);
+  else camExt.up.set(0, ETAT.hautCamera, 0).transformDirection(TERRE.globe.matrixWorld);   // axe de la Terre (±) : un astre fixe à l'infini court en ligne droite horizontale
   camExt.lookAt(cible);
   const fov = VUE_EXT.mode === 'lune' ? 50 : FOV_VUE_TERRE;
   // plan proche à la mesure de l'altitude : de près (zoom jusqu'à 8 km), 0,5 unité (50 km) coupait le sol
@@ -94,7 +96,7 @@ function vueTerreLune(){
   _o.copy(ETAT.Mnord).multiplyScalar(0.5).addScaledVector(_on, 0.85).normalize();   // un peu au-dessus : on voit l'orbite en perspective
   VUE_EXT.th = Math.atan2(_o.x, _o.z); VUE_EXT.ph = Math.asin(_o.y);
 }
-/* Vue Terre éclairée de biais (?provenance=CO2) : la caméra extérieure placée pour que le Soleil (ETAT.S) soit à 75° de son
+/* Vue Terre éclairée de biais ((drapeaux de l'hôte, url.js)) : la caméra extérieure placée pour que le Soleil (ETAT.S) soit à 75° de son
    axe de visée — un peu derrière la Terre : environ 60 % du disque éclairé, un bord de nuit visible — et à GAUCHE de l'écran
    (là où la page hôte pose son Soleil et son organigramme). La caméra reste à 20° au-dessus du plan de l'orbite (pas de vue
    d'un pôle) ; son azimut est cherché au degré, parmi ceux qui ont le Soleil à gauche : S · droite < 0, la droite de la

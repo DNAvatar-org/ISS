@@ -1,22 +1,8 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.16.0
-// - v1.16.0: ?vuesAuZoom= — le niveau de zoom choisit la vue (Terre–Lune ↔ Terre ↔ ISS) ; provenance=CO2 l'active, vuesAuZoom=0 l'éteint.
-// - v1.15.0: ?provenance=CO2 — la liste des éclipses ouverte est trouée dans l'organigramme de l'hôte (iss:fenetres) : par-dessus tout.
-// - v1.14.0: ?lumNuit= — lumières des villes la nuit, de 0 (éteintes) à 1.
-// - v1.13.1: ?provenance=CO2 — caméra de l'ISS tournée, la Terre à droite (ETAT.horizonVertical, cameras.js).
-// - v1.13.0: ?provenance=CO2 — vitesse ×100 ; Temps et Point de vue à gauche, sous Atmosphère de la page hôte, dépliés vers
-//   le bas (iss:marges fenetres { gauche, haut }) ; leurs rectangles à la page hôte (iss:fenetres), qui y troue son organigramme :
-//   elles passent par-dessus.
-// - v1.12.3: Temps contre la marge de la page hôte, Point de vue 10 px sous lui : repliés, le pas de la pile de titres de l'hôte.
-// - v1.12.2: Point de vue posé depuis la marge de la page hôte (Temps et lui glissent quand elle change).
-// - v1.12.1: iss:marges gauche = abscisse du centre de la Terre (hote.js xTerre).
-// - v1.12.0: ?pays=false ; ?provenance=CO2 : zoom enchaîné, satellites visibles dès que Point de vue est déplié ; montrer=reperes retiré.
-// - v1.11.0: ?notIR= — côté nuit lumineux (lave : la carte de jour à notIR % la nuit) ; cartes, atmosphère et notIR
-//   changeables par la page hôte sans rechargement (message iss:cartes, terre.js poserCartes).
-// - v1.9.0: ?provenance=CO2 — début du mode « bilan radiatif » (vitesse ×1000, fenêtres repliées, pas de Check Photo).
-// - v1.8.1: vue=soleil / vue=lune = l'horizon sous l'astre, sur le limbe (horizon.js).
-// - v1.8.0: ?atm=p:…,H:…,lum:… — atmosphère d'une autre Terre (pression, hauteur d'échelle, luminescence) ; p:0 = sans atmosphère.
+// Version 1.17.0
+// - v1.17.0: ?provenance remplacée par des drapeaux indépendants (noISS_mode, fenetresHote, zoomEnchaine, vueBiais, atmGrossie,
+//   horizonVertical, vitesse) : la page ne sait pas qui l'ouvre. L'historique est dans git.
 // - v1.7.0: ?onglet (page dans l'onglet d'une page hôte), ?jour= / ?nuit= (cartes de la Terre, ex. paléogéographie).
 // Date: [October 15, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
@@ -48,17 +34,19 @@
            (épaisseur optique Rayleigh ∝ colonne d'air, air de composition actuelle), H : hauteur d'échelle [km], lum : luminescence
            nocturne (airglow) relative à aujourd'hui. Absent : la Terre d'aujourd'hui (p:1, H:8, lum:1). p:0 : pas d'atmosphère.
            Les couleurs ne se donnent pas : elles sortent de la diffusion Rayleigh (terre.js).
-   provenance : qui ouvre la page. provenance=CO2 (bilan radiatif, onglet ISS) : début d'un mode « bilan radiatif » —
-           vitesse ×100, Temps et Point de vue repliés (+ ou leur titre les rouvre ; dépliée, Point de vue montre les
-           satellites), vues au zoom (vuesAuZoom ci-dessous), Temps puis Point de vue
-           à gauche, sous les boutons de la page hôte (message iss:marges { gauche, fenetres: { gauche, haut } } en px
-           de cette page ; gauche : place laissée à gauche de la Terre, qui se décale vers la droite, hote.js ;
-           fenetres : leur bord gauche et le haut de Temps), pas de Check Photo, vue Terre éclairée de biais (un bord de
-           nuit). Repliées, les fenêtres n'ont que la largeur de leur titre, + devant lui.
+   noISS_mode : présent ou true : jamais la caméra de l'ISS — vues Terre et Terre–Lune seulement (le zoom ne descend plus dans le
+           satellite), ni Check Photo, ni menu Éclipses, ni Point de vue ; coucher et lever de Soleil : la caméra se pose sur le lieu visé, l'heure saute au contact du Soleil avec le bord apparent de la
+           Terre (selon le zoom), à gauche si le sens de rotation le permet (pôle Sud en haut pour un lever), et la vitesse passe à ×10 ; bouton 🔒 :
+           caméra fixe dans le ciel ou accrochée au sol (glisser sur la Terre : fixe).
+   fenetresHote : Temps puis Point de vue repliés (+ ou leur titre les rouvre), à gauche, sous les boutons de la page hôte (message
+           iss:marges { gauche, fenetres: { gauche, haut } } en px de cette page ; gauche : place laissée à gauche de la Terre, qui se
+           décale vers la droite, hote.js ; fenetres : leur bord gauche et le haut de Temps).
+   zoomEnchaine : point d'horizon fixe à l'écran, vitesse selon la vue (hote.js) ; vueBiais : vue Terre éclairée de biais (un bord de
+           nuit) ; atmGrossie : atmosphère grossie au dessin ; horizonVertical : caméra de l'ISS tournée d'un quart de tour ;
+           vitesse : facteur de vitesse au départ (ex. 1000).
    vuesAuZoom : présent (ou 1) : le niveau de zoom choisit la vue — Terre–Lune au large (en deçà de ×0,2), Terre, caméra de l'ISS
            plus près que son altitude (horizon sous le Soleil), et retour à la vue Terre quand on élargit le champ de l'ISS
-           au-delà de celui de la vue Terre. 0 : chaque vue garde son zoom, on en change par les boutons. Actif par défaut
-           avec provenance=CO2.
+           au-delà de celui de la vue Terre. 0 : chaque vue garde son zoom, on en change par les boutons. 
    pays  : false (true par défaut) : pas de pays ni de case « Pays et coordonnées » (une Terre d'avant les frontières).
    zen   : présent (sans valeur), démarre en plein écran : fenêtres, crédits et signature masqués, comme le bouton ⛶ ;
            un toucher bref ou le bouton les remet. Pour une page embarquée (iframe), où le vrai plein écran exige un geste.
@@ -205,8 +193,7 @@ function appliquerOngletURL(){
   if(URL_P.has('onglet')) basculerCredits();   // en onglet : crédits dépliés par défaut (3 lignes à gauche de ⓒ, css « PAGE EN ONGLET »)
 }
 
-/* ?vuesAuZoom : le niveau de zoom choisit la vue (entrees.js) ; présent sans valeur ou 1 : oui, 0 : non. Après provenance=CO2,
-   qui l'active : vuesAuZoom=0 l'éteint. */
+/* ?vuesAuZoom : le niveau de zoom choisit la vue (entrees.js) ; présent sans valeur ou 1 : oui, 0 : non.  */
 function appliquerVuesAuZoomURL(){
   const v = URL_P.get('vuesAuZoom');
   if(v === null) return [];
@@ -215,22 +202,58 @@ function appliquerVuesAuZoomURL(){
   return [];
 }
 
-function appliquerProvenanceURL(){
-  const p = URL_P.get('provenance');
-  if(p === null) return [];
-  if(p !== 'CO2') return ['Provenance inconnue : « ' + p + ' ». Connue : CO2 (bilan radiatif).'];
-  ETAT.vitesse = 1000; ETAT.pause = false;          // après allerAujourdhui (main.js), qui remet ×1 ; puis selon la vue (hote.js)
-  $('hud').classList.add('plie'); $('panel').classList.add('plie');
+/* Drapeau booléen de l'URL : présent (sans valeur), 1 ou true : oui ; 0 ou false, ou absent : non. */
+function drapeauURL(nom, avis){
+  const v = URL_P.get(nom);
+  if(v === null) return false;
+  if(v === '' || v === '1' || v === 'true') return true;
+  if(v === '0' || v === 'false') return false;
+  avis.push(nom + ' : « ' + v + ' » inconnu. Valeurs : true (ou sans valeur), false.');
+  return false;
+}
+
+/* Les modes de la page, un drapeau chacun (aucun ne dépend de qui ouvre la page) : noISS_mode, fenetresHote, zoomEnchaine,
+   horizonVertical, vueBiais, atmGrossie, et vitesse=N (après allerAujourdhui, main.js, qui remet ×1). */
+function appliquerModesURL(){
+  const avis = [];
+  const noISS = drapeauURL('noISS_mode', avis), fenetresHote = drapeauURL('fenetresHote', avis);
+  if(URL_P.has('vitesse')){
+    const x = parseFloat(URL_P.get('vitesse'));
+    if(x > 0){ ETAT.vitesse = x; ETAT.pause = false; }
+    else avis.push('Vitesse illisible : vitesse=' + URL_P.get('vitesse') + ' (facteur > 0, ex. vitesse=1000).');
+  }
+  if(drapeauURL('vueBiais', avis)) vueEclaireeDeBiais();           // le Soleil un peu derrière la Terre : un bord de nuit (cameras.js)
+  ETAT.zoomEnchaine = drapeauURL('zoomEnchaine', avis);            // point d'horizon fixe, vitesse selon la vue (hote.js)
+  ETAT.horizonVertical = drapeauURL('horizonVertical', avis);      // caméra de l'ISS tournée d'un quart de tour (cameras.js)
+  if(drapeauURL('atmGrossie', avis)){ ATM_AFFICHAGE.epaisseur = 4; ATM_AFFICHAGE.expo = 3; }   // vue de l'espace : la bande bleue du limbe se voit (terre.js)
+  if(noISS) appliquerNoISSModeURL();
+  if(fenetresHote) appliquerFenetresHoteURL();
+  return avis;
+}
+
+/* noISS_mode : jamais la caméra de l'ISS — vues Terre et Terre–Lune seulement (zoom : entrees.js ; éclipses : masquées en css),
+   pas de Check Photo, lever et coucher de Soleil sans l'ISS (hote.js aubeAuSol), bouton de la caméra : fixe dans le ciel ou accrochée au sol. */
+function appliquerNoISSModeURL(){
+  ETAT.noISS_mode = true;
+  document.body.classList.add('noISS-mode');
   $('bCheck').hidden = true;
-  vueEclaireeDeBiais();                            // le Soleil un peu derrière la Terre : un bord de nuit (cameras.js)
-  ETAT.zoomEnchaine = true;                         // mode bilan radiatif : point d'horizon fixe, vitesse selon la vue (hote.js)
-  ETAT.vuesAuZoom = true;                           // le zoom choisit la vue (entrees.js) ; ?vuesAuZoom=0 l'éteint (appliquerVuesAuZoomURL)
-  ETAT.horizonVertical = true;
-  // atmosphère grossie au dessin (terre.js) : vue de l'espace en zoomant jusqu'au limbe, la bande bleue se voit
-  ATM_AFFICHAGE.epaisseur = 4; ATM_AFFICHAGE.expo = 3;                      // caméra de l'ISS : la Terre à droite, le ciel et l'organigramme à gauche (cameras.js)
-  // Temps puis Point de vue à gauche, sous les boutons de la page hôte (message iss:marges) : Temps à leur place, Point de
-  // vue 10 px sous lui, replié ou déplié ; dépliés, ils s'ouvrent vers le bas.
-  document.body.classList.add('provenance-co2');
+  $('bDebutNuit').title = "Coucher de Soleil : la caméra se pose sur le lieu visé, l'heure saute juste avant que le Soleil passe derrière le bord gauche de la Terre (pôle Sud en haut ; sinon, du côté où il se couche)";
+  $('bLever').title = "Lever de Soleil : la caméra se pose sur le lieu visé, l'heure saute juste avant que le Soleil sorte de derrière le bord gauche de la Terre (pôle Sud en haut ; sinon, du côté où il se lève)";
+  $('oZoomVue').title = "Niveau de zoom et vue : ×1 = vue Terre de départ ; plus loin, la vue Terre–Lune";
+  $('oTheta').title = "Heure de Greenwich (UT). Clic : la saisir à la seconde (HH:MM:SS, Entrée). Le curseur gris règle l'heure de la journée";
+  $('sTheta').title = "Heure de la journée (UT)";
+  const b = document.createElement('button');
+  b.type = 'button'; b.id = 'bCamSol'; b.textContent = '🔒';
+  b.title = "Caméra : fixe dans le ciel (la Terre tourne dessous) ou accrochée au sol du lieu visé (le Soleil tourne). Clic : basculer ; glisser sur la Terre : fixe";
+  b.onclick = basculerCameraSol;
+  $('bAuj').before(b);
+}
+
+/* fenetresHote : Temps puis Point de vue à gauche, sous les boutons de la page hôte (message iss:marges), repliés au départ ;
+   dépliés, ils s'ouvrent vers le bas. */
+function appliquerFenetresHoteURL(){
+  $('hud').classList.add('plie'); $('panel').classList.add('plie');
+  document.body.classList.add('fenetres-hote');
   new ResizeObserver(placerPointDeVue).observe($('hud'));
   // leurs rectangles à la page hôte, qui troue son organigramme à leur place (par-dessus tout) : à chaque changement de
   // taille, et à la fin de chaque glissement (transition de top)
@@ -247,9 +270,8 @@ function appliquerProvenanceURL(){
     placerPointDeVue();
     HOTE.xTerre = () => e.data.gauche; decalerTerre();   // la place de son organigramme, à gauche de la Terre (hote.js)
   });
-  return [];
 }
-/* Point de vue 10 px sous Temps : le haut de Temps (css provenance-co2) plus sa hauteur — pas son bas mesuré, qui glisse
+/* Point de vue 10 px sous Temps : le haut de Temps (css fenetres-hote) plus sa hauteur — pas son bas mesuré, qui glisse
    encore (transition) quand la pile bouge. Repliés (titre de 20 px), un titre tous les 30 px, le pas des titres de l'hôte. */
 let FENETRES_HAUT = 0;
 function placerPointDeVue(){ $('panel').style.top = (FENETRES_HAUT + $('hud').offsetHeight + 10) + 'px'; }

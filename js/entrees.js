@@ -35,7 +35,7 @@ const R_EXT_MIN = CFG.R + 0.08;                  // vue Terre au plus proche : 8
 const R_EXT_MAX = 3000;                          // vue Terre au plus loin
 const R_LUNE_MIN = 1500;                         // vue Terre–Lune au plus proche
 const R_LUNE_MAX = 6000;                         // vue Terre–Lune au plus loin
-// Vues au zoom (?vuesAuZoom, ?provenance=CO2) : un seul niveau (ui.js niveauZoom : altitude de départ / altitude, continu d'une
+// Vues au zoom (?vuesAuZoom, (drapeaux de l'hôte, url.js)) : un seul niveau (ui.js niveauZoom : altitude de départ / altitude, continu d'une
 // vue à l'autre) choisit la vue. Plus loin que ×0,2 : la vue Terre–Lune. Plus près que l'altitude de l'ISS : sa caméra, horizon
 // sous le Soleil, au champ qui garde le niveau. Champ de l'ISS élargi au-delà de celui de la vue Terre : la vue Terre, à l'altitude
 // qui garde le niveau — une Terre vue de profil en parabole, c'est qu'on a trop reculé dans le satellite.
@@ -47,7 +47,7 @@ function zoomer(f){
     // Vues au zoom (?vuesAuZoom) : vers le large, la vue Terre–Lune au plus proche, et retour ; vers le sol, la caméra de l'ISS.
     if(ETAT.vuesAuZoom && !lune && VUE_EXT.r*f > R_VERS_LUNE){ poseEffacer(); vueTerreLune(); VUE_EXT.r = R_LUNE_MIN; majBoutons(); return; }
     if(ETAT.vuesAuZoom && lune && VUE_EXT.r*f < R_LUNE_MIN){ poseEffacer(); VUE_EXT.mode = 'terre'; VUE_EXT.r = R_VERS_LUNE; majBoutons(); return; }
-    if(ETAT.vuesAuZoom && !lune && (VUE_EXT.r - CFG.R)*f < OBS.R - CFG.R){ entrerDansIss((VUE_EXT.r - CFG.R)*f); return; }
+    if(ETAT.vuesAuZoom && !ETAT.noISS_mode && !lune && (VUE_EXT.r - CFG.R)*f < OBS.R - CFG.R){ entrerDansIss((VUE_EXT.r - CFG.R)*f); return; }
     // vue Terre : le zoom multiplie l'altitude (r − R), pas la distance au centre — sinon, près du sol, un cran sautait de
     // centaines de km jusqu'à la butée (le zoom semblait bloqué)
     if(lune) VUE_EXT.r = Math.max(R_LUNE_MIN, Math.min(R_LUNE_MAX, VUE_EXT.r*f));

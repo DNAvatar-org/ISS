@@ -254,6 +254,7 @@ function creerUI(){
   // coucher de Soleil : vue ISS braquée sur le Soleil encore visible, 45 s avant l'entrée dans l'ombre, au ralenti
   $('bDebutNuit').onclick = () => {
     poseInterrompre();
+    if(ETAT.noISS_mode){ aubeAuSol(false); return; }       // sans ISS : caméra au sol, hote.js
     ETAT.t = tEntree(cycleNuit(ETAT.t).k + 1) - 45;
     ETAT.vue = 'iss'; choisirPreset('soleil');
     VUE_ISS.decal = -10*DEG; VUE_ISS.fov = 45;           // le Soleil un peu au-dessus du centre, l'horizon dessous
@@ -266,6 +267,7 @@ function creerUI(){
   // lever de Soleil : vue ISS braquée sur le Soleil juste avant la sortie de l'ombre, au ralenti
   $('bLever').onclick = () => {
     poseInterrompre();
+    if(ETAT.noISS_mode){ aubeAuSol(true); return; }
     const c = cycleNuit(ETAT.t), k = c.nuit ? c.k : c.k + 1;
     ETAT.t = tEntree(k) + dureeNuit() - 45;
     ETAT.vue = 'iss'; choisirPreset('soleil');

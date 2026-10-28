@@ -10,7 +10,7 @@
 // - v1.1.8: hors vue ISS, la lumière du Soleil ne suit plus la nuit ni l'éclipse du satellite.
 // - v1.1.7: cônes d'axe de la Terre (terre.js) visibles en vue Terre seulement.
 // - v1.1.6: en onglet, la Terre à l'écran est envoyée à la page hôte à chaque image (hote.js, 'iss:terre').
-// - v1.1.5: ?provenance= (url.js), appliquée en dernier (après la date, qui remet la vitesse à ×1).
+// - v1.1.5: (drapeaux, url.js) (url.js), appliquée en dernier (après la date, qui remet la vitesse à ×1).
 // - v1.1.4: visées « soleil » / « lune » = horizon sous l'astre (horizon.js), repères du joystick seulement.
 // Date: [October 22, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
@@ -74,6 +74,7 @@ function majScene(){
   SOL.groupe.visible = true;
 
   majCamExt(); majCamIss(); majCone(); colorerSoleil();
+  (ETAT.vue === 'iss' ? camIss : camExt).getWorldQuaternion(SOL.disque.quaternion);   // disque du Soleil parallèle à l'image (soleil.js)
   // Soleil et voûte à l'infini : posés relativement à l'observateur, quelle que soit la vue (aucune parallaxe).
   // Le Soleil réel est 390 fois plus loin que la Lune ; dessiné à distance fixe du centre, il semblait sur son orbite.
   SOL.groupe.position.copy(ETAT.vue === 'iss' ? OBS.groupe.position : camExt.position).addScaledVector(ETAT.S, CFG.SUN_D);
@@ -154,8 +155,8 @@ function demarrer(){
   appliquerOngletURL();                            // ?onglet : dans l'onglet d'une page hôte (ni signature ni ⛶)
   avisURL.push(...appliquerPaysURL());             // ?pays=false : une Terre sans frontières (geo.js)
   appliquerZenURL();                               // ?zen : plein écran au démarrage (fenêtres et signature masquées)
-  avisURL.push(...appliquerProvenanceURL());       // ?provenance=CO2 : début du mode bilan radiatif
-  avisURL.push(...appliquerVuesAuZoomURL());       // ?vuesAuZoom : le zoom choisit la vue (après provenance=CO2, qui l'active)
+  avisURL.push(...appliquerModesURL());            // ?noISS_mode, ?fenetresHote, ?zoomEnchaine, ?vueBiais, ?atmGrossie, ?vitesse
+  avisURL.push(...appliquerVuesAuZoomURL());       // ?vuesAuZoom : le zoom choisit la vue
   if(avisURL.length) avis(avisURL);
   addEventListener('resize', redimensionner); redimensionner();
   requestAnimationFrame(boucle);

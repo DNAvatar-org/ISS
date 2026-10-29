@@ -1,6 +1,6 @@
 // File: js/solveur/recherche-dates.js
 // Desc: « Dates possibles » d'une photo sans date : fenêtre (année, nom NASA), passages de l'ISS, ligne verte, Lune, villes.
-// Version 1.0.0
+// Version 1.1.0
 // Date: [October 29, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.txt.
@@ -14,14 +14,16 @@
       vers 92 km, qui fixe aussi l'heure à ~2 s ;
    3. éclairage : une Terre claire, ni verte ni piquée de villes (nuages au clair de lune), veut la Lune assez haute et
       pleine (eclairage.js) ;
-   4. villes, si la photo en montre : accord avec la carte VIIRS (villes.js), retenu s'il se détache du hasard ; sinon
-      les instants restent classés par l'accord du limbe.
+   4. villes, si la photo en montre : accord avec la carte VIIRS (villes.js). Si la meilleure note ne se détache pas
+      du hasard, les villes classent d'abord les instants au meilleur limbe (95 % du meilleur au moins) : sur des
+      centaines d'instants, le limbe n'y distingue plus rien, une note même faible si.
    Chacun est listé (« vers » : ce que vise le centre de la photo) ; le premier est appliqué (cadre rouge), un clic sur un
    autre le compare (calque). Une autre recherche ou une autre photo arrête celle-ci.
    Essais du 29 octobre 2026 : ISS042-E-37847 (NASA : 13.12.14 20:42:12, ligne verte alors à 128 km : horloge de
    l'appareil en avance ?) → 13.12.14 20:42:29 en tête, devant les deux orbites voisines. Photos de Pesquet cherchées
    de 2000 à 2026 : Italie, Europe, orage datés par leurs villes (significatif) ; Voie lactée, peu de villes : la bonne
-   date a la meilleure note sans se détacher assez — elle est citée, le classement reste au limbe. */
+   date a la meilleure note sans se détacher assez (z = 3,7 pour un seuil de 4,4), mais son limbe est à 96 % : parmi
+   les meilleurs limbes, elle passe en tête. */
 
 // Expédition d'une photo NASA d'après son nom (ISS042-E-37847, iss042e037847.jpg…) : {n, debut, fin} en s Unix, avec
 // 2 jours de marge (fin : aujourd'hui pour l'expédition en cours, ou au-delà de la table) ; du, au : ses dates. Sinon null.
@@ -105,10 +107,12 @@ async function chercherDates(){
     if(notes.length){
       const m = c[notes[0]], s = await significativiteVilles(res, img, pts, m, notes.slice(1).map(i => c[i].note));
       if(CHK.recherche !== jeton) return;
+      // pas concluantes, les villes départagent d'abord les instants au meilleur limbe (95 % du meilleur au moins)
+      const lMin = 0.95*Math.max(...c.map(x => Math.exp(-x.J/2))), bon = i => Math.exp(-c[i].J/2) >= lMin;
+      ordre = [...(s.ok ? notes : [...notes.filter(bon), ...notes.filter(i => !bon(i))]), ...ordre.filter(i => c[i].note === null)];
       pv.textContent = s.ok ? 'Villes : la meilleure note (' + pc(m.note) + ') se détache du hasard (z = ' + fr(s.z, 1) + ', seuil ' + fr(s.seuil, 1) + ') : classés par les villes.'
                             : 'Villes : la meilleure note (' + pc(m.note) + ', le ' + texteDate(m.unix) + ' à ' + texteHeure(m.unix) + ') ne se détache pas assez du hasard (z = '
-                              + fr(s.z, 1) + ', seuil ' + fr(s.seuil, 1) + ') : classés par le limbe.';
-      if(s.ok) ordre = [...notes, ...ordre.filter(i => c[i].note === null)];
+                              + fr(s.z, 1) + ', seuil ' + fr(s.seuil, 1) + ') : classés par les villes, d\'abord ceux au limbe d\'au moins ' + pc(lMin) + '.';
     }
   }
   for(const i of ordre) l.appendChild(boutons[i]);

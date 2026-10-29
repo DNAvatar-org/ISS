@@ -100,12 +100,28 @@
       "dest": "pages/ISS/js/solveur/instant.js"
     },
     {
+      "src": "js/solveur/ligne-verte.js",
+      "dest": "pages/ISS/js/solveur/ligne-verte.js"
+    },
+    {
       "src": "js/solveur/villes.js",
       "dest": "pages/ISS/js/solveur/villes.js"
     },
     {
+      "src": "js/solveur/eclairage.js",
+      "dest": "pages/ISS/js/solveur/eclairage.js"
+    },
+    {
+      "src": "js/solveur/expeditions-data.js",
+      "dest": "pages/ISS/js/solveur/expeditions-data.js"
+    },
+    {
       "src": "js/solveur/ui-solveur.js",
       "dest": "pages/ISS/js/solveur/ui-solveur.js"
+    },
+    {
+      "src": "js/solveur/recherche-dates.js",
+      "dest": "pages/ISS/js/solveur/recherche-dates.js"
     },
     {
       "src": "js/solveur/encart.js",

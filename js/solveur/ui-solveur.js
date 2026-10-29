@@ -1,7 +1,7 @@
 // File: js/solveur/ui-solveur.js
 // Desc: « Check Photo » : une photo prise depuis l'ISS (bouton ou glisser-déposer) → visée, focale, heure ; appliquées à la vue.
-// Version 1.7.0
-// Date: [October 07, 2026]
+// Version 1.8.0
+// Date: [October 29, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -9,8 +9,10 @@
    catalogue (astrometrie.js) → direction, rotation, focale. La date vient des EXIF s'il y en a (originaux Flickr,
    appareil), sinon on part de la date affichée (le limbe affine l'heure à ±40 min près, instant.js). Dès que les étoiles
    sont reconnues, c'est appliqué : l'ISS à cet instant (pause), la caméra braquée, la focale, les paramètres dans l'URL.
+   Sans date, la recherche des dates possibles (recherche-dates.js) part du nom du fichier (photo NASA : l'expédition).
    Tout s'affiche dans l'encart Photo (encart.js) ; corriger la date ou l'heure (saisie ou ◀ ▶ 1 s) recommence. */
-const CHK = {res:null, img:null, data:null, limbe:null, exif:null, cv:null, image:null, echelle:1, lignes:[], focalePosee:false, recherche:null};   // focalePosee : la focale de la photo a été donnée à la vue
+// nom : du fichier ; verte : le limbe posé sur la ligne verte (ligne-verte.js) ; focalePosee : la focale de la photo a été donnée à la vue
+const CHK = {res:null, img:null, data:null, limbe:null, verte:null, exif:null, cv:null, image:null, nom:'', echelle:1, lignes:[], focalePosee:false, recherche:null};
 const LARGEUR_MAX = 2400;                                               // au-delà, l'image est réduite (vitesse)
 
 function creerSolveur(){
@@ -60,7 +62,7 @@ async function analyserPhoto(fichier, opt = {}){
   lignesSolveur(['Analyse de « ' + fichier.name + ' » : limbe, étoiles…']);
   await peindre();
   const img = cx.getImageData(0, 0, W, H);
-  Object.assign(CHK, {cv, image:img, exif, echelle:k});
+  Object.assign(CHK, {cv, image:img, exif, nom:fichier.name, echelle:k});
   // ?limbe= sert à UNE photo : la première chargée après l'ouverture de la page (ou celle pour qui il a été tracé)
   if(LIMBE_URL.pts && LIMBE_URL.utilise){ LIMBE_URL.pts = null; LIMBE_URL.utilise = false; ecrireLimbeURL(null); }
   const L = opt.limbe ? limbeDePointsOrigine(opt.limbe, bmp.width, bmp.height, 'catalogue')
@@ -81,20 +83,23 @@ async function resoudrePhoto(limbe){
   await peindre();
   const Fl = limbe ? focaleParLimbe(limbe, W, H) : null;               // la courbure du limbe borne la focale
   const res = resoudreCiel({W, H}, det, Fl, limbe);
-  Object.assign(CHK, {res, img:{W, H}, data:img.data, limbe, focalePosee:false});
-  marquerPhoto(cv, det, res, limbe);
+  const verte = res && limbe ? ligneVerte(img.data, W, H, limbe, res.F) : null;   // la focale donne l'échelle en km
+  Object.assign(CHK, {res, img:{W, H}, data:img.data, limbe, verte, focalePosee:false});
+  marquerPhoto(cv, det, res, limbe, verte);
   demanderLimbe(limbe);
   if(!res){
     lignesSolveur(['Étoiles non reconnues (' + det.length + ' points, en gris).',
                    'Il faut une photo de nuit, nette, avec au moins une dizaine d\'étoiles (le bruit coloré d\'une caméra vidéo ne compte pas).']);
     return;
   }
-  const ra = res.centre.ra/15;
+  const ra = res.centre.ra/15, x = expeditionDuNom(CHK.nom);
   CHK.lignes = [
     '✓ ' + res.appariees.length + ' étoiles reconnues (± ' + fr(res.rms, 1) + ' px)' + (res.miroir ? ', image en miroir' : ''),
-    'RA ' + Math.floor(ra) + ' h ' + fr((ra % 1)*60, 1) + ' min, Dec ' + fr(res.centre.dec, 2) + '° · ' + fr(res.F*36/W, 1) + ' mm' + (limbe ? (limbe.source === 'url' ? ' · limbe de l\'URL' : limbe.manuel ? ' · limbe tracé' : ' · limbe vu') : ''),
+    'RA ' + Math.floor(ra) + ' h ' + fr((ra % 1)*60, 1) + ' min, Dec ' + fr(res.centre.dec, 2) + '° · ' + fr(res.F*36/W, 1) + ' mm' + (limbe ? (limbe.source === 'url' ? ' · limbe de l\'URL' : limbe.manuel ? ' · limbe tracé' : ' · limbe vu') : '')
+      + (verte ? ', ligne verte (tirets roses)' : ''),
     exif.date ? 'EXIF : ' + texteDate(exif.date) + ' ' + texteHeure(exif.date) + ' UT' + (exif.focale ? ', ' + exif.focale + ' mm' : '')
-              : limbe ? 'Pas de date dans l\'image : les étoiles ne la donnent pas. Recherche des instants où l\'ISS voyait ce limbe sous ces étoiles, de 2000 à aujourd\'hui (« Année » pour restreindre).'
+              : limbe ? 'Pas de date dans l\'image : les étoiles ne la donnent pas. Recherche des instants où l\'ISS voyait ce limbe sous ces étoiles, '
+                        + (x ? 'dans l\'expédition ' + x.n + ' (nom NASA ; « Année » pour une autre période).' : 'de 2000 à aujourd\'hui (« Année » pour restreindre).')
                       : 'Pas de date dans l\'image ni de limbe : indique le jour et l\'heure UT.'
   ];
   $('solChamps').hidden = false;
@@ -105,58 +110,8 @@ async function resoudrePhoto(limbe){
     $('solDate').value = ''; $('solHeure').value = '';                // pas la date du jour : la photo est d'une autre époque
     $('solDates').hidden = !limbe;
     lignesSolveur(CHK.lignes);
-    if(limbe) chercherDates();                                         // toutes les années, sans attendre un clic
+    if(limbe) chercherDates();                                         // l'expédition du nom NASA, sinon toutes les années, sans attendre un clic
   }
-}
-
-// « Dates possibles » : instants où l'ISS, de nuit, voyait ce limbe sous ces étoiles — l'année indiquée, sinon de 2000 à
-// aujourd'hui, année par année (progression affichée ; une autre recherche ou une autre photo arrête celle-ci). Les 400
-// plus cohérents (dispersion du limbe) sont notés sur les lumières des villes (villes.js), listés dans l'ordre du temps
-// pendant la notation, puis par note décroissante ; chacun avec le lieu visé par le centre de la photo (pointVise) ;
-// le mieux noté est sélectionné (cadre rouge) et appliqué.
-async function chercherDates(){
-  const v = $('solAn').value.trim(), an = /^\d{2}$/.test(v) ? 2000 + +v : /^\d{4}$/.test(v) ? +v : null;
-  const a0 = an || DATES.AN_MIN, a1 = an || new Date().getUTCFullYear(), jeton = CHK.recherche = {};
-  const l = $('solListe'); l.textContent = '';
-  const p = document.createElement('p'); l.appendChild(p);
-  let c = [];
-  for(let a=a0;a<=a1;a++){
-    p.textContent = 'Recherche… ' + a + (a1 > a0 ? ' (' + a0 + ' → ' + a1 + ')' : '') + (c.length ? ' : ' + c.length + ' instant' + (c.length > 1 ? 's' : '') : '');
-    await peindre();
-    if(CHK.recherche !== jeton) return;
-    c.push(...datesPossibles(CHK.res, CHK.img, CHK.limbe, Date.UTC(a, 0, 1)/1000, Math.min(Date.UTC(a + 1, 0, 1), Date.now())/1000));
-  }
-  const n = c.length;
-  c = c.sort((x, y) => x.sdDeg - y.sdDeg).slice(0, 400).sort((x, y) => x.unix - y.unix);
-  for(const m of c){ const g = pointVise(CHK.res, m.unix); m.lieu = g ? lieuProche(g.lat, g.lon) : null; }   // ce que vise la photo
-  const periode = an ? ' en ' + an : ' de ' + a0 + ' à aujourd\'hui';
-  p.textContent = n ? n + ' instant' + (n > 1 ? 's' : '') + periode + (n > c.length ? ' (les ' + c.length + ' plus cohérents)' : '') + ' ; « vers » : ce que vise le centre de la photo'
-                      + ' ; note = accord des lumières de villes avec la carte VIIRS de la NASA, de la meilleure à la moins bonne. La meilleure est appliquée ; clic sur une autre pour comparer (calque).'
-                    : 'Aucun instant' + periode + ' : l\'ISS n\'a pas vu ce limbe sous ces étoiles de nuit (autre satellite, photo retouchée ou montage ?).';
-  const pts = echantillonsTerre(CHK.data, CHK.img.W, CHK.img.H, CHK.limbe);
-  const choisir = (m, b) => {
-    l.querySelectorAll('button.sel').forEach(x => x.classList.remove('sel')); b.classList.add('sel');
-    $('solDate').value = texteDate(m.unix); $('solHeure').value = texteHeure(m.unix); appliquerSolution(false);
-  };
-  const libelle = m => texteDate(m.unix) + ' ' + texteHeure(m.unix) + ' UT' + (m.lieu ? ' · vers ' + m.lieu : '') + ' · villes ' + (m.note === undefined ? '…' : m.note === null ? '—' : Math.round(m.note*100) + ' %');
-  const boutons = c.map(m => {
-    const b = document.createElement('button');
-    b.textContent = libelle(m); b.onclick = () => choisir(m, b);
-    l.appendChild(b);
-    return b;
-  });
-  // notes une par une (tuiles VIIRS chargées au fil de l'eau), puis le meilleur choisi
-  for(let i=0;i<boutons.length;i++){
-    c[i].note = await noteVilles(CHK.res, CHK.img, pts, c[i].unix);
-    if(CHK.recherche !== jeton) return;
-    boutons[i].textContent = libelle(c[i]);
-  }
-  // notées : rangées par note décroissante (sans note à la fin), la mieux notée en haut, choisie
-  const ordre = c.map((m, i) => i).sort((i, j) => (c[j].note ?? -9) - (c[i].note ?? -9));
-  for(const i of ordre) l.appendChild(boutons[i]);
-  const ib = ordre[0];
-  if(c.length && c[ib].note !== null) choisir(c[ib], boutons[ib]);   // aucun instant : rien à choisir
-  l.scrollTop = 0; l.scrollIntoView({block:'nearest'});                // en haut : l'explication et la mieux notée
 }
 
 // ±delta secondes sur l'instant saisi (la date suit au passage de minuit), puis on recommence
@@ -170,18 +125,24 @@ function decalerHeure(delta){
 
 // prudent : n'appliquer que si le limbe confirme l'instant (date non sûre : celle affichée par défaut, sans EXIF)
 function appliquerSolution(prudent = false){
-  const {res, img, limbe, exif} = CHK;
+  const {res, img, limbe, verte, exif} = CHK;
   const jour = lireDateURL($('solDate').value), frac = lireHeureURL($('solHeure').value);
   if(jour === null || frac === null){ lignesSolveur([...CHK.lignes, 'Date ou heure illisible (JJ.MM.AA, HH:MM:SS).']); return; }
-  let unix = unixDeJour(jour + frac);
+  let unix = Math.round(unixDeJour(jour + frac));
   const l = [];
-  const h = limbe ? heureParLimbe(res, img, limbe, unix, 2400) : null, tl = limbe ? toleranceLimbe(res, img, limbe) : null;
-  // limbe concordant : points bien sur un même cône autour du nadir, bord vu entre le sol et le haut de l'airglow
+  const h = limbe ? heureParLimbe(res, img, verte || limbe, unix, 2400) : null, tl = limbe ? toleranceLimbe(res, img, limbe) : null;
+  const hv = h && verte ? heureParLigneVerte(res, img, verte, h.unix, tl) : null;
+  // limbe concordant : points bien sur un même cône autour du nadir ; avec une ligne verte, elle vers 92 km (son heure
+  // est la plus juste, instant.js), sinon le bord vu entre le sol et le haut de l'airglow.
   // l'heure saisie est appliquée telle quelle ; celle du limbe est proposée (bouton, toujours là quand il y a un limbe :
   // grisé si on y est déjà ou s'il ne colle pas — la mise en page ne saute pas)
   let hLimbe = null;
-  if(h && h.sdDeg < tl.sd && h.alt > -20 - tl.alt && h.alt < 150 + tl.alt){   // tolérance : grand-angle (instant.js)
-    l.push('Heure par le limbe : ' + texteHeure(h.unix) + ' UT (' + (h.ecart >= 0 ? '+' : '') + h.ecart + ' s ; bord à ' + h.alt.toFixed(0) + ' km)');
+  const ecart = t => (t >= unix ? '+' : '') + (t - unix) + ' s';
+  if(hv && hv.ok){
+    l.push('Heure par la ligne verte : ' + texteHeure(hv.unix) + ' UT (' + ecart(hv.unix) + ' ; ligne à ' + hv.alt.toFixed(0) + ' km, attendue vers ' + VERTE.alt + ')');
+    hLimbe = hv.unix;
+  }else if(h && h.sdDeg < tl.sd && h.alt > -20 - tl.alt && h.alt < 150 + tl.alt){   // tolérance : grand-angle (instant.js)
+    l.push('Heure par le limbe : ' + texteHeure(h.unix) + ' UT (' + ecart(h.unix) + ' ; ' + (verte ? 'ligne verte à ' + h.alt.toFixed(0) + ' km, loin des ' + VERTE.alt + ' attendus' : 'bord à ' + h.alt.toFixed(0) + ' km') + ')');
     hLimbe = h.unix;
   }else{
     if(limbe) l.push('Le limbe ne colle pas à l\'ISS à ±40 min de cette heure : vérifie la date.');
@@ -211,7 +172,7 @@ function appliquerSolution(prudent = false){
   if(limbe){
     const b = document.createElement('button');
     b.type = 'button'; b.textContent = 'Prendre l\'heure du limbe (' + (hLimbe ? texteHeure(hLimbe) : '—') + ')';
-    b.disabled = !hLimbe || h.ecart === 0;
+    b.disabled = !hLimbe || hLimbe === unix;
     b.onclick = () => { $('solHeure').value = texteHeure(hLimbe); appliquerSolution(false); };
     $('solTxt').appendChild(b);
   }

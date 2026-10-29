@@ -1,14 +1,15 @@
 // File: js/solveur/encart.js
 // Desc: Encart « Photo » (à droite, sous Temps) : la photo analysée et ce que le solveur y a trouvé ; clic = calque sur la vue.
-// Version 1.3.0
-// Date: [October 07, 2026]
+// Version 1.4.0
+// Date: [October 29, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.txt.
 
 /* La photo s'affiche dès qu'elle est lue (afficherPhoto), avant l'analyse ; les marques viennent ensuite (marquerPhoto).
    Vignette : étoiles reconnues (cercle vert, nom des plus brillantes), autres détections (point gris), limbe ajusté
-   (arc bleu, Terre masquée teintée). Un clic superpose à la vue 3D le calque (#calque, canevas semi-transparent) : la
-   photo AVEC ses marques — cercles verts autour de SES étoiles reconnues, trait bleu du limbe —, centrée et à l'échelle
+   (arc bleu, Terre masquée teintée), ligne verte de l'airglow si elle est trouvée (tirets roses, ligne-verte.js). Un
+   clic superpose à la vue 3D le calque (#calque, canevas semi-transparent) : la photo AVEC ses marques — cercles
+   verts autour de SES étoiles reconnues, trait bleu du limbe —, centrée et à l'échelle
    de la caméra : focale de la photo (pixels de l'image) → focale de l'écran, rotation (roulis) et miroir compris. Dans la
    simulation, les étoiles du catalogue appariées sont des points rouges (ciel.js) : un point rouge dans chaque cercle
    vert, et le trait bleu sur l'horizon de la vue, si la solution est bonne. Re-clic ou ✕ : retirée. Elle suit le zoom (majCalque, à chaque trame). */
@@ -60,23 +61,28 @@ function afficherPhoto(src){
   montrerCalque(false);
 }
 
-// Marques de l'analyse, sur la vignette et sur le calque. det : détections ; res : solution (ou null) ; limbe (ou null).
-function marquerPhoto(src, det, res, limbe){
+// Marques de l'analyse, sur la vignette et sur le calque. det : détections ; res : solution (ou null) ; limbe (ou null) ;
+// verte : le limbe posé sur la ligne verte (ou null).
+function marquerPhoto(src, det, res, limbe, verte = null){
   Object.assign(ENC, {F:res ? res.F : 0, miroir:res ? res.miroir : false});
-  dessinerMarques($('encCv'), src, det, res, limbe, Math.max(1, src.width/400), true);
-  dessinerMarques($('calque'), src, det, res, limbe, Math.max(1, src.width/900), false);
+  dessinerMarques($('encCv'), src, det, res, limbe, verte, Math.max(1, src.width/400), true);
+  dessinerMarques($('calque'), src, det, res, limbe, verte, Math.max(1, src.width/900), false);
   marquerEtoilesTestees(res ? res.appariees.map(a => a.i) : []);
   montrerCalque(!$('calque').hidden);
 }
 
 // t : épaisseur des traits (lisible une fois réduit) ; vignette : Terre teintée, détections grises, noms.
-function dessinerMarques(cv, src, det, res, limbe, t, vignette){
+function dessinerMarques(cv, src, det, res, limbe, verte, t, vignette){
   const W = src.width, cx = cv.getContext('2d');
   cx.drawImage(src, 0, 0);
   if(limbe){
     cx.save(); cx.beginPath(); cx.arc(limbe.cx, limbe.cy, limbe.r, 0, 2*Math.PI);
     if(vignette){ cx.fillStyle = 'rgba(0,200,255,.12)'; cx.fill(); }
     cx.lineWidth = 2*t; cx.strokeStyle = '#3cf'; cx.stroke(); cx.restore();
+  }
+  if(verte){                                                            // en tirets : la ligne reste visible entre eux
+    cx.save(); cx.beginPath(); cx.arc(verte.cx, verte.cy, verte.r, 0, 2*Math.PI);
+    cx.setLineDash([6*t, 6*t]); cx.lineWidth = 1.5*t; cx.strokeStyle = '#f6c'; cx.stroke(); cx.restore();
   }
   if(vignette){
     cx.fillStyle = 'rgba(200,200,200,.8)';

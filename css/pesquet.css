@@ -1,6 +1,7 @@
 /* File: css/pesquet.css
    Desc: Mise en page : panneau de réglages, HUD du chrono, canvas plein écran.
-   Version 1.6.0
+   Version 1.6.1
+   v1.6.1 : fenetresHote — repliées, ni bordure ni rognage : le + de Temps à l'aplomb de ceux de l'hôte, entier.
    v1.6.0 : titre de Temps — la vitesse (.vit-tete), seulement repliée (dépliée, la jauge la montre).
    v1.5.0 : en onglet, ⓒ seul dans le coin bas droit (plus de ⛶ de l'hôte) ; titres au lissage de l'hôte.
    v1.4.1 : fenetresHote — Point de vue invisible.
@@ -457,8 +458,9 @@ body.zen #credits{display:none !important}
 body.fenetres-hote #hud,body.fenetres-hote #panel{bottom:auto;left:var(--fenetres-gauche);right:auto;transition:top .4s ease}
 body.fenetres-hote #hud{top:var(--fenetres-haut);max-height:calc(100vh - var(--fenetres-haut) - 12px)}   /* déplié, il défile plutôt que de sortir par le bas */
 /* repliées : la largeur de leur titre seul, le + devant lui comme les boutons de l'hôte (CO2 html/visu_radiatif.html
-   « Energies »), un titre tous les 30 px (url.js placerPointDeVue) */
-body.fenetres-hote #hud.plie,body.fenetres-hote #panel.plie{width:auto;padding:0}
+   « Energies »), un titre tous les 30 px (url.js placerPointDeVue) ; sans bordure (même transparente, elle décale le titre
+   d'un pixel) ni défilement (il rognait le bord gauche du +) */
+body.fenetres-hote #hud.plie,body.fenetres-hote #panel.plie{width:auto;padding:0;border-width:0;overflow:visible}
 body.fenetres-hote .titre-plier{flex-direction:row-reverse}
 /* Point de vue invisible : le bilan radiatif se lit en vue Terre (zoom jusqu'au limbe), Temps reste seule */
 body.noISS-mode #panel{display:none}

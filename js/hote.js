@@ -3,7 +3,9 @@
 //       Soleil à l'écran, envoyés à la page hôte (message 'iss:terre') : elle pose son organigramme autour, son Soleil du
 //       côté du vrai, et le suit quand on tourne la caméra (bilan radiatif CO2, onglets_graphe.js). En retour, la place
 //       qu'elle demande à gauche de la Terre (iss:marges) : le centre de la Terre se pose là.
-// Version 1.12.0
+// Version 1.13.0
+// - v1.13.0: vue Terre en repère équatorial (cameras.js) : point sous la caméra et visée accrochée au sol par dirVueExt /
+//   poserVueExt ; aube au sol : vue remise à l'endroit avant de s'accrocher.
 // - v1.12.0: visée accrochée au sol : vue à l'envers (passée par-dessus un pôle, entrees.js) gardée à l'envers (pas de demi-tour).
 // - v1.11.0: message iss:dormir { oui } — la page hôte endort la Terre (la boucle ne dessine plus : le canevas garde sa
 //   dernière image, un grab) le temps de faire tourner sa propre 3D (le tamagoshi : sa créature animée) ; oui false la
@@ -95,7 +97,7 @@ const VISEE_HOTE = {lat:NaN, lon:NaN, th:NaN, ph:NaN, actif:false};
 const _vh = new THREE.Vector3();
 addEventListener('message', e => {
   if(!e.data || e.data.type !== 'iss:viser') return;
-  ETAT.vue = 'ext'; VUE_EXT.mode = 'terre';
+  ETAT.vue = 'ext'; if(VUE_EXT.mode === 'lune') changerModeExt('terre');   // repère de la vue Terre (cameras.js) : pas de saut
   Object.assign(VISEE_HOTE, {lat:e.data.lat, lon:e.data.lon, th:VUE_EXT.th, ph:VUE_EXT.ph, actif:true, arrive:!!e.data.colle});
 });
 function suivreVisee(){
@@ -105,14 +107,11 @@ function suivreVisee(){
     if(ETAT.noISS_mode){ lacherLeSol(); majBoutonSol(); return; }   // un glissé rend la caméra fixe dans le ciel
     // glissé à la main : le lieu visé devient le point du sol sous la caméra — la vue reste accrochée au sol, la
     // rotation de la Terre ne l'emporte plus (de près, elle filait de quelques km par seconde)
-    _vh.set(Math.cos(VUE_EXT.ph)*Math.sin(VUE_EXT.th), Math.sin(VUE_EXT.ph), Math.cos(VUE_EXT.ph)*Math.cos(VUE_EXT.th));
-    const g = geoDeLocal(TERRE.globe.worldToLocal(_vh));
+    const g = geoDeLocal(TERRE.globe.worldToLocal(dirVueExt(_vh)));
     VISEE_HOTE.lat = g.lat; VISEE_HOTE.lon = g.lon; VISEE_HOTE.arrive = true;
   }
   TERRE.globe.localToWorld(vecGeo(VISEE_HOTE.lat, VISEE_HOTE.lon, 1, _vh)).normalize();
-  let th = Math.atan2(_vh.x, _vh.z), ph = Math.asin(_vh.y);
-  // vue passée par-dessus un pôle (|ph| > 90°, entrees.js) : le même point, pris de ce côté-là — sinon demi-tour de l'image
-  if(Math.cos(VUE_EXT.ph) < 0){ th += Math.PI; ph = Math.sign(VUE_EXT.ph)*Math.PI - ph; }
+  const {th, ph} = anglesVueExt(_vh, true);        // vue passée par-dessus un pôle : gardée à l'envers (cameras.js)
   const dth = Math.atan2(Math.sin(th - VUE_EXT.th), Math.cos(th - VUE_EXT.th));
   // glisse vers le lieu (≈ 1 s) ; une fois arrivé, collé dessus (sans le retard du glissement)
   if(VISEE_HOTE.arrive || Math.abs(dth) + Math.abs(ph - VUE_EXT.ph) < 1e-3){ VISEE_HOTE.arrive = true; VUE_EXT.th = th; VUE_EXT.ph = ph; }
@@ -122,10 +121,7 @@ function suivreVisee(){
 
 /* noISS_mode : la caméra est fixe dans le ciel (la Terre tourne dessous) ou accrochée au sol d'un lieu (VISEE_HOTE : le Soleil
    tourne autour de la Terre, à 15°/h). Bouton 🔒 : bascule ; un glissé sur la Terre la rend fixe (suivreVisee). */
-const pointSousLaCamera = () => {
-  _vh.set(Math.cos(VUE_EXT.ph)*Math.sin(VUE_EXT.th), Math.sin(VUE_EXT.ph), Math.cos(VUE_EXT.ph)*Math.cos(VUE_EXT.th));
-  return geoDeLocal(TERRE.globe.worldToLocal(_vh));
-};
+const pointSousLaCamera = () => geoDeLocal(TERRE.globe.worldToLocal(dirVueExt(_vh)));
 const accrocherAuSol = g => Object.assign(VISEE_HOTE, {lat:g.lat, lon:g.lon, th:VUE_EXT.th, ph:VUE_EXT.ph, actif:true, arrive:true});
 const lacherLeSol = () => { VISEE_HOTE.actif = false; ETAT.hautCamera = 0; };
 const majBoutonSol = () => $('bCamSol').classList.toggle('on', VISEE_HOTE.actif);
@@ -182,6 +178,8 @@ function aubeAuSol(lever){
   }
   ETAT.t = t0 + (meilleur.i - 720)*60; majSoleilDate(); orienterTerre();
   ETAT.vitesse = VITESSE_AUBE; ETAT.pause = false; ETAT.hautCamera = meilleur.haut;
+  // vue à l'endroit (même position, passée par-dessus un pôle : cos ph < 0) : son haut est alors celui que choisit hautCamera
+  if(Math.cos(VUE_EXT.ph) < 0) Object.assign(VUE_EXT, {th:VUE_EXT.th + Math.PI, ph:Math.sign(VUE_EXT.ph)*Math.PI - VUE_EXT.ph});
   accrocherAuSol({lat:meilleur.lat, lon:g.lon}); majBoutonSol(); majBoutons();
 }
 

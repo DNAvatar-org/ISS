@@ -1,6 +1,7 @@
 // File: js/config.js
 // Desc: Constantes physiques (échelle : 1 unité = 100 km) et état de la simulation (ETAT).
-// Version 1.2.0
+// Version 1.2.1
+// - v1.2.1: hautCamera — vue Terre : −1 pôle Sud en haut, sinon pôle Nord (repère équatorial, cameras.js).
 // - v1.2.0: angleTour (angle ramené à ]−π, π]) : latitude de la caméra extérieure sans butée aux pôles.
 // - v1.1.0: ETAT.vuesAuZoom (?vuesAuZoom, (drapeaux de l'hôte, url.js)) : le niveau de zoom choisit la vue, Terre–Lune ↔ Terre ↔ ISS.
 // - v1.0.3: ETAT.horizonVertical (mode bilan radiatif : caméra de l'ISS tournée d'un quart de tour, la Terre à droite).
@@ -43,7 +44,7 @@ const ETAT = {
   montrer: {orbite:false, reperes:false, trace:false, cone:false, geo:false},
   zoomEnchaine: false,      // ?zoomEnchaine : point d'horizon fixe, vitesse selon la vue (hote.js)
   vuesAuZoom: false,        // ?vuesAuZoom ((drapeaux de l'hôte, url.js)) : le niveau de zoom choisit la vue — Terre–Lune ↔ Terre ↔ ISS (entrees.js)
-  hautCamera: 0,            // noISS_mode : 0 = haut de la caméra = normale de l'orbite (repère de la scène) ; ±1 = ± l'axe de la Terre (aube au sol, hote.js)
+  hautCamera: 0,            // vue Terre : −1 = pôle Sud en haut (aube au sol, hote.js) ; 0 ou 1 = pôle Nord en haut (cameras.js majCamExt)
   noISS_mode: false,     // ?noISS_mode : jamais la caméra de l'ISS — Terre et Terre–Lune seulement ; lever/coucher au sol (hote.js)
   horizonVertical: false    // ?horizonVertical : caméra de l'ISS tournée d'un quart de tour (cameras.js)
 };

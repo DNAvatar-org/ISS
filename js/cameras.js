@@ -1,6 +1,9 @@
 // File: js/cameras.js
 // Desc: Deux caméras : orbitale autour de la Terre (vue éloignée) et embarquée dans l'ISS (visée cap / site).
-// Version 2.7.0
+// Version 2.8.0
+// - v2.8.0: vue Terre dans le repère équatorial (Y = axe des pôles) : (th, ph) = ascension droite et déclinaison de la caméra,
+//   glisser en X la fait tourner autour de l'axe de la Terre, en Y règle l'assiette ; haut = tangente au méridien (pôle Nord
+//   en haut, Sud si hautCamera = −1). Vue Terre–Lune : repère de la scène, comme avant. dirVueExt, poserVueExt, changerModeExt.
 // - v2.7.0: vue Terre — haut de la caméra = tangente au méridien (vers les ph croissants) : continu par-dessus les pôles, la
 //   vue passe à l'envers au lieu de buter (entrees.js).
 // - v2.6.1: FOV_VUE_TERRE (champ de la vue Terre), lu aussi par hote.js.
@@ -74,17 +77,45 @@ function baseVisee(cap, site, f, u, r){
   r.crossVectors(f, u);
 }
 
+/* Repère de (th, ph) : vue Terre, l'équatorial céleste — Y = axe des pôles, X = point vernal (la Terre à la date 0 h sidérale,
+   terre.js orienterTerre) : th, ph = ascension droite et déclinaison de la caméra, le glisser horizontal tourne autour de l'axe
+   de la Terre et le vertical règle l'assiette (entrees.js). Vue Terre–Lune : le repère de la scène (Y = normale de l'orbite). */
+const _eqX = new THREE.Vector3(), _eqY = new THREE.Vector3(), _eqZ = new THREE.Vector3(), _qExt = new THREE.Quaternion();
+function repereVueExt(){
+  if(VUE_EXT.mode === 'lune') return _qExt.identity();
+  ETAT.vers([1, 0, 0], _eqX); ETAT.vers([0, 0, 1], _eqY); ETAT.vers([0, -1, 0], _eqZ);
+  return _qExt.setFromRotationMatrix(_m.makeBasis(_eqX, _eqY, _eqZ));
+}
+// Direction (monde, unitaire) de la caméra extérieure vue de sa cible.
+const dirVueExt = out =>
+  out.set(Math.cos(VUE_EXT.ph)*Math.sin(VUE_EXT.th), Math.sin(VUE_EXT.ph), Math.cos(VUE_EXT.ph)*Math.cos(VUE_EXT.th)).applyQuaternion(repereVueExt());
+/* (th, ph) d'une direction monde dans le repère du mode courant ; garderCote : vue passée par-dessus un pôle (cos ph < 0,
+   entrees.js), le même point pris de ce côté-là — sinon l'image ferait un demi-tour. */
+const _dvExt = new THREE.Vector3(), _dmExt = new THREE.Vector3();
+function anglesVueExt(dirMonde, garderCote){
+  _dvExt.copy(dirMonde).applyQuaternion(repereVueExt().invert());
+  let th = Math.atan2(_dvExt.x, _dvExt.z), ph = Math.asin(Math.max(-1, Math.min(1, _dvExt.y)));
+  if(garderCote && Math.cos(VUE_EXT.ph) < 0){ th += Math.PI; ph = Math.sign(VUE_EXT.ph)*Math.PI - ph; }
+  return {th, ph};
+}
+const poserVueExt = (dirMonde, garderCote) => Object.assign(VUE_EXT, anglesVueExt(dirMonde, garderCote));
+// Vue Terre ↔ Terre–Lune : les repères diffèrent, la caméra garde sa direction (pas de saut de position) ; son haut passe de
+// la normale de l'orbite à l'axe de la Terre (roulis de l'image au changement, accepté).
+function changerModeExt(mode){ dirVueExt(_dmExt); VUE_EXT.mode = mode; poserVueExt(_dmExt, true); }
+
+const _hautExt = new THREE.Vector3();
 function majCamExt(){
   const {th, ph, r, cible} = VUE_EXT;
   // vue Terre–Lune : visée sur l'axe Terre → Lune, à la fraction que donne le zoom — la Terre au plus près (R_LUNE_MIN), le
   // milieu Terre–Lune au plus large (R_LUNE_MAX) : zoomer va vers la Terre (entrees.js)
   if(VUE_EXT.mode === 'lune') cible.copy(ETAT.M).multiplyScalar(CFG.LUNE_D/2*(r - R_LUNE_MIN)/(R_LUNE_MAX - R_LUNE_MIN));
   else cible.set(0, 0, 0);
-  camExt.position.set(r*Math.cos(ph)*Math.sin(th), r*Math.sin(ph), r*Math.cos(ph)*Math.cos(th)).add(cible);
-  // haut = tangente au méridien vers les ph croissants : le +Y projeté tant que |ph| < 90°, et continu au-delà — passé
-  // un pôle, la vue est à l'envers sans saut (au lieu de basculer d'un demi-tour au passage)
-  if(ETAT.hautCamera === 0) camExt.up.set(-Math.sin(ph)*Math.sin(th), Math.cos(ph), -Math.sin(ph)*Math.cos(th));
-  else camExt.up.set(0, ETAT.hautCamera, 0).transformDirection(TERRE.globe.matrixWorld);   // axe de la Terre (±) : un astre fixe à l'infini court en ligne droite horizontale
+  camExt.position.copy(dirVueExt(_dmExt)).multiplyScalar(r).add(cible);
+  // haut = tangente au méridien vers les ph croissants, dans le repère (repereVueExt) : vue Terre, l'axe de la Terre projeté
+  // (un astre fixe à l'infini court en ligne droite horizontale) tant que |ph| < 90°, et continu au-delà — passé un pôle,
+  // la vue est à l'envers sans saut ; hautCamera = −1 (aube au sol, hote.js) : le pôle Sud en haut
+  _hautExt.set(-Math.sin(ph)*Math.sin(th), Math.cos(ph), -Math.sin(ph)*Math.cos(th)).applyQuaternion(repereVueExt());
+  camExt.up.copy(_hautExt).multiplyScalar(ETAT.hautCamera === -1 ? -1 : 1);
   camExt.lookAt(cible);
   const fov = VUE_EXT.mode === 'lune' ? 50 : FOV_VUE_TERRE;
   // plan proche à la mesure de l'altitude : de près (zoom jusqu'à 8 km), 0,5 unité (50 km) coupait le sol
@@ -98,26 +129,29 @@ function vueTerreLune(){
   ETAT.vue = 'ext'; VUE_EXT.mode = 'lune'; VUE_EXT.r = 5200;
   _on.crossVectors(ETAT.Mnord, ETAT.M).normalize();                       // perpendiculaire à l'axe Terre–Lune, dans le plan de l'orbite
   _o.copy(ETAT.Mnord).multiplyScalar(0.5).addScaledVector(_on, 0.85).normalize();   // un peu au-dessus : on voit l'orbite en perspective
-  VUE_EXT.th = Math.atan2(_o.x, _o.z); VUE_EXT.ph = Math.asin(_o.y);
+  poserVueExt(_o, false);
 }
 /* Vue Terre éclairée de biais ((drapeaux de l'hôte, url.js)) : la caméra extérieure placée pour que le Soleil (ETAT.S) soit à 75° de son
    axe de visée — un peu derrière la Terre : environ 60 % du disque éclairé, un bord de nuit visible — et à GAUCHE de l'écran
    (là où la page hôte pose son Soleil et son organigramme). La caméra reste à 20° au-dessus du plan de l'orbite (pas de vue
    d'un pôle) ; son azimut est cherché au degré, parmi ceux qui ont le Soleil à gauche : S · droite < 0, la droite de la
-   caméra étant Y × z (z : direction de la caméra depuis la Terre). La Terre reste libre à la souris. */
+   caméra étant A × z (A : axe de la Terre, haut de la vue Terre ; z : direction de la caméra depuis la Terre). 20° au-dessus
+   de l'équateur. La Terre reste libre à la souris. */
 function vueEclaireeDeBiais(){
-  const angle = 75*DEG, ph = 20*DEG, z = new THREE.Vector3();
-  let ecartMin = Infinity;
+  // dans le repère de la vue Terre (repereVueExt) : le haut de l'image est l'axe de la Terre A, la droite A × z
+  const angle = 75*DEG, ph = 20*DEG, z = new THREE.Vector3(), A = ETAT.vers([0, 0, 1], new THREE.Vector3()), droite = new THREE.Vector3();
+  let ecartMin = Infinity, thMeilleur = 0;
   for(let th = 0; th < 360; th++){
-    z.set(Math.cos(ph)*Math.sin(th*DEG), Math.sin(ph), Math.cos(ph)*Math.cos(th*DEG));
-    const aGauche = ETAT.S.x*z.z - ETAT.S.z*z.x < 0;   // S · (Y × z)
+    z.set(Math.cos(ph)*Math.sin(th*DEG), Math.sin(ph), Math.cos(ph)*Math.cos(th*DEG)).applyQuaternion(repereVueExt());
+    const aGauche = ETAT.S.dot(droite.crossVectors(A, z)) < 0;
     const ecart = aGauche ? Math.abs(Math.acos(ETAT.S.dot(z)) - angle) : Infinity;
-    if(ecart < ecartMin){ ecartMin = ecart; VUE_EXT.th = th*DEG; VUE_EXT.ph = ph; }
+    if(ecart < ecartMin){ ecartMin = ecart; thMeilleur = th*DEG; }
   }
+  VUE_EXT.th = thMeilleur; VUE_EXT.ph = ph;
 }
 function vueTerre(){
   ETAT.vue = 'ext';
-  if(VUE_EXT.mode === 'lune'){ VUE_EXT.mode = 'terre'; VUE_EXT.r = 250; }
+  if(VUE_EXT.mode === 'lune'){ changerModeExt('terre'); VUE_EXT.r = 250; }
 }
 
 const FOV_VUE_TERRE = 40;                          // [°] champ vertical de la vue Terre (Terre–Lune : 50)

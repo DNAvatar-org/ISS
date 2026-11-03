@@ -1,6 +1,8 @@
 // File: js/entrees.js
 // Desc: Souris, pavé tactile et écran tactile : orbite autour de la Terre, visée et focale de la caméra embarquée.
-// Version 1.10.0
+// Version 1.11.0
+// - v1.11.0: vue Terre — le glisser horizontal tourne autour de l'axe de la Terre, le vertical règle l'assiette (repère
+//   équatorial, cameras.js) ; vue Terre–Lune : glisser d'avant (butée à ±1,5 rad), passage Terre–Lune → Terre sans saut.
 // - v1.10.0: glisser en vue Terre sans butée en latitude : la caméra passe par-dessus les pôles (angle ramené à ]−π, π]), le
 //   glisser horizontal s'inverse quand la vue est à l'envers (le point saisi suit toujours le doigt).
 // - v1.9.1: vues au zoom — la vue Terre–Lune en deçà de ×0,2 (au lieu de ×0,8) : la vue Terre se dézoome 5 fois plus loin que le départ.
@@ -48,7 +50,7 @@ function zoomer(f){
     const lune = VUE_EXT.mode === 'lune';       // en vue Terre–Lune on reste dans la voûte (rayon 9 000)
     // Vues au zoom (?vuesAuZoom) : vers le large, la vue Terre–Lune au plus proche, et retour ; vers le sol, la caméra de l'ISS.
     if(ETAT.vuesAuZoom && !lune && VUE_EXT.r*f > R_VERS_LUNE){ poseEffacer(); vueTerreLune(); VUE_EXT.r = R_LUNE_MIN; majBoutons(); return; }
-    if(ETAT.vuesAuZoom && lune && VUE_EXT.r*f < R_LUNE_MIN){ poseEffacer(); VUE_EXT.mode = 'terre'; VUE_EXT.r = R_VERS_LUNE; majBoutons(); return; }
+    if(ETAT.vuesAuZoom && lune && VUE_EXT.r*f < R_LUNE_MIN){ poseEffacer(); changerModeExt('terre'); VUE_EXT.r = R_VERS_LUNE; majBoutons(); return; }
     if(ETAT.vuesAuZoom && !ETAT.noISS_mode && !lune && (VUE_EXT.r - CFG.R)*f < OBS.R - CFG.R){ entrerDansIss((VUE_EXT.r - CFG.R)*f); return; }
     // vue Terre : le zoom multiplie l'altitude (r − R), pas la distance au centre — sinon, près du sol, un cran sautait de
     // centaines de km jusqu'à la butée (le zoom semblait bloqué)
@@ -113,11 +115,17 @@ addEventListener('pointermove', e => {
     // vue Terre : rotation proportionnelle à l'altitude de la caméra (r − R), le point saisi suit à peu près le doigt —
     // inchangée à la distance par défaut (250), bien plus douce de près ; vue Terre–Lune : comme avant
     const k = VUE_EXT.mode === 'lune' ? 1 : Math.max(0.0002, (VUE_EXT.r - CFG.R)/(250 - CFG.R));   // de près : lent
-    // pas de butée aux pôles : la caméra passe par-dessus, la vue se retrouve à l'envers (cameras.js majCamExt) et le glisser
-    // horizontal s'inverse avec elle ; caméra au haut de l'axe de la Terre (hautCamera, noISS_mode) : jamais à l'envers
-    const envers = ETAT.hautCamera === 0 && Math.cos(VUE_EXT.ph) < 0 ? -1 : 1;
-    VUE_EXT.th -= dx*0.006*k*envers;
-    VUE_EXT.ph = angleTour(VUE_EXT.ph + dy*0.005*k);
+    if(VUE_EXT.mode === 'lune'){
+      VUE_EXT.th -= dx*0.006*k;
+      VUE_EXT.ph = Math.max(-1.5, Math.min(1.5, VUE_EXT.ph + dy*0.005*k));
+    }else{
+      // vue Terre (repère équatorial, cameras.js) : en X, autour de l'axe de la Terre ; en Y, l'assiette, sans butée aux
+      // pôles — la caméra passe par-dessus, la vue se retrouve à l'envers et le glisser horizontal s'inverse avec elle (pôle
+      // Sud en haut, hautCamera = −1 : de même)
+      const envers = (ETAT.hautCamera === -1 ? -1 : 1)*(Math.cos(VUE_EXT.ph) < 0 ? -1 : 1);
+      VUE_EXT.th -= dx*0.006*k*envers;
+      VUE_EXT.ph = angleTour(VUE_EXT.ph + dy*0.005*k);
+    }
   }else{
     const k = VUE_ISS.fov*DEG/innerHeight;          // rad par pixel : le point saisi suit le doigt
     // horizon vertical (cameras.js) : la droite de l'image est le bas, son haut la droite — le cap suit le glisser vertical

@@ -1,6 +1,8 @@
 // File: js/entrees.js
 // Desc: Souris, pavé tactile et écran tactile : orbite autour de la Terre, visée et focale de la caméra embarquée.
-// Version 1.9.1
+// Version 1.10.0
+// - v1.10.0: glisser en vue Terre sans butée en latitude : la caméra passe par-dessus les pôles (angle ramené à ]−π, π]), le
+//   glisser horizontal s'inverse quand la vue est à l'envers (le point saisi suit toujours le doigt).
 // - v1.9.1: vues au zoom — la vue Terre–Lune en deçà de ×0,2 (au lieu de ×0,8) : la vue Terre se dézoome 5 fois plus loin que le départ.
 // - v1.9.0: ?vuesAuZoom — le niveau de zoom choisit la vue : Terre–Lune au large, Terre, caméra de l'ISS en deçà de son
 //   altitude, et retour à la vue Terre quand on élargit le champ de l'ISS au-delà de celui de la vue Terre.
@@ -13,7 +15,7 @@
 // - v1.4.0: glisser en vue Terre : rotation proportionnelle à l'altitude de la caméra (de près, beaucoup plus douce).
 // - v1.3.0: zoom enchaîné vers le large : vue Terre au plus loin → vue Terre–Lune ; et retour.
 // - v1.2.0: zoom enchaîné (ETAT.zoomEnchaine) : vue Terre au plus proche → caméra de l'ISS, horizon sous le Soleil ; et retour.
-// Date: [October 23, 2026]
+// Date: [November 03, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -111,8 +113,11 @@ addEventListener('pointermove', e => {
     // vue Terre : rotation proportionnelle à l'altitude de la caméra (r − R), le point saisi suit à peu près le doigt —
     // inchangée à la distance par défaut (250), bien plus douce de près ; vue Terre–Lune : comme avant
     const k = VUE_EXT.mode === 'lune' ? 1 : Math.max(0.0002, (VUE_EXT.r - CFG.R)/(250 - CFG.R));   // de près : lent
-    VUE_EXT.th -= dx*0.006*k;
-    VUE_EXT.ph = Math.max(-1.5, Math.min(1.5, VUE_EXT.ph + dy*0.005*k));
+    // pas de butée aux pôles : la caméra passe par-dessus, la vue se retrouve à l'envers (cameras.js majCamExt) et le glisser
+    // horizontal s'inverse avec elle ; caméra au haut de l'axe de la Terre (hautCamera, noISS_mode) : jamais à l'envers
+    const envers = ETAT.hautCamera === 0 && Math.cos(VUE_EXT.ph) < 0 ? -1 : 1;
+    VUE_EXT.th -= dx*0.006*k*envers;
+    VUE_EXT.ph = angleTour(VUE_EXT.ph + dy*0.005*k);
   }else{
     const k = VUE_ISS.fov*DEG/innerHeight;          // rad par pixel : le point saisi suit le doigt
     // horizon vertical (cameras.js) : la droite de l'image est le bas, son haut la droite — le cap suit le glisser vertical

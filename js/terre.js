@@ -1,12 +1,13 @@
 // File: js/terre.js
 // Desc: Terre jour/nuit (geoview.jpg + steamNight.jpg), atmosphère, trace de l'ISS au sol.
-// Version 2.6.0
+// Version 2.7.0
+// - v2.7.0: globe en renderOrder −2 : dessiné avant les carreaux de détail (tuiles-rendu.js), qui passent par-dessus.
 // - v2.6.0: lumières des villes réglables (uLumNuit, ?lumNuit=, partagé avec les tuiles) : 0 les éteint.
 // - v2.5.0: ATM_AFFICHAGE — atmosphère exagérée au dessin seulement (hauteur d'échelle, exposition de jour) ; 1 par défaut,
 //   (drapeaux de l'hôte, url.js) la grossit (url.js) : vue de l'espace, la bande bleue du limbe se voit.
 // - v2.4.0: reflet du Soleil aussi sur l'eau sombre de Blue Marble (cartes GIBS par défaut).
 // - v2.3.0: côté nuit lumineux (uNotIR, ?notIR=) ; poserCartes — cartes, atmosphère, notIR changés sans rechargement.
-// Date: [October 18, 2026]
+// Date: [November 03, 2026]
 // - v2.2.1: exposition de l'atmosphère (luminescence de nuit) en vue ISS seulement : la vue Terre ne suit plus le satellite.
 // - v2.2.0: cônes d'axe aux pôles (comme le globe de l'organigramme du bilan radiatif), vue Terre seulement.
 // - v2.1.0: atmosphère paramétrée (ATM, url.js ?atm=) : pression, hauteur d'échelle, luminescence ; coque à 10 H si plus haute.
@@ -213,6 +214,7 @@ function creerTerre(tex){
     new THREE.ShaderMaterial({vertexShader:GLSL_TERRE_VS, fragmentShader:GLSL_TERRE_FS,
       uniforms:{uJour:{value:tex.jour}, uNuit:{value:tex.nuit}, uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS,
                 uNotIR:{value:NOT_IR}, uLumNuit:TERRE.uLumNuit}}));
+  TERRE.globe.renderOrder = -2;                 // avant les carreaux de détail (tuiles-rendu.js), après le ciel
   TERRE.axe.add(TERRE.globe);
 
   // Cônes d'axe, comme le globe de l'organigramme du bilan radiatif (CO2 organigramme.js) : pointe au pôle, base vers

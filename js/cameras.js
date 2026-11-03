@@ -1,13 +1,15 @@
 // File: js/cameras.js
 // Desc: Deux caméras : orbitale autour de la Terre (vue éloignée) et embarquée dans l'ISS (visée cap / site).
-// Version 2.6.1
+// Version 2.7.0
+// - v2.7.0: vue Terre — haut de la caméra = tangente au méridien (vers les ph croissants) : continu par-dessus les pôles, la
+//   vue passe à l'envers au lieu de buter (entrees.js).
 // - v2.6.1: FOV_VUE_TERRE (champ de la vue Terre), lu aussi par hote.js.
 // - v2.6.0: ETAT.horizonVertical : caméra de l'ISS tournée d'un quart de tour, la Terre à droite de l'image.
 // - v2.5.0: plan proche de la vue Terre à la mesure de l'altitude (zoom jusqu'à 8 km).
 // - v2.4.0: vue Terre–Lune : la visée glisse avec le zoom, du milieu Terre–Lune (au plus large) à la Terre (au plus près).
 // - v2.2.0: vueEclaireeDeBiais ((drapeaux de l'hôte, url.js)) : le Soleil à 75° de l'axe de visée, un bord de nuit visible.
 // - v2.1.0: suivis « soleil » et « lune » = l'horizon sous l'astre (horizon.js) : son cap, le site du limbe.
-// Date: [October 19, 2026]
+// Date: [November 03, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -79,7 +81,9 @@ function majCamExt(){
   if(VUE_EXT.mode === 'lune') cible.copy(ETAT.M).multiplyScalar(CFG.LUNE_D/2*(r - R_LUNE_MIN)/(R_LUNE_MAX - R_LUNE_MIN));
   else cible.set(0, 0, 0);
   camExt.position.set(r*Math.cos(ph)*Math.sin(th), r*Math.sin(ph), r*Math.cos(ph)*Math.cos(th)).add(cible);
-  if(ETAT.hautCamera === 0) camExt.up.set(0, 1, 0);
+  // haut = tangente au méridien vers les ph croissants : le +Y projeté tant que |ph| < 90°, et continu au-delà — passé
+  // un pôle, la vue est à l'envers sans saut (au lieu de basculer d'un demi-tour au passage)
+  if(ETAT.hautCamera === 0) camExt.up.set(-Math.sin(ph)*Math.sin(th), Math.cos(ph), -Math.sin(ph)*Math.cos(th));
   else camExt.up.set(0, ETAT.hautCamera, 0).transformDirection(TERRE.globe.matrixWorld);   // axe de la Terre (±) : un astre fixe à l'infini court en ligne droite horizontale
   camExt.lookAt(cible);
   const fov = VUE_EXT.mode === 'lune' ? 50 : FOV_VUE_TERRE;

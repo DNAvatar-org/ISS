@@ -1,14 +1,16 @@
 // File: js/config.js
 // Desc: Constantes physiques (échelle : 1 unité = 100 km) et état de la simulation (ETAT).
-// Version 1.1.0
+// Version 1.2.0
+// - v1.2.0: angleTour (angle ramené à ]−π, π]) : latitude de la caméra extérieure sans butée aux pôles.
 // - v1.1.0: ETAT.vuesAuZoom (?vuesAuZoom, (drapeaux de l'hôte, url.js)) : le niveau de zoom choisit la vue, Terre–Lune ↔ Terre ↔ ISS.
 // - v1.0.3: ETAT.horizonVertical (mode bilan radiatif : caméra de l'ISS tournée d'un quart de tour, la Terre à droite).
 // - v1.0.2: ETAT.zoomEnchaine (mode bilan radiatif : le zoom passe de la vue Terre à la caméra de l'ISS).
-// Date: [October 08, 2026]
+// Date: [November 03, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
 const DEG = Math.PI/180;
+const angleTour = a => a - 2*Math.PI*Math.round(a/(2*Math.PI));   // angle ramené à ]−π, π]
 
 const CFG = {
   R: 63.71,                 // rayon de la Terre (6 371 km)

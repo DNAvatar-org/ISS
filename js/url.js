@@ -1,10 +1,11 @@
 // File: js/url.js
 // Desc: Paramètres d'URL : ?sat=ISS&vue=avant&focale=58&date=30.07.21&heure=22:20:46 (satellite, visée, focale, date et heure UT) ; avis si mal formés ; l'URL suit la vue.
-// Version 1.17.0
+// Version 1.18.0
+// - v1.18.0: cam= : latitude sans butée (au-delà de ±90°, vue passée par-dessus un pôle) ; plus de zoom dans le titre de Temps.
 // - v1.17.0: ?provenance remplacée par des drapeaux indépendants (noISS_mode, fenetresHote, zoomEnchaine, vueBiais, atmGrossie,
 //   horizonVertical, vitesse) : la page ne sait pas qui l'ouvre. L'historique est dans git.
 // - v1.7.0: ?onglet (page dans l'onglet d'une page hôte), ?jour= / ?nuit= (cartes de la Terre, ex. paléogéographie).
-// Date: [October 15, 2026]
+// Date: [November 03, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -169,7 +170,7 @@ function appliquerCamURL(){
   if(c === null){ if(VUE_EXT.mode === 'lune') vueTerreLune(); return []; }
   const v = c.split(',').map(Number);
   if(v.length !== 3 || !v.every(isFinite) || !(v[2] > 0)) return ['Caméra illisible : cam=' + c + '. Format attendu : cam=51.6,31.5,250 (longitude, latitude en degrés, distance).'];
-  VUE_EXT.th = v[0]*DEG; VUE_EXT.ph = Math.max(-1.5, Math.min(1.5, v[1]*DEG)); VUE_EXT.r = v[2];
+  VUE_EXT.th = v[0]*DEG; VUE_EXT.ph = angleTour(v[1]*DEG); VUE_EXT.r = v[2];
   return [];
 }
 
@@ -239,7 +240,6 @@ function appliquerNoISSModeURL(){
   $('bCheck').hidden = true;
   $('bDebutNuit').title = "Coucher de Soleil : la caméra se pose sur le lieu visé, l'heure saute juste avant que le Soleil passe derrière le bord gauche de la Terre (pôle Sud en haut ; sinon, du côté où il se couche)";
   $('bLever').title = "Lever de Soleil : la caméra se pose sur le lieu visé, l'heure saute juste avant que le Soleil sorte de derrière le bord gauche de la Terre (pôle Sud en haut ; sinon, du côté où il se lève)";
-  $('oZoomVue').title = "Niveau de zoom et vue : ×1 = vue Terre de départ ; plus loin, la vue Terre–Lune";
   $('oTheta').title = "Heure de Greenwich (UT). Clic : la saisir à la seconde (HH:MM:SS, Entrée). Le curseur gris règle l'heure de la journée";
   $('sTheta').title = "Heure de la journée (UT)";
   const b = document.createElement('button');

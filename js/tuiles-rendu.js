@@ -1,8 +1,11 @@
 // File: js/tuiles-rendu.js
 // Desc: Un carreau = une calotte de sphère (maillage lon/lat) texturée par une tuile (GIBS jour+nuit, ou Sentinel-2 jour).
-// Version 2.1.0
+// Version 2.2.0
+// - v2.2.0: carreaux dessinés du plus grossier au plus fin (renderOrder), sans test de profondeur : ils se chevauchaient à
+//   quelques centaines de m, sous la précision du tampon de profondeur vue de l'ISS (taches hachurées en nadir). Le côté caché
+//   de la Terre reste invisible : faces arrière éliminées (sphère convexe).
 // - v2.1.0: carreaux : lumières des villes réglables (uLumNuit, terre.js) ; uNotIR déclaré (0).
-// Date: [October 05, 2026]
+// Date: [November 03, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -40,8 +43,11 @@ function geometrieCarreau(src, z, row, col, rayon){
   return g;
 }
 
-/* Plus le niveau est fin, plus le carreau passe devant (polygonOffset + léger rayon en plus ; les niveaux
-   Sentinel-2, 8 à 14, ne montent que de 60 m chacun pour ne pas décoller de la Terre vue de l'ISS).
+/* Plus le niveau est fin, plus le carreau passe devant : dessiné plus tard (renderOrder, après le globe de terre.js et
+   avant tout le reste), sans test de profondeur — à quelques centaines de m d'écart, le tampon de profondeur ne départageait
+   plus les niveaux vus de l'ISS (taches hachurées). Il écrit sa profondeur : ce qui passe devant la Terre (ISS, Lune) la teste.
+   Le côté caché de la Terre : faces arrière éliminées (la sphère est convexe). Léger rayon en plus par niveau, gardé pour les
+   tracés posés sur le sol.
    Sentinel-2 n'a que le jour : ses carreaux s'effacent côté nuit (FIN), les lumières GIBS dessous restent visibles. */
 function carreauMesh(src, z, row, col, texJour, texNuit){
   const mat = new THREE.ShaderMaterial({
@@ -49,9 +55,10 @@ function carreauMesh(src, z, row, col, texJour, texNuit){
     defines: src === 'eox' ? {FIN:''} : {},
     uniforms:{uJour:{value:texJour}, uNuit:{value:texNuit}, uSun:TERRE.uSun, uLune:TERRE.uLune, uRL:TERRE.uRL, uRS:TERRE.uRS,
       uNotIR:{value:0}, uLumNuit:TERRE.uLumNuit},
-    polygonOffset:true, polygonOffsetFactor:-z, polygonOffsetUnits:-z});
+    depthTest:false});
   const rayon = CFG.R + 0.003*Math.min(z, 7) + 0.0006*Math.max(0, z - 7);
   const m = new THREE.Mesh(geometrieCarreau(src, z, row, col, rayon), mat);
   m.frustumCulled = false;
+  m.renderOrder = -2 + z/100;                     // globe à −2 ; GIBS 3–7 puis Sentinel-2 8–14 : du grossier au fin
   return m;
 }

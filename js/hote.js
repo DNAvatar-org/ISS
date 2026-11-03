@@ -3,7 +3,8 @@
 //       Soleil à l'écran, envoyés à la page hôte (message 'iss:terre') : elle pose son organigramme autour, son Soleil du
 //       côté du vrai, et le suit quand on tourne la caméra (bilan radiatif CO2, onglets_graphe.js). En retour, la place
 //       qu'elle demande à gauche de la Terre (iss:marges) : le centre de la Terre se pose là.
-// Version 1.11.0
+// Version 1.12.0
+// - v1.12.0: visée accrochée au sol : vue à l'envers (passée par-dessus un pôle, entrees.js) gardée à l'envers (pas de demi-tour).
 // - v1.11.0: message iss:dormir { oui } — la page hôte endort la Terre (la boucle ne dessine plus : le canevas garde sa
 //   dernière image, un grab) le temps de faire tourner sa propre 3D (le tamagoshi : sa créature animée) ; oui false la
 //   réveille.
@@ -21,7 +22,7 @@
 // - v1.4.0: la page hôte donne l'abscisse du centre de la Terre (iss:marges gauche), à gauche du milieu s'il le faut.
 // - v1.3.0: iss:terre porte la vue ('ext' / 'iss') : en caméra de l'ISS, l'hôte cache son organigramme.
 // - v1.2.0: message iss:cartes — la page hôte change cartes, atmosphère et côté nuit lumineux sans recharger (terre.js poserCartes).
-// Date: [October 22, 2026]
+// Date: [November 03, 2026]
 // Copyright 2026 DNAvatar.org - Arnaud Maignan
 // Licensed under Apache License 2.0 with Commons Clause. See LICENSE.
 
@@ -109,7 +110,9 @@ function suivreVisee(){
     VISEE_HOTE.lat = g.lat; VISEE_HOTE.lon = g.lon; VISEE_HOTE.arrive = true;
   }
   TERRE.globe.localToWorld(vecGeo(VISEE_HOTE.lat, VISEE_HOTE.lon, 1, _vh)).normalize();
-  const th = Math.atan2(_vh.x, _vh.z), ph = Math.asin(_vh.y);
+  let th = Math.atan2(_vh.x, _vh.z), ph = Math.asin(_vh.y);
+  // vue passée par-dessus un pôle (|ph| > 90°, entrees.js) : le même point, pris de ce côté-là — sinon demi-tour de l'image
+  if(Math.cos(VUE_EXT.ph) < 0){ th += Math.PI; ph = Math.sign(VUE_EXT.ph)*Math.PI - ph; }
   const dth = Math.atan2(Math.sin(th - VUE_EXT.th), Math.cos(th - VUE_EXT.th));
   // glisse vers le lieu (≈ 1 s) ; une fois arrivé, collé dessus (sans le retard du glissement)
   if(VISEE_HOTE.arrive || Math.abs(dth) + Math.abs(ph - VUE_EXT.ph) < 1e-3){ VISEE_HOTE.arrive = true; VUE_EXT.th = th; VUE_EXT.ph = ph; }

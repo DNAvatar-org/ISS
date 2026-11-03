@@ -1,6 +1,7 @@
 // File: js/ui.js
 // Desc: Commandes : vues, jauge de vitesse (crans logarithmiques), date (donc β), position sur l'orbite, affichages, pose.
-// Version 2.8.0
+// Version 2.9.0
+// - v2.9.0: ligne de titre de Temps : la vitesse (#oVitTete, visible repliée) au lieu du zoom et de la vue.
 // - v2.8.0: niveau de zoom et nom de la vue aussi sur la ligne de titre de Temps (#oZoomVue), visible repliée ; compté en
 //   altitude (la vue Terre zoome en altitude jusqu'au limbe).
 // - v2.7.0: case « Axes et pôles » retirée ; niveau de zoom à droite du titre Capture (majZoom) ; satellites visibles Point de vue déplié.
@@ -27,6 +28,7 @@ function majJaugeVitesse(){
   const c = cranVitesse();
   $('sVit').value = c;
   $('oVit').textContent = vitLibelle(c === 0 ? 0 : VITESSES[c]);
+  $('oVitTete').textContent = $('oVit').textContent;              // titre de Temps, visible repliée
 }
 
 function marquer(sel, test){
@@ -369,9 +371,6 @@ function majZoom(){
   const z = niveauZoom();
   const txt = '×' + (z < 10 ? z.toFixed(1).replace('.', ',') : Math.round(z).toLocaleString('fr-FR'));
   $('oZoom').textContent = txt;
-  // ligne de titre de Temps, visible repliée : le niveau et la vue (où passer d'une vue à l'autre)
-  const vue = ETAT.vue === 'iss' ? 'ISS' : VUE_EXT.mode === 'lune' ? 'Terre–Lune' : 'Terre';
-  $('oZoomVue').textContent = txt + ' · ' + vue;
 }
 
 function majCurseurFocale(){

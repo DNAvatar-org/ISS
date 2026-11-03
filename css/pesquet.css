@@ -1,6 +1,7 @@
 /* File: css/pesquet.css
    Desc: Mise en page : panneau de réglages, HUD du chrono, canvas plein écran.
-   Version 1.5.0
+   Version 1.6.0
+   v1.6.0 : titre de Temps — la vitesse (.vit-tete), seulement repliée (dépliée, la jauge la montre).
    v1.5.0 : en onglet, ⓒ seul dans le coin bas droit (plus de ⛶ de l'hôte) ; titres au lissage de l'hôte.
    v1.4.1 : fenetresHote — Point de vue invisible.
    v1.4.0 : fenetresHote — Temps et Point de vue à gauche, sous les boutons de l'hôte, dépliés vers le bas, + devant le titre.
@@ -475,7 +476,8 @@ body.fenetres-hote #temps .tete-temps h2,body.fenetres-hote #panel .grp:first-ch
 @media (min-width:761px) and (min-height:501px){ #titrePose{display:flex;justify-content:space-between;align-items:baseline} }
 #oZoom{font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim)}
 /* niveau de zoom et vue sur la ligne de titre de Temps (ui.js majZoom) : reste visible quand Temps est replié */
-.zoom-vue{margin-left:10px;font-size:11px;color:var(--dim);white-space:nowrap}
+.vit-tete{margin-left:10px;font-size:11px;color:var(--dim);white-space:nowrap}
+#hud:not(.plie) .vit-tete{display:none}
 
 /* en onglet (embarqué dans CO2), les crédits d'imagerie sont dans le pied de CO2, affichés selon l'époque */
 body.onglet #bCredits, body.onglet #credits{display:none !important}
